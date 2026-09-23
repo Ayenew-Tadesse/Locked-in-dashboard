@@ -201,6 +201,50 @@
     justify-content:space-between;
     gap:12px;
   }
+  /* daily report */
+  .report-btn{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border:none;
+    border-radius:7px;
+    padding:6px 10px;
+    cursor:pointer;
+    white-space:nowrap;
+    flex:none;
+  }
+  .report-btn:hover, .report-btn:focus-visible{background:var(--accent);color:var(--surface);outline:none;}
+  .report-btn[aria-expanded="true"]{background:var(--accent);color:var(--surface);}
+  .report-card{
+    margin-top:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px 20px 18px;
+    animation:panelDrop .22s ease-out;
+  }
+  .report-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .report-date{text-align:center;min-width:0;}
+  .report-day{font-size:15px;font-weight:600;color:var(--ink);}
+  .report-status{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-top:2px;}
+  .report-status.active{color:var(--good);}
+  .report-status.missed{color:var(--red);}
+  .report-status.idle{color:var(--ink-3);}
+  .report-stats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;justify-content:center;}
+  .report-stats span{font-size:12px;color:var(--ink-2);background:var(--surface-2);border-radius:999px;padding:4px 10px;}
+  .report-stats b{color:var(--ink);font-weight:600;}
+  .report-summary{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 14px;}
+  .report-block + .report-block{margin-top:14px;}
+  .report-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .report-list li{font-size:13px;line-height:1.45;color:var(--ink);padding-left:14px;position:relative;}
+  .report-list li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:2px;background:var(--heat-4);}
+  .report-list.next li::before{background:var(--orange);}
+  .report-list .muted{color:var(--ink-3);}
+  .report-list li.empty{padding-left:0;color:var(--ink-3);}
+  .report-list li.empty::before{display:none;}
+
   /* app chips: inline app buttons at the bottom of the frequency card */
   .app-chips{
     display:flex;
@@ -780,7 +824,7 @@
           <span class="cd-num idle" id="cd-h">—</span><b>:</b><span class="cd-num idle" id="cd-mi">—</span><b>:</b><span class="cd-num idle" id="cd-s">—</span>
         </div>
       </div>
-      <div class="heat-sub">Guxo Flights + Guxo repos</div>
+      <button type="button" class="report-btn" id="report-btn" aria-expanded="false" aria-controls="report-card">Daily report</button>
     </div>
     <div class="heat-scroll" id="heat-scroll">
       <div class="heat-grid">
@@ -802,6 +846,27 @@
     <div class="app-panel" id="app-panel" hidden></div>
   </div>
   <div class="heat-tip" id="heat-tip" hidden></div>
+
+  <section class="report-card" id="report-card" hidden aria-label="Daily report">
+    <div class="report-nav">
+      <button type="button" class="heat-arrow" id="report-prev" aria-label="Previous day">&#8249;</button>
+      <div class="report-date">
+        <div class="report-day" id="report-day"></div>
+        <div class="report-status" id="report-status"></div>
+      </div>
+      <button type="button" class="heat-arrow" id="report-next" aria-label="Next day">&#8250;</button>
+    </div>
+    <div class="report-stats" id="report-stats"></div>
+    <p class="report-summary" id="report-summary" hidden></p>
+    <div class="report-block" id="report-done-block">
+      <p class="modal-sub">What was done</p>
+      <ul class="report-list" id="report-done"></ul>
+    </div>
+    <div class="report-block" id="report-next-block" hidden>
+      <p class="modal-sub">Next up</p>
+      <ul class="report-list next" id="report-next-list"></ul>
+    </div>
+  </section>
 
 
 
@@ -833,6 +898,10 @@
 (function(){
   var STATUS_LABEL = { good: "In progress", warn: "In progress", idle: "Not started" };
   var dbRef = null;
+  // Written daily reports (summary + next steps), keyed by YYYY-MM-DD. The live
+  // "reports" collection replaces this snapshot inside claude.ai.
+  var FALLBACK_REPORTS = {"2026-09-23": {"summary": "First full day of tracked work. Guxo Flights got its new name everywhere, a stricter date-of-birth field, and a complete guest mode. Guxo's README now points to Guxo Flights.", "next": ["Start Guxo Flights' React Native navigation and core screens (Oct checklist)", "Rename the hid-go repo to match Guxo Flights", "Plan the first real change to Guxo"]}};
+  var reportData = JSON.parse(JSON.stringify(FALLBACK_REPORTS));
   var FALLBACK_CHECKLISTS = {"hidgo": [{"deadline": "Oct 2026", "done": false, "id": "t1", "text": "Build Guxo Flights' navigation and core screen structure in React Native"}, {"deadline": "Oct 2026", "done": false, "id": "t2", "text": "Build the shared design system / component kit (colors, type, buttons, cards) as reusable RN components"}, {"deadline": "Nov 2026", "done": false, "id": "t3", "text": "Wire state management and live API integration into Guxo Flights' booking flow"}, {"deadline": "Nov 2026", "done": false, "id": "t4", "text": "Build the shared auth pattern for all three sibling apps"}, {"deadline": "Dec 2026", "done": false, "id": "t5", "text": "Build the shared points/promotions data model across Guxo Flights, Guxo, Gexi"}, {"deadline": "Dec 2026", "done": false, "id": "t6", "text": "Ship Guxo Flights' real end-to-end booking flow (search → select → book) on the shared components"}], "q1": [{"deadline": "Oct 2026", "done": false, "id": "1", "text": "Build Guxo Flights' navigation and core screen structure in React Native"}, {"deadline": "Oct 2026", "done": false, "id": "2", "text": "Build the shared design system / component kit (colors, type, buttons, cards)"}, {"deadline": "Nov 2026", "done": false, "id": "3", "text": "Wire state management and live API integration into Guxo Flights' booking flow"}, {"deadline": "Nov 2026", "done": false, "id": "4", "text": "Build the shared auth pattern for all three sibling apps"}, {"deadline": "Dec 2026", "done": false, "id": "5", "text": "Build the shared points/promotions data model across Guxo Flights, Guxo, Gexi"}, {"deadline": "Dec 2026", "done": false, "id": "6", "text": "Ship Guxo Flights' real end-to-end booking flow (search → select → book)"}], "q2": [{"deadline": "Jan 2027", "done": false, "id": "1", "text": "Polish Guxo Flights' booking flow for real use — edge, empty, error, and loading states"}, {"deadline": "Jan 2027", "done": false, "id": "2", "text": "Wire Guxo Flights into the shared points/promotions system for real"}, {"deadline": "Feb 2027", "done": false, "id": "3", "text": "Ship Guxo Flights publicly — sibling #1 live"}, {"deadline": "Feb 2027", "done": false, "id": "4", "text": "Scaffold Guxo on the shared design system and auth pattern"}, {"deadline": "Mar 2027", "done": false, "id": "5", "text": "Build Guxo's core booking flow (search → select → book)"}, {"deadline": "Mar 2027", "done": false, "id": "6", "text": "Wire Guxo into the shared points/promotions system"}], "q3": [{"deadline": "Apr 2027", "done": false, "id": "1", "text": "Polish Guxo's booking flow for real use — edge, empty, error, and loading states"}, {"deadline": "Apr 2027", "done": false, "id": "2", "text": "Ship Guxo publicly — sibling #2 live"}, {"deadline": "May 2027", "done": false, "id": "3", "text": "Scope Gexi's payment integrations (Telebirr, Chapa, CBE Birr) and pick the first to build"}, {"deadline": "May 2027", "done": false, "id": "4", "text": "Scaffold Gexi on the shared design system and auth pattern"}, {"deadline": "Jun 2027", "done": false, "id": "5", "text": "Build Gexi's core shopping flow (browse → cart → checkout)"}, {"deadline": "Jun 2027", "done": false, "id": "6", "text": "Wire the first payment gateway into Gexi's checkout"}], "q4": [{"deadline": "Jul 2027", "done": false, "id": "1", "text": "Polish Gexi's shopping flow for real use — edge, empty, error, and loading states"}, {"deadline": "Aug 2027", "done": false, "id": "2", "text": "Ship Gexi publicly — sibling #3 live"}, {"deadline": "Aug 2027", "done": false, "id": "3", "text": "Wire the shared points/promotions system live across all three apps"}, {"deadline": "Sep 2027", "done": false, "id": "4", "text": "Run one real cross-app promotion end-to-end"}, {"deadline": "Sep 2027", "done": false, "id": "5", "text": "Write the Guxo and Gexi case studies (Guxo Flights' is already drafted)"}]};
   var checklistCache = JSON.parse(JSON.stringify(FALLBACK_CHECKLISTS));
   var currentChecklistId = null;
@@ -1708,6 +1777,7 @@
         if (i >= text.length){
           clearInterval(quoteTimer);
           quoteTimer = null;
+          textEl.style.minHeight = ""; // release the reserved height (the width may have changed)
           setTimeout(function(){ textEl.classList.remove("typing"); }, 1200);
           by.classList.add("show");
         }
@@ -1856,6 +1926,70 @@
 
   }
 
+  // --- daily report ---
+  // One report per day from the activity start date to today. Commit facts come
+  // from the contributions data; the written summary / next steps come from
+  // the reports data when a report was filed for that day.
+  var reportDay = null;
+  function dayFromKey(key){ var p = key.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function renderReport(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var todayKey = isoDay(today);
+    if (!reportDay) reportDay = todayKey;
+    var d = dayFromKey(reportDay);
+    var entry = heatData[reportDay] || {};
+    var n = entry.count || 0;
+    var written = reportData[reportDay] || {};
+
+    document.getElementById("report-day").textContent =
+      d.toLocaleDateString("en-US", { weekday:"long", month:"short", day:"numeric", year:"numeric" });
+    var status = document.getElementById("report-status");
+    if (n){ status.textContent = "Active day"; status.className = "report-status active"; }
+    else if (reportDay === todayKey){ status.textContent = "No app work yet today"; status.className = "report-status idle"; }
+    else { status.textContent = "Missed day"; status.className = "report-status missed"; }
+
+    // Week score as of this day (Mon through this day).
+    var ws = weekStart(d), weekActive = 0;
+    for (var x = new Date(ws); x <= d; x.setDate(x.getDate() + 1)){ if (countsAsActive(x)) weekActive++; }
+    var weekPct = Math.min(100, Math.round(weekActive / WEEK_TARGET * 100));
+    var repos = entry.repos ? Object.keys(entry.repos).map(function(r){ return esc(r) + " " + esc(entry.repos[r]); }).join(" · ") : "";
+    document.getElementById("report-stats").innerHTML =
+      '<span><b>' + n + '</b> commit' + (n === 1 ? '' : 's') + '</span>' +
+      (repos ? '<span>' + repos + '</span>' : '') +
+      '<span>Week so far <b>' + weekPct + '%</b></span>';
+
+    var summary = document.getElementById("report-summary");
+    summary.textContent = written.summary || "";
+    summary.hidden = !written.summary;
+
+    var items = Array.isArray(entry.items) ? entry.items : [];
+    document.getElementById("report-done").innerHTML = items.length
+      ? items.map(function(it){ return '<li>' + (it.repo ? '<span class="muted">' + esc(it.repo) + ':</span> ' : '') + esc(it.text) + '</li>'; }).join("")
+      : '<li class="empty">' + (reportDay === todayKey ? "Nothing logged yet today." : "No app work was logged on this day.") + '</li>';
+
+    var next = Array.isArray(written.next) ? written.next : [];
+    document.getElementById("report-next-block").hidden = !next.length;
+    document.getElementById("report-next-list").innerHTML = next.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join("");
+
+    document.getElementById("report-prev").disabled = reportDay <= ACTIVITY_START;
+    document.getElementById("report-next").disabled = reportDay >= todayKey;
+  }
+  function stepReport(dir){
+    var d = dayFromKey(reportDay); d.setDate(d.getDate() + dir);
+    reportDay = isoDay(d);
+    renderReport();
+  }
+  document.getElementById("report-prev").addEventListener("click", function(){ stepReport(-1); });
+  document.getElementById("report-next").addEventListener("click", function(){ stepReport(1); });
+  var reportBtn = document.getElementById("report-btn");
+  reportBtn.addEventListener("click", function(){
+    var card = document.getElementById("report-card");
+    var open = card.hidden;
+    card.hidden = !open;
+    reportBtn.setAttribute("aria-expanded", String(open));
+    if (open){ reportDay = null; renderReport(); }
+  });
+
   // Render a real starting state immediately (page-at-rest requirement).
   renderApps(FALLBACK_APPS);
   startCountdown(FALLBACK_COUNTDOWN_TARGET);
@@ -1883,11 +2017,20 @@
       }
     }).catch(function(){ /* keep fallback countdown on error */ });
 
+    db.collection("reports").limit(1000).onSnapshot(function(snap){
+      if (!snap.docs.length) return; // keep the built-in snapshot until reports exist
+      var next = {};
+      snap.docs.forEach(function(doc){ next[doc.id] = doc.data() || {}; });
+      reportData = next;
+      if (!document.getElementById("report-card").hidden) renderReport();
+    }, function(){ /* keep the built-in reports on error */ });
+
     db.collection("contributions").limit(1000).onSnapshot(function(snap){
       var next = {};
       snap.docs.forEach(function(doc){ next[doc.id] = doc.data() || {}; });
       heatData = next;
       renderHeatmap();
+      if (!document.getElementById("report-card").hidden) renderReport();
       renderWeekly();
     }, function(){ /* keep last known heatmap on error */ });
 
