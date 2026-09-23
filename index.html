@@ -259,7 +259,7 @@
   .report-list.checks li .tick{position:absolute;left:0;top:0;font-weight:700;}
   .report-list.checks li.done .tick{color:var(--good);}
   .report-list.checks li.open .tick{color:var(--red);}
-  .report-list.checks li.done .t{color:var(--ink-3);text-decoration:line-through;}
+  .report-list.checks li.done .t{color:var(--good);}
 
   /* daily report */
   .report-btn{
@@ -766,10 +766,13 @@
     line-height:1.5;
     color:var(--ink);
   }
-  .checklist li.done .task-text{
-    color:var(--ink-3);
-    text-decoration:line-through;
+  /* finished tasks: green row with a green tick, no strikethrough */
+  .checklist li.done{
+    background:var(--good-soft);
+    border-color:color-mix(in srgb, var(--good) 45%, transparent);
   }
+  .checklist li.done input[type="checkbox"]{accent-color:var(--good);}
+  .checklist li.done .task-text{color:var(--good);font-weight:500;}
   .deadline-pill{
     font-family:'IBM Plex Mono', ui-monospace, monospace;
     font-size:10.5px;
