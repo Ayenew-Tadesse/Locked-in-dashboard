@@ -1,0 +1,1896 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Aye-Noow's Locked in</title>
+<style>
+  /* Committed single look: light ground, dark text — same for every viewer,
+     regardless of system or in-app theme. */
+  :root{
+    --bg:#F4F6FA;
+    --surface:#FFFFFF;
+    --surface-2:#EEF2F8;
+    --ink:#122033;
+    --ink-2:#4A5870;
+    --ink-3:#7A869C;
+    --line:#DDE3EC;
+    --accent:#2F6BD0;
+    --accent-soft:#E3ECFB;
+    --good:#1E9464;
+    --good-soft:#DFF4EA;
+    --warn:#B7791F;
+    --warn-soft:#FBF0DC;
+    --idle:#6B778C;
+    --idle-soft:#EDF0F5;
+    --heat-0:#EBEEF3;
+    --heat-1:#BFE6D1;
+    --heat-2:#7FD0A6;
+    --heat-3:#3CAE78;
+    --heat-4:#1E8A5A;
+    --orange:#F08A24;
+    --red:#D64545;
+    --miss:#F1B5B5;
+    color-scheme:light;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    padding-inline:20px;
+    padding-block:36px 56px;
+  }
+  .wrap{max-width:840px;margin:0 auto;}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:500;
+  }
+  h1{
+    font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif;
+    font-weight:800;
+    font-size:clamp(40px,8vw,64px);
+    line-height:.92;
+    letter-spacing:.01em;
+    margin:4px 0 14px;
+    text-wrap:balance;
+  }
+  .welcome{
+    font-size:16px;
+    font-weight:500;
+    color:var(--ink-2);
+    margin:44px 0 0; /* 36px body padding + 44px = 80px from the top */
+  }
+  .daily-quote{
+    position:relative;
+    margin:28px 0 0;
+    max-width:56ch;
+    padding-left:12px;
+  }
+  .daily-quote::before{
+    content:"";
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:2px;
+    background:var(--accent);
+    transform-origin:top;
+    transform:scaleY(0);
+  }
+  .daily-quote.play::before{animation:quoteBar .5s ease-out forwards;}
+  .daily-quote.done::before{transform:scaleY(1);}
+  .daily-quote p.typing::after{
+    content:"";
+    display:inline-block;
+    width:2px;height:1em;
+    margin-left:2px;
+    vertical-align:-2px;
+    background:var(--accent);
+    animation:quoteCaret .8s steps(1) infinite;
+  }
+  .daily-quote cite{opacity:0;transform:translateY(4px);transition:opacity .5s ease, transform .5s ease;}
+  .daily-quote cite.show{opacity:1;transform:none;}
+  @keyframes quoteBar{to{transform:scaleY(1);}}
+  @keyframes quoteCaret{50%{opacity:0;}}
+  .daily-quote p{
+    margin:0;
+    font-size:15px;
+    line-height:1.5;
+    color:var(--ink);
+  }
+  .daily-quote cite{
+    display:block;
+    margin-top:4px;
+    font-style:normal;
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    letter-spacing:.04em;
+    color:var(--ink-3);
+  }
+  .lede{
+    font-size:15px;
+    line-height:1.55;
+    color:var(--ink-2);
+    max-width:56ch;
+    margin:0;
+  }
+
+  /* objectives / roadmap */
+  .roadmap-card{
+    margin-top:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:4px 20px;
+  }
+  .phases{list-style:none;margin:0;padding:0;}
+  .phases li{
+    display:flex;
+    gap:16px;
+    align-items:baseline;
+    padding:14px 10px;
+    margin:0 -10px;
+    border-bottom:1px solid var(--line);
+    border-radius:8px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .phases li:last-child{border-bottom:none;}
+  .phases li:hover, .phases li:focus-visible{
+    background:var(--surface-2);
+    outline:none;
+  }
+  .phase-tag{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    letter-spacing:.04em;
+    color:var(--accent);
+    white-space:nowrap;
+    flex:none;
+    width:150px;
+  }
+  .phase-text{
+    font-size:13px;
+    line-height:1.5;
+    color:var(--ink);
+    flex:1;
+  }
+  .phase-arrow{
+    color:var(--ink-3);
+    font-size:16px;
+    flex:none;
+  }
+
+  /* countdown in the frequency card header */
+  .cd-pin{min-width:0;}
+  .cd-pin-label{
+    font-size:9.5px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:3px;
+    white-space:nowrap;
+  }
+  .cd-pin-label span{color:var(--ink-3);letter-spacing:.04em;text-transform:none;margin-left:4px;}
+  .cd-pin-row{
+    display:flex;
+    align-items:baseline;
+    font-size:15px;
+    font-weight:500;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .cd-pin-row i{font-style:normal;font-size:10px;color:var(--ink-3);margin:0 5px 0 1px;}
+  .cd-pin-row b{font-weight:400;color:var(--ink-3);margin:0 1px;}
+  .cd-sep{width:1px;height:12px;background:var(--line);margin:0 7px 0 2px;align-self:center;}
+  .cd-num.good{color:var(--good);}
+  .cd-num.idle{color:var(--ink-3);}
+
+  /* weekly score */
+  .week-card{
+    margin-top:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 20px 16px;
+  }
+  .week-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  /* app chips: inline app buttons at the bottom of the frequency card */
+  .app-chips{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .app-chips::-webkit-scrollbar{display:none;}
+  .app-chip{
+    position:relative;
+    flex:1 1 0;
+    min-width:0;
+    display:inline-flex;
+    align-items:baseline;
+    justify-content:center;
+    white-space:nowrap;
+    gap:6px;
+    padding:8px 12px 10px;
+    border:none;
+    border-radius:0;
+    background:none;
+    color:var(--ink-2);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    overflow:hidden;
+    transition:color .15s ease;
+  }
+  .app-chip small{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:10px;letter-spacing:.06em;color:var(--ink-3);font-weight:500;}
+  .app-chip:hover{color:var(--ink);}
+  .app-chip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .app-chip.active{color:var(--ink);}
+  .app-chip.active::after{
+    content:"";
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:3px;
+    background:var(--good);
+  }
+
+  .app-chip .caret{font-size:10px;color:var(--ink-3);transition:transform .2s ease;margin-left:2px;}
+  .app-chip[aria-expanded="true"] .caret{transform:rotate(180deg);color:var(--accent);}
+  .app-panel{
+    margin-top:10px;
+    padding:14px 16px 16px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--surface-2);
+    animation:panelDrop .22s ease-out;
+  }
+  .app-panel .checklist li{background:var(--surface);}
+  .app-panel-name{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:24px;line-height:1;margin:0 0 8px;}
+  @keyframes panelDrop{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion: reduce){ .app-panel{animation:none;} }
+
+  /* app details inside the overlay */
+  .modal-app{margin-bottom:16px;}
+  .modal-app[hidden]{display:none;}
+  .modal-app .app-cat{margin:0 0 10px;}
+  .modal-app .card-actions{margin-top:12px;}
+  .modal-app .card-foot{margin-top:14px;}
+  .modal-sub{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px;}
+
+  .heat-card{position:relative;}
+  .ring-title{font-size:13px;font-weight:600;color:var(--ink);}
+  .month-left{font-size:12px;line-height:1.35;color:var(--ink-2);min-height:32px;display:flex;align-items:center;justify-content:center;}
+  .week-ring{position:relative;width:100%;max-width:132px;aspect-ratio:1;}
+  .week-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .ring-track{fill:none;stroke:var(--heat-0);stroke-width:3;}
+  .ring-knob{fill:var(--surface);stroke:var(--orange);stroke-width:2;transition:cx .5s ease, cy .5s ease;}
+  .ring-fill{fill:none;stroke:var(--orange);stroke-width:3;stroke-linecap:round;transition:stroke-dasharray .5s ease;}
+  /* score tone: <=40% red, below 80% orange, 80% and up green */
+  .ring-fill.red, .ring-knob.red{stroke:var(--red);}
+  .ring-fill.green, .ring-knob.green{stroke:var(--good);}
+  .week-ring-center{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .week-ring-col{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1 1 0;min-width:0;text-align:center;}
+  .week-pct{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    font-size:clamp(26px,8vw,40px);
+    line-height:.9;
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .week-range{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:11px;color:var(--ink-3);margin-top:2px;}
+
+  /* contribution heatmap (GitHub-style) */
+  .heat-card{
+    margin-top:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 20px 14px;
+  }
+  .heat-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .heat-sub{font-size:12px;color:var(--ink-3);}
+  .heat-scroll{overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth;}
+  .heat-scroll::-webkit-scrollbar{display:none;}
+  .heat-nav{display:flex;gap:6px;}
+  .heat-nav[hidden]{display:none;}
+  .heat-arrow{
+    width:28px;height:28px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink-2);
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    padding:0;
+  }
+  .heat-arrow:hover:not(:disabled), .heat-arrow:focus-visible{border-color:var(--accent);color:var(--ink);outline:none;}
+  .heat-arrow:disabled{opacity:.35;cursor:default;}
+  .heat-grid{
+    display:grid;
+    grid-template-columns:28px auto;
+    grid-template-rows:16px auto;
+    column-gap:4px;
+    width:max-content;
+  }
+  .heat-months{
+    grid-column:2;
+    position:relative;
+    height:16px;
+    font-size:10.5px;
+    color:var(--ink-3);
+  }
+  .heat-months span{position:absolute;top:0;white-space:nowrap;}
+  .heat-days{
+    grid-column:1;
+    display:grid;
+    grid-template-rows:repeat(7,11px);
+    row-gap:3px;
+    font-size:10px;
+    color:var(--ink-3);
+    line-height:11px;
+  }
+  .heat-cells{
+    grid-column:2;
+    display:grid;
+    grid-auto-flow:column;
+    grid-template-rows:repeat(7,11px);
+    grid-auto-columns:11px;
+    gap:3px;
+  }
+  .heat-cell{
+    width:11px;height:11px;border-radius:2px;
+    background:var(--heat-0);
+    outline:1px solid rgba(18,32,51,.04);
+    outline-offset:-1px;
+  }
+  .heat-cell.missed{background:var(--miss);}
+  .heat-cell.l1{background:var(--heat-1);}
+  .heat-cell.l2{background:var(--heat-2);}
+  .heat-cell.l3{background:var(--heat-3);}
+  .heat-cell.l4{background:var(--heat-4);}
+  .heat-cell.future{background:transparent;outline:none;}
+  .heat-cells .heat-cell:not(.future):hover{outline:1.5px solid var(--ink-2);outline-offset:0;}
+  .heat-foot{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    font-size:11.5px;
+    color:var(--ink-3);
+  }
+  .heat-legend{display:flex;align-items:center;gap:3px;}
+  .heat-legend .heat-cell{display:inline-block;}
+  .heat-legend .lbl{margin:0 4px;}
+  .heat-tip{
+    position:fixed;
+    z-index:60;
+    pointer-events:none;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    font-size:12px;
+    line-height:1.45;
+    padding:7px 10px;
+    border-radius:7px;
+    box-shadow:0 6px 18px rgba(18,32,51,.12);
+    max-width:300px;
+  }
+  .heat-tip .muted{color:var(--ink-3);}
+  .heat-tip-list{
+    list-style:none;
+    margin:6px 0 0;
+    padding:6px 0 0;
+    border-top:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .heat-tip-list li{padding-left:10px;position:relative;}
+  .heat-tip-list li::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:7px;
+    width:4px;
+    height:4px;
+    border-radius:1px;
+    background:var(--heat-4);
+  }
+  .heat-tip-list li.muted::before{display:none;}
+
+  /* app grid */
+  .apps{
+    margin-top:32px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    cursor:pointer;
+    transition:border-color .15s ease;
+  }
+  .card[data-app-id]:hover,
+  .card[data-app-id]:focus-visible{
+    border-color:var(--accent);
+    outline:none;
+  }
+  .card.placeholder{cursor:default;}
+  .card-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .route-code{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    color:var(--ink-3);
+    text-transform:uppercase;
+  }
+  .pill{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:10.5px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    padding:3px 9px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .pill.good{background:var(--good-soft);color:var(--good);}
+  .pill.warn{background:var(--warn-soft);color:var(--warn);}
+  .pill.idle{background:var(--idle-soft);color:var(--idle);}
+
+  .app-name{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    font-size:32px;
+    line-height:1;
+  }
+  .app-cat{
+    font-size:13px;
+    color:var(--ink-2);
+    margin-top:2px;
+  }
+  .facts{
+    list-style:none;
+    padding:0;
+    margin:2px 0 0;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+  }
+  .facts li{
+    font-size:13px;
+    line-height:1.5;
+    color:var(--ink);
+    padding-left:14px;
+    position:relative;
+  }
+  .facts li::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:7px;
+    width:5px;
+    height:5px;
+    border-radius:1px;
+    background:var(--accent);
+  }
+  .card-foot{
+    margin-top:auto;
+    padding-top:12px;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:11.5px;
+    color:var(--ink-3);
+  }
+  .card-foot .cs{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  .card-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .cta{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:11.5px;
+    font-weight:500;
+    letter-spacing:.02em;
+    color:var(--accent);
+    background:var(--accent-soft);
+    text-decoration:none;
+    padding:6px 10px;
+    border-radius:6px;
+    white-space:nowrap;
+    transition:background .15s ease, color .15s ease;
+  }
+  .cta:hover, .cta:focus-visible{
+    background:var(--accent);
+    color:var(--surface);
+    outline:none;
+  }
+
+  .card.placeholder{
+    border-style:dashed;
+    background:transparent;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    color:var(--ink-3);
+    min-height:180px;
+    gap:6px;
+  }
+  .card.placeholder .app-name{
+    font-size:20px;
+    color:var(--ink-2);
+  }
+  .card.placeholder p{
+    font-size:12.5px;
+    margin:0;
+    max-width:32ch;
+  }
+
+  footer.note{
+    margin-top:28px;
+    font-size:11.5px;
+    color:var(--ink-3);
+    line-height:1.6;
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+
+  /* checklist modal */
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(18,32,51,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:50;
+  }
+  .modal{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    width:100%;
+    max-width:440px;
+    max-height:min(80vh, 640px);
+    overflow-y:auto;
+    padding:22px;
+  }
+  .modal-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .modal-title{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    font-size:28px;
+    line-height:1;
+    margin:4px 0 0;
+  }
+  .modal-close{
+    font-family:'IBM Plex Sans', sans-serif;
+    background:var(--surface-2);
+    color:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    width:30px;
+    height:30px;
+    line-height:1;
+    cursor:pointer;
+    flex:none;
+  }
+  .modal-close:hover, .modal-close:focus-visible{
+    color:var(--ink);
+    border-color:var(--accent);
+    outline:none;
+  }
+  .checklist{
+    list-style:none;
+    padding:0;
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .checklist li{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:10px 12px;
+  }
+  .checklist li input[type="checkbox"]{
+    margin-top:3px;
+    width:16px;
+    height:16px;
+    accent-color:var(--accent);
+    flex:none;
+    cursor:pointer;
+  }
+  .checklist .task-text{
+    flex:1;
+    font-size:13.5px;
+    line-height:1.5;
+    color:var(--ink);
+  }
+  .checklist li.done .task-text{
+    color:var(--ink-3);
+    text-decoration:line-through;
+  }
+  .deadline-pill{
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:10.5px;
+    letter-spacing:.03em;
+    color:var(--warn);
+    background:var(--warn-soft);
+    padding:3px 8px;
+    border-radius:999px;
+    white-space:nowrap;
+    flex:none;
+  }
+  .checklist li.done .deadline-pill{
+    color:var(--ink-3);
+    background:var(--idle-soft);
+  }
+  .modal-empty{
+    font-size:13px;
+    color:var(--ink-3);
+    line-height:1.6;
+    margin:0;
+  }
+
+  .sm{display:none;}
+  @media (max-width:520px){
+    .lg{display:none;}
+    .sm{display:inline;}
+    .heat-head{flex-wrap:nowrap;}
+    .heat-sub{display:none;}
+    .heat-foot{flex-wrap:nowrap;gap:8px;}
+    .heat-foot #heat-streak{white-space:nowrap;}
+    .heat-legend .lbl{display:none;}
+    .heat-arrow{width:24px;height:24px;font-size:14px;}
+    .month-left{min-height:0;white-space:nowrap;font-size:11px;}
+    .week-top{gap:6px;}
+    .week-ring-col .week-range{white-space:nowrap;}
+      .app-chip{padding:7px 10px 9px;font-size:12.5px;}
+    .app-chip small{display:none;}
+    .phases li{flex-direction:column;gap:4px;}
+    .phase-tag{width:auto;}
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <p class="welcome">Welcome back</p>
+  <h1>Aye'</h1>
+  <blockquote class="daily-quote" id="daily-quote" aria-label="Quote of the day">
+    <p id="daily-quote-text"></p>
+    <cite id="daily-quote-by"></cite>
+  </blockquote>
+
+  <div class="week-card" id="week-card" style="margin-top:32px">
+    <div class="week-top">
+      <div class="week-ring-col">
+      <div class="ring-title" id="week-meta">This week</div>
+      <div class="week-ring" role="img" id="week-ring" aria-label="Weekly score 0%">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="ring-fill" id="week-ring-fill" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100"></circle>
+          <circle class="ring-knob" id="week-ring-knob" cx="110" cy="60" r="3.5" opacity="0"></circle>
+        </svg>
+        <div class="week-ring-center">
+          <div class="week-pct" id="week-pct">0%</div>
+        </div>
+      </div>
+      <div class="month-left" id="week-left"></div>
+      <div class="week-range" id="week-range"></div>
+      </div>
+      <div class="week-ring-col">
+      <div class="ring-title" id="month-meta">This month</div>
+      <div class="week-ring" role="img" id="month-ring" aria-label="Monthly score 0%">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="ring-fill" id="month-ring-fill" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100"></circle>
+          <circle class="ring-knob" id="month-ring-knob" cx="110" cy="60" r="3.5" opacity="0"></circle>
+        </svg>
+        <div class="week-ring-center">
+          <div class="week-pct" id="month-pct">0%</div>
+        </div>
+      </div>
+      <div class="month-left" id="month-left"></div>
+      <div class="week-range" id="month-range"></div>
+      </div>
+      <div class="week-ring-col">
+      <div class="ring-title" id="quarter-meta">This quarter</div>
+      <div class="week-ring" role="img" id="quarter-ring" aria-label="Quarterly score 0%">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="ring-fill" id="quarter-ring-fill" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100"></circle>
+          <circle class="ring-knob" id="quarter-ring-knob" cx="110" cy="60" r="3.5" opacity="0"></circle>
+        </svg>
+        <div class="week-ring-center">
+          <div class="week-pct" id="quarter-pct">0%</div>
+        </div>
+      </div>
+      <div class="month-left" id="quarter-left"></div>
+      <div class="week-range" id="quarter-range"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="heat-card" id="heat-card">
+    <div class="heat-head">
+      <div class="cd-pin" role="timer" aria-label="Year countdown">
+        <div class="cd-pin-label">Countdown <span id="cd-target">…</span></div>
+        <div class="cd-pin-row">
+          <span class="cd-num idle" id="cd-y">—</span><i>y</i>
+          <span class="cd-num idle" id="cd-mo">—</span><i>m</i>
+          <span class="cd-num idle" id="cd-d">—</span><i>d</i>
+          <span class="cd-sep"></span>
+          <span class="cd-num idle" id="cd-h">—</span><b>:</b><span class="cd-num idle" id="cd-mi">—</span><b>:</b><span class="cd-num idle" id="cd-s">—</span>
+        </div>
+      </div>
+      <div class="heat-sub">Guxo Flights + Guxo repos</div>
+    </div>
+    <div class="heat-scroll" id="heat-scroll">
+      <div class="heat-grid">
+        <div></div>
+        <div class="heat-months" id="heat-months"></div>
+        <div class="heat-days" aria-hidden="true"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div>
+        <div class="heat-cells" id="heat-cells" role="img" aria-label="Commit activity over the last year"></div>
+      </div>
+    </div>
+    <div class="heat-foot">
+      <span id="heat-streak"></span>
+      <span class="heat-nav" id="heat-nav" hidden>
+        <button type="button" class="heat-arrow" id="heat-prev" aria-label="Show earlier months">&#8249;</button>
+        <button type="button" class="heat-arrow" id="heat-next" aria-label="Show later months">&#8250;</button>
+      </span>
+      <span class="heat-legend" aria-hidden="true"><span class="lbl">Less</span><i class="heat-cell"></i><i class="heat-cell l1"></i><i class="heat-cell l2"></i><i class="heat-cell l3"></i><i class="heat-cell l4"></i><span class="lbl">More</span></span>
+    </div>
+    <div class="app-chips" id="app-chips" role="list" aria-label="Apps"></div>
+    <div class="app-panel" id="app-panel" hidden></div>
+  </div>
+  <div class="heat-tip" id="heat-tip" hidden></div>
+
+
+
+  <div class="eyebrow" style="margin-top:32px">Objective</div>
+  <p class="lede" id="obj-text" style="margin-top:4px">Loading…</p>
+  <div class="roadmap-card">
+    <ol class="phases" id="obj-phases"></ol>
+  </div>
+
+  <footer class="note" id="footnote">Shows only what's been shared in chat — nothing here is estimated or filled in.</footer>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow" id="modal-eyebrow">Checklist</div>
+        <h2 class="modal-title" id="modal-title"></h2>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Close checklist" type="button">&#10005;</button>
+    </div>
+    <div class="modal-app" id="modal-app" hidden></div>
+    <ul class="checklist" id="checklist-items"></ul>
+    <p class="modal-empty" id="modal-empty" hidden>Nothing logged here yet — tell Claude what's on deck and it'll show up here every time you visit.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STATUS_LABEL = { good: "In progress", warn: "In progress", idle: "Not started" };
+  var dbRef = null;
+  var checklistCache = {};
+  var currentChecklistId = null;
+
+  var FALLBACK_APPS = [
+    {
+      id: "hidgo",
+      name: "Guxo Flights",
+      routeCode: "FLT",
+      category: "Flight booking",
+      statusLevel: "good",
+      stage: "Case study drafted",
+      facts: [
+        "First case study drafted",
+        "Covers a redesigned booking flow — improved mobile experience, faster task completion"
+      ],
+      caseStudy: "Drafted",
+      lastNoted: "Sep 21, 2026",
+      webAppLink: "https://ayenew-tadesse.github.io/hid-go/",
+      repoLink: "https://github.com/Ayenew-Tadesse/hid-go"
+    },
+    {
+      id: "guxo",
+      name: "Guxo",
+      routeCode: "BUS",
+      category: "Bus booking · local transit",
+      statusLevel: "idle",
+      stage: "Not started",
+      facts: [
+        "Bus-booking app, part of the sibling-app network alongside Guxo Flights",
+        "No design or build details logged yet"
+      ],
+      caseStudy: "Not started",
+      lastNoted: "Sep 21, 2026",
+      webAppLink: "https://ayenew-tadesse.github.io/Guxo/",
+      repoLink: "https://github.com/Ayenew-Tadesse/Guxo"
+    },
+    {
+      id: "gexi",
+      name: "Gexi",
+      routeCode: "SHP",
+      category: "Online shopping · e-commerce",
+      statusLevel: "idle",
+      stage: "Not started",
+      facts: [
+        "Online shopping app for Ethiopians",
+        "Part of the sibling-app network alongside Guxo Flights and Guxo"
+      ],
+      caseStudy: "Not started",
+      lastNoted: "Sep 23, 2026",
+      webAppLink: null,
+      repoLink: null
+    }
+  ];
+
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  var appsById = {};
+  // The bar marks the open app only; with nothing open there is no bar.
+  function activeChipId(){
+    return openAppId && appsById[openAppId] ? openAppId : null;
+  }
+  function renderApps(apps){
+    appsById = {};
+    var chips = apps.map(function(app){
+      appsById[app.id] = app;
+      var active = app.id === activeChipId();
+      return '<button type="button" role="listitem" class="app-chip' + (active ? ' active' : '') + '" data-app-id="' + esc(app.id) + '"' +
+        ' aria-controls="app-panel" aria-expanded="' + (openAppId === app.id) + '"' +
+        ' aria-label="' + esc(app.name || "") + (active ? ' (active)' : '') + '">' +
+        esc(app.name || "") + '<small>' + esc(app.routeCode || "") + '</small><span class="caret" aria-hidden="true">&#9662;</span></button>';
+    }).join("");
+    document.getElementById("app-chips").innerHTML = chips;
+    if (openAppId) renderAppPanel();
+  }
+
+  function appDetailsHtml(app){
+    var status = app.statusLevel || "idle";
+    var label = STATUS_LABEL[status] || "Not started";
+    var actions = '';
+    if (app.webAppLink) actions += '<a class="cta" href="' + esc(app.webAppLink) + '" target="_blank" rel="noopener">View Web App</a>';
+    if (app.repoLink) actions += '<a class="cta" href="' + esc(app.repoLink) + '" target="_blank" rel="noopener">View Repo</a>';
+    return (
+      '<div class="app-cat"><span class="pill ' + status + '">' + esc(label) + '</span> &nbsp;' + esc(app.category || "") + '</div>' +
+      '<ul class="facts">' + (app.facts || []).map(function(f){ return '<li>' + esc(f) + '</li>'; }).join("") + '</ul>' +
+      (actions ? '<div class="card-actions">' + actions + '</div>' : '') +
+      '<div class="card-foot">' +
+        '<span class="cs">Case study: ' + esc(app.caseStudy || "—") + '</span>' +
+        '<span>' + (app.lastNoted ? "Last noted " + esc(app.lastNoted) : "") + '</span>' +
+      '</div>' +
+      '<p class="modal-sub" style="margin-top:18px">Checklist</p>'
+    );
+  }
+
+  var FALLBACK_OBJECTIVE = {
+    objective: "Ship three sibling apps — Guxo Flights, Guxo, Gexi — as one connected network within twelve months, built solo inside the Deep Focus block.",
+    phases: [
+      { id: "q1", tag: "Q1 · Sep–Dec 2026", text: "Build the shared foundation: design system, auth, and the points engine — proven out on Guxo Flights." },
+      { id: "q2", tag: "Q2 · Jan–Mar 2027", text: "Ship Guxo Flights. Start Guxo on the shared foundation." },
+      { id: "q3", tag: "Q3 · Apr–Jun 2027", text: "Ship Guxo. Scope and start Gexi's payments." },
+      { id: "q4", tag: "Q4 · Jul–Sep 2027", text: "Ship Gexi. Connect the network — shared loyalty live across all three." }
+    ]
+  };
+
+  function renderObjective(data){
+    var obj = data && data.objective ? data : FALLBACK_OBJECTIVE;
+    document.getElementById("obj-text").textContent = obj.objective;
+    document.getElementById("obj-phases").innerHTML = (obj.phases || []).map(function(p, i){
+      var qid = p.id || ("q" + (i + 1));
+      return (
+        '<li data-quarter-id="' + esc(qid) + '" data-quarter-label="' + esc(p.tag) + '" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open breakdown for ' + esc(p.tag) + '">' +
+          '<span class="phase-tag">' + esc(p.tag) + '</span>' +
+          '<span class="phase-text">' + esc(p.text) + '</span>' +
+          '<span class="phase-arrow" aria-hidden="true">&#8250;</span>' +
+        '</li>'
+      );
+    }).join("");
+  }
+
+  var FALLBACK_COUNTDOWN_TARGET = "2027-09-23T05:58:33Z";
+  var countdownIntervalId = null;
+
+  function pad2(n){ return (n < 10 ? "0" : "") + n; }
+
+  function calendarDiff(target, now){
+    if (now >= target) {
+      return { years:0, months:0, days:0, hours:0, minutes:0, seconds:0, expired:true };
+    }
+    var years = target.getUTCFullYear() - now.getUTCFullYear();
+    var months = target.getUTCMonth() - now.getUTCMonth();
+    var days = target.getUTCDate() - now.getUTCDate();
+    var hours = target.getUTCHours() - now.getUTCHours();
+    var minutes = target.getUTCMinutes() - now.getUTCMinutes();
+    var seconds = target.getUTCSeconds() - now.getUTCSeconds();
+
+    if (seconds < 0){ seconds += 60; minutes--; }
+    if (minutes < 0){ minutes += 60; hours--; }
+    if (hours < 0){ hours += 24; days--; }
+    if (days < 0){
+      var prevMonthDate = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), 0));
+      days += prevMonthDate.getUTCDate();
+      months--;
+    }
+    if (months < 0){ months += 12; years--; }
+
+    return { years:years, months:months, days:days, hours:hours, minutes:minutes, seconds:seconds, expired:false };
+  }
+
+  function renderCountdown(target){
+    var diff = calendarDiff(target, new Date());
+    var vals = diff.expired
+      ? { y:0, mo:0, d:0, h:0, mi:0, s:0 }
+      : { y:diff.years, mo:diff.months, d:diff.days, h:diff.hours, mi:diff.minutes, s:diff.seconds };
+    var ids = { y:"cd-y", mo:"cd-mo", d:"cd-d", h:"cd-h", mi:"cd-mi", s:"cd-s" };
+
+    Object.keys(ids).forEach(function(key){
+      var el = document.getElementById(ids[key]);
+      if (!el) return;
+      el.textContent = pad2(vals[key]);
+      el.className = "cd-num" + ((diff.expired || vals[key] === 0) ? " idle" : " good");
+    });
+  }
+
+  function startCountdown(targetIso){
+    var target = new Date(targetIso);
+    if (isNaN(target.getTime())) return;
+    var label = target.toLocaleString("en-US", { month:"short", day:"numeric", year:"numeric", timeZone:"UTC" });
+    document.getElementById("cd-target").textContent = "to " + label;
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    renderCountdown(target);
+    countdownIntervalId = setInterval(function(){ renderCountdown(target); }, 1000);
+  }
+
+
+  // --- checklist modal ---
+  var backdropEl = document.getElementById("modal-backdrop");
+  var checklistEl = document.getElementById("checklist-items");
+  var modalEmptyEl = document.getElementById("modal-empty");
+
+  function renderChecklistItems(tasks){
+    if (!tasks || !tasks.length){
+      checklistEl.innerHTML = "";
+      modalEmptyEl.hidden = false;
+      return;
+    }
+    modalEmptyEl.hidden = true;
+    checklistEl.innerHTML = tasks.map(function(t){
+      return (
+        '<li class="' + (t.done ? "done" : "") + '">' +
+          '<input type="checkbox" data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + '>' +
+          '<span class="task-text">' + esc(t.text) + '</span>' +
+          (t.deadline ? '<span class="deadline-pill">' + esc(t.deadline) + '</span>' : "") +
+        '</li>'
+      );
+    }).join("");
+  }
+
+  function openChecklist(id, title, eyebrow, app){
+    currentChecklistId = id;
+    var appBox = document.getElementById("modal-app");
+    appBox.innerHTML = app ? appDetailsHtml(app) : "";
+    appBox.hidden = !app;
+    document.getElementById("modal-eyebrow").textContent = eyebrow || "Checklist";
+    document.getElementById("modal-title").textContent = title;
+    renderChecklistItems(checklistCache[id] || []);
+    backdropEl.hidden = false;
+
+    if (!dbRef) return;
+    dbRef.doc("checklists/" + id).get().then(function(snap){
+      var tasks = (snap.exists && snap.data() && Array.isArray(snap.data().tasks)) ? snap.data().tasks : [];
+      checklistCache[id] = tasks;
+      if (currentChecklistId === id) renderChecklistItems(tasks);
+    }).catch(function(){ /* keep whatever's cached */ });
+  }
+
+  function closeChecklist(){
+    backdropEl.hidden = true;
+    currentChecklistId = null;
+  }
+
+  function toggleTask(taskId, checked){
+    if (!currentChecklistId) return;
+    var tasks = (checklistCache[currentChecklistId] || []).slice();
+    var idx = tasks.findIndex(function(t){ return t.id === taskId; });
+    if (idx === -1) return;
+    tasks[idx] = Object.assign({}, tasks[idx], { done: checked });
+    checklistCache[currentChecklistId] = tasks;
+    renderChecklistItems(tasks);
+
+    if (dbRef) {
+      dbRef.doc("checklists/" + currentChecklistId).set({ tasks: tasks }).catch(function(){ /* local state still reflects the tap */ });
+    }
+  }
+
+  // App dropdown: clicking a chip opens its details + checklist under the row;
+  // clicking it again (or another chip) closes or switches it.
+  var openAppId = null;
+  function taskListHtml(tasks){
+    return tasks.map(function(t){
+      return (
+        '<li class="' + (t.done ? "done" : "") + '">' +
+          '<input type="checkbox" data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + '>' +
+          '<span class="task-text">' + esc(t.text) + '</span>' +
+          (t.deadline ? '<span class="deadline-pill">' + esc(t.deadline) + '</span>' : "") +
+        '</li>'
+      );
+    }).join("");
+  }
+  function renderAppPanel(){
+    var panel = document.getElementById("app-panel");
+    var app = openAppId && appsById[openAppId];
+    if (!app){ panel.hidden = true; panel.innerHTML = ""; return; }
+    var tasks = checklistCache[app.id] || [];
+    panel.innerHTML =
+      '<h3 class="app-panel-name">' + esc(app.name || "") + '</h3>' +
+      appDetailsHtml(app) +
+      (tasks.length
+        ? '<ul class="checklist" id="app-panel-list">' + taskListHtml(tasks) + '</ul>'
+        : '<p class="modal-empty">Nothing logged here yet \u2014 tell Claude what\'s on deck and it\'ll show up here every time you visit.</p>');
+    panel.hidden = false;
+  }
+  function setOpenApp(id){
+    openAppId = id;
+    var activeId = activeChipId();
+    [].forEach.call(document.querySelectorAll(".app-chip[data-app-id]"), function(c){
+      c.setAttribute("aria-expanded", String(c.dataset.appId === id));
+      c.classList.toggle("active", c.dataset.appId === activeId);
+    });
+    renderAppPanel();
+    if (!id || !dbRef) return;
+    dbRef.doc("checklists/" + id).get().then(function(snap){
+      checklistCache[id] = (snap.exists && snap.data() && Array.isArray(snap.data().tasks)) ? snap.data().tasks : [];
+      if (openAppId === id) renderAppPanel();
+    }).catch(function(){ /* keep whatever's cached */ });
+  }
+  document.getElementById("app-chips").addEventListener("click", function(e){
+    var chip = e.target.closest(".app-chip[data-app-id]");
+    if (!chip) return;
+    setOpenApp(openAppId === chip.dataset.appId ? null : chip.dataset.appId);
+  });
+  document.getElementById("app-panel").addEventListener("change", function(e){
+    if (!e.target.matches('input[type="checkbox"]') || !openAppId) return;
+    var id = openAppId, taskId = e.target.getAttribute("data-task-id");
+    var tasks = (checklistCache[id] || []).map(function(t){
+      return t.id === taskId ? Object.assign({}, t, { done: e.target.checked }) : t;
+    });
+    checklistCache[id] = tasks;
+    renderAppPanel();
+    if (dbRef) dbRef.doc("checklists/" + id).set({ tasks: tasks }).catch(function(){ /* local state still reflects the tap */ });
+  });
+  document.getElementById("obj-phases").addEventListener("click", function(e){
+    var row = e.target.closest("li[data-quarter-id]");
+    if (!row) return;
+    openChecklist(row.dataset.quarterId, row.dataset.quarterLabel, "Quarter breakdown");
+  });
+  document.getElementById("obj-phases").addEventListener("keydown", function(e){
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var row = e.target.closest("li[data-quarter-id]");
+    if (!row) return;
+    e.preventDefault();
+    openChecklist(row.dataset.quarterId, row.dataset.quarterLabel, "Quarter breakdown");
+  });
+  document.getElementById("modal-close").addEventListener("click", closeChecklist);
+  backdropEl.addEventListener("click", function(e){
+    if (e.target === backdropEl) closeChecklist();
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && !backdropEl.hidden) closeChecklist();
+  });
+  checklistEl.addEventListener("change", function(e){
+    if (e.target && e.target.matches('input[type="checkbox"]')) {
+      toggleTask(e.target.getAttribute("data-task-id"), e.target.checked);
+    }
+  });
+
+  // --- commit activity heatmap ---
+  // One doc per day in "contributions" (id = YYYY-MM-DD):
+  // { count, repos: { "<repo>": n }, items: [{ repo, text }] }.
+  // Rendered as the trailing 53 weeks; items describe what was done that day.
+  var heatData = {};
+  // Activity tracking starts here: scores and missed days count from this date.
+  var ACTIVITY_START = "2026-09-22";
+  function countsAsActive(d){
+    var key = isoDay(d);
+    var e = heatData[key];
+    return key >= ACTIVITY_START && !!(e && e.count);
+  }
+  var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // Long text on wide screens, compact text on phones (CSS picks one).
+  function setDual(id, longText, shortText){
+    var el = document.getElementById(id);
+    el.textContent = "";
+    var lg = document.createElement("span"); lg.className = "lg"; lg.textContent = longText;
+    var sm = document.createElement("span"); sm.className = "sm"; sm.textContent = shortText;
+    el.appendChild(lg); el.appendChild(sm);
+  }
+  function rangeShort(a, b){
+    return a.getMonth() === b.getMonth()
+      ? MONTHS[a.getMonth()] + " " + a.getDate() + "–" + b.getDate()
+      : MONTHS[a.getMonth()] + " " + a.getDate() + " – " + MONTHS[b.getMonth()] + " " + b.getDate();
+  }
+  function isoDay(d){
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+  function heatLevel(n){
+    if (!n) return 0;
+    if (n >= 8) return 4;
+    if (n >= 5) return 3;
+    if (n >= 3) return 2;
+    return 1;
+  }
+  function renderHeatmap(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var start = new Date(today);
+    start.setDate(start.getDate() - 364 - start.getDay()); // back to a Sunday, 53 columns
+    var cells = [], months = [], total = 0, activeDays = 0, lastMonth = -1, col = 0;
+    // Missed days count from the activity start date; earlier days stay neutral.
+    var firstTracked = ACTIVITY_START;
+    var todayKey = isoDay(today);
+    for (var d = new Date(start); col < 53; d.setDate(d.getDate() + 1)){
+      var dow = d.getDay();
+      if (dow === 0 && d.getMonth() !== lastMonth && d.getDate() <= 7){
+        months.push('<span style="left:' + (col * 14) + 'px">' + MONTHS[d.getMonth()] + '</span>');
+        lastMonth = d.getMonth();
+      }
+      var key = isoDay(d);
+      if (d > today){
+        cells.push('<i class="heat-cell future"></i>');
+      } else {
+        var entry = heatData[key];
+        var n = entry && entry.count ? entry.count : 0;
+        total += n; if (n && key >= ACTIVITY_START) activeDays++;
+        var missed = !n && firstTracked && key >= firstTracked && key < todayKey;
+        cells.push('<i class="heat-cell l' + heatLevel(n) + (missed ? ' missed' : '') + '" data-day="' + key + '"></i>');
+      }
+      if (dow === 6) col++;
+    }
+    document.getElementById("heat-cells").innerHTML = cells.join("");
+    document.getElementById("heat-months").innerHTML = months.join("");
+
+    var streak = 0;
+    for (var s = new Date(today); heatData[isoDay(s)] && heatData[isoDay(s)].count; s.setDate(s.getDate() - 1)) streak++;
+    setDual("heat-streak",
+      activeDays + " active day" + (activeDays === 1 ? "" : "s") + (streak ? " · " + streak + "-day streak" : ""),
+      activeDays + " day" + (activeDays === 1 ? "" : "s") + (streak ? " · " + streak + "d streak" : ""));
+
+    var scroller = document.getElementById("heat-scroll");
+    scroller.style.scrollBehavior = "auto";
+    scroller.scrollLeft = scroller.scrollWidth;
+    scroller.style.scrollBehavior = "";
+    updateHeatNav();
+  }
+
+  // Arrow buttons stand in for the scrollbar when the grid is wider than the card.
+  function updateHeatNav(){
+    var sc = document.getElementById("heat-scroll");
+    var overflow = sc.scrollWidth - sc.clientWidth;
+    document.getElementById("heat-nav").hidden = overflow <= 1;
+    document.getElementById("heat-prev").disabled = sc.scrollLeft <= 1;
+    document.getElementById("heat-next").disabled = sc.scrollLeft >= overflow - 1;
+  }
+  function stepHeat(dir){
+    var sc = document.getElementById("heat-scroll");
+    sc.scrollLeft += dir * Math.max(56, sc.clientWidth * 0.6);
+  }
+  document.getElementById("heat-prev").addEventListener("click", function(){ stepHeat(-1); });
+  document.getElementById("heat-next").addEventListener("click", function(){ stepHeat(1); });
+  window.addEventListener("resize", updateHeatNav);
+
+  var heatTip = document.getElementById("heat-tip");
+  function showHeatTip(cell){
+    var key = cell.getAttribute("data-day");
+    if (!key) return;
+    var entry = heatData[key] || {};
+    var n = entry.count || 0;
+    var parts = key.split("-");
+    var label = MONTHS[+parts[1] - 1] + " " + (+parts[2]) + ", " + parts[0];
+    var repos = entry.repos ? Object.keys(entry.repos).map(function(r){ return esc(r) + " " + esc(entry.repos[r]); }).join(" · ") : "";
+    var items = Array.isArray(entry.items) ? entry.items : [];
+    var shown = items.slice(0, 8);
+    var list = shown.length
+      ? '<ul class="heat-tip-list">' + shown.map(function(it){
+          return '<li>' + (it.repo ? '<span class="muted">' + esc(it.repo) + ':</span> ' : '') + esc(it.text) + '</li>';
+        }).join("") + (items.length > shown.length ? '<li class="muted">+' + (items.length - shown.length) + ' more</li>' : '') + '</ul>'
+      : "";
+    heatTip.innerHTML = "<b>" + (n ? n + " commit" + (n === 1 ? "" : "s") : "No commits") + "</b> on " + label +
+      (repos ? '<br><span class="muted">' + repos + "</span>" : "") + list;
+    heatTip.hidden = false;
+    var r = cell.getBoundingClientRect();
+    var tw = heatTip.offsetWidth, th = heatTip.offsetHeight;
+    var left = Math.min(Math.max(8, r.left + r.width / 2 - tw / 2), window.innerWidth - tw - 8);
+    var top = r.top - th - 8;
+    if (top < 8) top = r.bottom + 8;
+    heatTip.style.left = left + "px";
+    heatTip.style.top = top + "px";
+  }
+  var heatCellsEl = document.getElementById("heat-cells");
+  heatCellsEl.addEventListener("mouseover", function(e){
+    if (e.target.classList.contains("heat-cell")) showHeatTip(e.target);
+  });
+  heatCellsEl.addEventListener("click", function(e){
+    if (e.target.classList.contains("heat-cell")) showHeatTip(e.target);
+  });
+  heatCellsEl.addEventListener("mouseleave", function(){ heatTip.hidden = true; });
+  document.getElementById("heat-scroll").addEventListener("scroll", function(){ heatTip.hidden = true; updateHeatNav(); });
+
+  // --- quote of the day ---
+  // 365 quotes, one per day: a new one each local calendar day, and the
+  // full list plays through once before any quote repeats.
+  var QUOTES = [
+    ["Show up today. Consistency beats intensity.", ""],
+    ["Great works are performed not by strength but by perseverance.", "Samuel Johnson"],
+    ["Associate with people who are likely to improve you.", "Seneca"],
+    ["Wealth consists not in having great possessions, but in having few wants.", "Epictetus"],
+    ["Go to the ant, thou sluggard; consider her ways, and be wise.", "Proverbs 6:6"],
+    ["He who learns, teaches.", "Ethiopian proverb"],
+    ["Act as if what you do makes a difference. It does.", "William James"],
+    ["Do the difficult things while they are easy and do the great things while they are small.", "Lao Tzu"],
+    ["Dripping water hollows out stone, not through force but through persistence.", "Ovid"],
+    ["No man was ever wise by chance.", "Seneca"],
+    ["My strength lies solely in my tenacity.", "Louis Pasteur"],
+    ["If it is not right, do not do it; if it is not true, do not say it.", "Marcus Aurelius"],
+    ["While I breathe, I hope.", "Latin motto"],
+    ["If you want to go fast, go alone. If you want to go far, go together.", "African proverb"],
+    ["The sun does not forget a village just because it is small.", "African proverb"],
+    ["An investment in knowledge pays the best interest.", "Benjamin Franklin"],
+    ["One never notices what has been done; one can only see what remains to be done.", "Marie Curie"],
+    ["Patience is the key to paradise.", "Turkish proverb"],
+    ["Through hardships to the stars.", "Latin motto"],
+    ["The work is the shortcut.", ""],
+    ["A good deed is something you return.", "Ethiopian proverb"],
+    ["He who goes slowly goes safely and goes far.", "Italian proverb"],
+    ["That which does not kill us makes us stronger.", "Friedrich Nietzsche"],
+    ["Nothing is particularly hard if you divide it into small jobs.", "Henry Ford"],
+    ["Your only competition is who you were yesterday.", ""],
+    ["No matter how far you have gone on a wrong road, turn back.", "Turkish proverb"],
+    ["Little strokes fell great oaks.", "Benjamin Franklin"],
+    ["Hide not your talents; they for use were made.", "Benjamin Franklin"],
+    ["Knowing yourself is the beginning of all wisdom.", "Aristotle"],
+    ["Whatever you are, be a good one.", "Abraham Lincoln"],
+    ["Aim for better, not for perfect.", ""],
+    ["Hurry, hurry has no blessing.", "Swahili proverb"],
+    ["Early to bed and early to rise makes a man healthy, wealthy, and wise.", "Benjamin Franklin"],
+    ["The harder the battle, the sweeter the victory.", "Proverb"],
+    ["You'll never plough a field by turning it over in your mind.", "Irish proverb"],
+    ["You are building something that lasts.", ""],
+    ["Your habits decide your future.", ""],
+    ["Today's effort is tomorrow's portfolio.", ""],
+    ["Slow and steady wins the race.", "Aesop"],
+    ["A river that forgets its source will soon dry up.", "Yoruba proverb"],
+    ["Hard days build strong skills.", ""],
+    ["Vision without action is a daydream. Action without vision is a nightmare.", "Japanese proverb"],
+    ["Excuses don't build apps.", ""],
+    ["Build the thing you wish existed.", ""],
+    ["Nature does not hurry, yet everything is accomplished.", "Lao Tzu"],
+    ["Diligence is the mother of good fortune.", "Miguel de Cervantes"],
+    ["Every new beginning comes from some other beginning's end.", "Seneca"],
+    ["Wisely and slow; they stumble that run fast.", "William Shakespeare"],
+    ["Measure seven times, cut once.", "Russian proverb"],
+    ["He who has begun has half done. Dare to be wise; begin!", "Horace"],
+    ["A year from now you'll wish you had started today.", ""],
+    ["Be not afraid of growing slowly; be afraid only of standing still.", "Chinese proverb"],
+    ["Consistency is a superpower.", ""],
+    ["No great thing is created suddenly.", "Epictetus"],
+    ["No day without a line.", "Pliny the Elder"],
+    ["Rome wasn't built in a day.", "Proverb"],
+    ["The day you decide to do it is your lucky day.", "Japanese proverb"],
+    ["Optimism is the faith that leads to achievement.", "Helen Keller"],
+    ["If you hear a voice within you say 'you cannot paint,' then by all means paint, and that voice will be silenced.", "Vincent van Gogh"],
+    ["Every commit counts.", ""],
+    ["Many a mickle makes a muckle.", "Scottish proverb"],
+    ["Drive thy business, or it will drive thee.", "Benjamin Franklin"],
+    ["The only bad workday is the one you skip.", ""],
+    ["Build in public, grow in private.", ""],
+    ["One more rep, one more screen, one more step.", ""],
+    ["The early bird catches the worm.", "Proverb"],
+    ["Learning without thought is labor lost; thought without learning is perilous.", "Confucius"],
+    ["A smooth sea never made a skilled sailor.", "Proverb"],
+    ["The important thing is not to stop questioning.", "Albert Einstein"],
+    ["I am a slow walker, but I never walk back.", "Abraham Lincoln"],
+    ["Nothing is worth more than this day.", "Johann Wolfgang von Goethe"],
+    ["The morning hour has gold in its mouth.", "German proverb"],
+    ["Great talkers, little doers.", "Benjamin Franklin"],
+    ["Learning never exhausts the mind.", "Leonardo da Vinci"],
+    ["A single bracelet does not jingle.", "Congolese proverb"],
+    ["Actions speak louder than words.", "Proverb"],
+    ["Let the beauty of what you love be what you do.", "Rumi"],
+    ["Practice makes the master.", "German proverb"],
+    ["Without labor, you can't even pull a fish out of a pond.", "Russian proverb"],
+    ["God helps those who get up early.", "Spanish proverb"],
+    ["Hope is a waking dream.", "Aristotle"],
+    ["Work quietly, let your results speak.", ""],
+    ["What stands in the way becomes the way.", "Marcus Aurelius"],
+    ["Study the past if you would define the future.", "Confucius"],
+    ["A bird does not sing because it has an answer. It sings because it has a song.", "Indian proverb"],
+    ["Make the best use of what is in your power, and take the rest as it happens.", "Epictetus"],
+    ["A little impatience will spoil great plans.", "Chinese proverb"],
+    ["Tell me who you walk with, and I will tell you who you are.", "Spanish proverb"],
+    ["He who wants to do something will find a way; he who doesn't will find an excuse.", "Arabic proverb"],
+    ["Leave no stone unturned.", "Euripides"],
+    ["Learn one new thing today.", ""],
+    ["One who bathes willingly with cold water does not feel the cold.", "Ethiopian proverb"],
+    ["Waste no more time arguing what a good man should be. Be one.", "Marcus Aurelius"],
+    ["If you add a little to a little, and do this often, soon the little will become great.", "Hesiod"],
+    ["What you seek is seeking you.", "Rumi"],
+    ["The happiness of your life depends upon the quality of your thoughts.", "Marcus Aurelius"],
+    ["Every day is a new beginning.", "Indian proverb"],
+    ["A roaring lion kills no game.", "Ugandan proverb"],
+    ["Learn it, build it, ship it, repeat.", ""],
+    ["Patience is bitter, but its fruit is sweet.", "Persian proverb"],
+    ["Quality is never an accident; it is always the result of intelligent effort.", "John Ruskin"],
+    ["You didn't come this far to only come this far.", ""],
+    ["Practice is the best of all instructors.", "Publilius Syrus"],
+    ["Wherever you go, go with all your heart.", "Confucius"],
+    ["Learning is a treasure that will follow its owner everywhere.", "Chinese proverb"],
+    ["Knowing others is intelligence; knowing yourself is true wisdom.", "Lao Tzu"],
+    ["They can because they think they can.", "Virgil"],
+    ["Life is either a daring adventure or nothing.", "Helen Keller"],
+    ["Always bear in mind that your own resolution to succeed is more important than any other one thing.", "Abraham Lincoln"],
+    ["Anyone can hold the helm when the sea is calm.", "Publilius Syrus"],
+    ["Loss is nothing else but change.", "Marcus Aurelius"],
+    ["Wisdom does not come overnight.", "Somali proverb"],
+    ["Do not spoil what you have by desiring what you have not.", "Epicurus"],
+    ["Keep your face always toward the sunshine, and shadows will fall behind you.", "Walt Whitman"],
+    ["Every artist was first an amateur.", "Ralph Waldo Emerson"],
+    ["Determine never to be idle.", "Thomas Jefferson"],
+    ["Wisdom is like a baobab tree; no one individual can embrace it.", "Akan proverb"],
+    ["No act of kindness, no matter how small, is ever wasted.", "Aesop"],
+    ["Beginning is half the job.", "Korean proverb"],
+    ["Even the darkest night will end and the sun will rise.", "Victor Hugo"],
+    ["Even if the sky falls, there is a hole to escape through.", "Korean proverb"],
+    ["The dream is free; the hustle is sold separately.", ""],
+    ["Great things take time. Keep building.", ""],
+    ["Success usually comes to those who are too busy to be looking for it.", "Henry David Thoreau"],
+    ["Alone we can do so little; together we can do so much.", "Helen Keller"],
+    ["Worry often gives a small thing a big shadow.", "Swedish proverb"],
+    ["Little by little, a little becomes a lot.", "Tanzanian proverb"],
+    ["Failure is the mother of success.", "Chinese proverb"],
+    ["Tap even a stone bridge before you cross it.", "Korean proverb"],
+    ["Well done is better than well said.", "Benjamin Franklin"],
+    ["Pressure makes diamonds.", ""],
+    ["Pleasure in the job puts perfection in the work.", "Aristotle"],
+    ["Continuity is power.", "Japanese proverb"],
+    ["While we are postponing, life speeds by.", "Seneca"],
+    ["Your future self is watching. Make them proud.", ""],
+    ["Nothing in the world is worth having or worth doing unless it means effort, pain, difficulty.", "Theodore Roosevelt"],
+    ["Fall seven times, stand up eight.", "Japanese proverb"],
+    ["One today is worth two tomorrows.", "Benjamin Franklin"],
+    ["Do not look where you fell, but where you slipped.", "African proverb"],
+    ["You can't cross the sea merely by standing and staring at the water.", "Rabindranath Tagore"],
+    ["Seize the day, put no trust in tomorrow.", "Horace"],
+    ["I attribute my success to this: I never gave or took any excuse.", "Florence Nightingale"],
+    ["Design for the person, not the screen.", ""],
+    ["Don't wait for inspiration. Create it by working.", ""],
+    ["A good start is half the work.", "Irish proverb"],
+    ["To see what is right and not do it is a lack of courage.", "Confucius"],
+    ["Progress, not perfection.", ""],
+    ["It's not what happens to you, but how you react to it that matters.", "Epictetus"],
+    ["Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.", "Thomas Edison"],
+    ["Learning is like rowing upstream: not to advance is to drop back.", "Chinese proverb"],
+    ["Little by little does the trick.", "Aesop"],
+    ["Great acts are made up of small deeds.", "Lao Tzu"],
+    ["Be stubborn about the goal and flexible about the method.", ""],
+    ["A gem cannot be polished without friction, nor a man perfected without trials.", "Chinese proverb"],
+    ["Don't judge each day by the harvest you reap but by the seeds that you plant.", "Robert Louis Stevenson"],
+    ["Procrastination is the thief of time.", "Edward Young"],
+    ["Nothing ventured, nothing gained.", "French proverb"],
+    ["He who is afraid of asking is ashamed of learning.", "Danish proverb"],
+    ["Diligence is the mother of good luck.", "Benjamin Franklin"],
+    ["The unexamined life is not worth living.", "Socrates"],
+    ["As long as you live, keep learning how to live.", "Seneca"],
+    ["The best way to eat an elephant in your path is to cut it into little pieces.", "African proverb"],
+    ["Practice makes perfect.", "Proverb"],
+    ["A society grows great when old men plant trees whose shade they know they shall never sit in.", "Greek proverb"],
+    ["No matter how long the night, the day is sure to come.", "Congolese proverb"],
+    ["One who is carried on the back does not know how far the town is.", "Nigerian proverb"],
+    ["Never let the future disturb you.", "Marcus Aurelius"],
+    ["Seeing is different from being told.", "Kenyan proverb"],
+    ["Things do not change; we change.", "Henry David Thoreau"],
+    ["Every expert was once a beginner.", "Proverb"],
+    ["Finish each day and be done with it.", "Ralph Waldo Emerson"],
+    ["Work is love made visible.", "Kahlil Gibran"],
+    ["When you drink water, remember the source.", "Chinese proverb"],
+    ["Make haste slowly.", "Latin motto"],
+    ["Talent develops in quiet places, character in the full current of human life.", "Johann Wolfgang von Goethe"],
+    ["Measure your progress by what you built, not by how you felt.", ""],
+    ["He who wants to travel far takes care of his mount.", "French proverb"],
+    ["Stay locked in.", ""],
+    ["It is hard to fail, but it is worse never to have tried to succeed.", "Theodore Roosevelt"],
+    ["One generation plants the trees; another gets the shade.", "Chinese proverb"],
+    ["Do what you can, with what you have, where you are.", "Theodore Roosevelt"],
+    ["Our greatest glory is not in never falling, but in rising every time we fall.", "Confucius"],
+    ["Today is a good day to make progress.", ""],
+    ["Beginning is easy; continuing is an art.", "German proverb"],
+    ["Courage is knowing what not to fear.", "Plato"],
+    ["Do every act of your life as though it were the very last act of your life.", "Marcus Aurelius"],
+    ["Where there is no vision, the people perish.", "Proverbs 29:18"],
+    ["Dig the well before you are thirsty.", "Chinese proverb"],
+    ["Chance favors only the prepared mind.", "Louis Pasteur"],
+    ["A good traveler has no fixed plans and is not intent on arriving.", "Lao Tzu"],
+    ["Trust in God, but tie your camel.", "Arabic proverb"],
+    ["Keep your eyes on the stars, and your feet on the ground.", "Theodore Roosevelt"],
+    ["Teachers open the door, but you must enter by yourself.", "Chinese proverb"],
+    ["Done is better than perfect.", ""],
+    ["Strength does not come from physical capacity. It comes from an indomitable will.", "Mahatma Gandhi"],
+    ["The roots of education are bitter, but the fruit is sweet.", "Aristotle"],
+    ["There are no gains without pains.", "Benjamin Franklin"],
+    ["Keep going. You're closer than you think.", ""],
+    ["Talent starts the race; consistency finishes it.", ""],
+    ["Very little is needed to make a happy life.", "Marcus Aurelius"],
+    ["Little by little, one goes far.", "Spanish proverb"],
+    ["Be the person who finishes.", ""],
+    ["The goal is not to be busy; it's to be effective.", ""],
+    ["Where there's a will, there's a way.", "Proverb"],
+    ["Every noble work is at first impossible.", "Thomas Carlyle"],
+    ["He that can have patience can have what he will.", "Benjamin Franklin"],
+    ["Confine yourself to the present.", "Marcus Aurelius"],
+    ["Life is like riding a bicycle. To keep your balance you must keep moving.", "Albert Einstein"],
+    ["Great things are not done by impulse, but by a series of small things brought together.", "Vincent van Gogh"],
+    ["Every expert started with a single, clumsy first try.", ""],
+    ["Rain does not fall on one roof alone.", "Cameroonian proverb"],
+    ["Doubt kills more dreams than failure ever will.", ""],
+    ["The best time to plant a tree was 20 years ago. The second best time is now.", "Chinese proverb"],
+    ["Whatever you sow, so shall you reap.", "Persian proverb"],
+    ["Focus is saying no to good ideas.", ""],
+    ["Make it work, then make it beautiful.", ""],
+    ["Luck is what happens when preparation meets opportunity.", "Seneca"],
+    ["A person is a person through other people.", "Zulu proverb"],
+    ["The secret of getting ahead is getting started.", "Mark Twain"],
+    ["Be patient and tough; someday this pain will be useful to you.", "Ovid"],
+    ["Better a rough draft today than a perfect plan never started.", ""],
+    ["Quiet mornings, loud results.", ""],
+    ["Little by little, an egg will walk.", "Ethiopian proverb"],
+    ["By crawling, a child learns to stand.", "Hausa proverb"],
+    ["Advise and counsel him; if he does not listen, let adversity teach him.", "Ethiopian proverb"],
+    ["Success is to be measured not so much by the position one has reached in life as by the obstacles one has overcome.", "Booker T. Washington"],
+    ["Talk doesn't cook rice.", "Chinese proverb"],
+    ["It does not matter how slowly you go as long as you do not stop.", "Confucius"],
+    ["Ship something small today.", ""],
+    ["Have you somewhat to do tomorrow? Do it today.", "Benjamin Franklin"],
+    ["Even dust, when piled up, becomes a mountain.", "Japanese proverb"],
+    ["The one who asks questions does not lose his way.", "Akan proverb"],
+    ["Strike while the iron is hot.", "Proverb"],
+    ["It is the mark of an educated mind to be able to entertain a thought without accepting it.", "Aristotle"],
+    ["I would rather die of passion than of boredom.", "Vincent van Gogh"],
+    ["Before you speak, listen. Before you act, think.", "Indian proverb"],
+    ["Hold every hour in your grasp.", "Seneca"],
+    ["We know what we are, but know not what we may be.", "William Shakespeare"],
+    ["Your pace is fine. Just don't stop.", ""],
+    ["You don't need more time; you need more focus.", ""],
+    ["Protect your deep-work hours.", ""],
+    ["Real knowledge is to know the extent of one's ignorance.", "Confucius"],
+    ["Finish what you start.", ""],
+    ["The best project is the one you finish.", ""],
+    ["The journey of a thousand miles begins with one step.", "Lao Tzu"],
+    ["Invest in skills; they compound.", ""],
+    ["No man ever steps in the same river twice.", "Heraclitus"],
+    ["Small deeds done are better than great deeds planned.", "Peter Marshall"],
+    ["Sloth makes all things difficult, but industry all easy.", "Benjamin Franklin"],
+    ["Don't explain your philosophy. Embody it.", "Epictetus"],
+    ["The best revenge is not to be like your enemy.", "Marcus Aurelius"],
+    ["The superior man is modest in his speech, but exceeds in his actions.", "Confucius"],
+    ["Discipline is remembering what you want.", ""],
+    ["Believe you can and you're halfway there.", "Theodore Roosevelt"],
+    ["Rest is part of the work.", ""],
+    ["The work you avoid is usually the work that matters most.", ""],
+    ["We suffer more often in imagination than in reality.", "Seneca"],
+    ["Drop by drop is the water pot filled.", "The Buddha"],
+    ["Patience is the key which solves all problems.", "Sudanese proverb"],
+    ["It's not what you look at that matters, it's what you see.", "Henry David Thoreau"],
+    ["The two most powerful warriors are patience and time.", "Leo Tolstoy"],
+    ["He who has a why to live can bear almost any how.", "Friedrich Nietzsche"],
+    ["Whether you think you can, or you think you can't, you're right.", "Henry Ford"],
+    ["Without labor nothing prospers.", "Sophocles"],
+    ["Hard work conquers all.", "Virgil"],
+    ["If you want to improve, be content to be thought foolish and stupid.", "Epictetus"],
+    ["Before anything else, preparation is the key to success.", "Alexander Graham Bell"],
+    ["If it scares you a little, it's probably worth doing.", ""],
+    ["Little by little, the bird builds its nest.", "French proverb"],
+    ["Where you will sit when you are old shows where you stood in youth.", "Yoruba proverb"],
+    ["However long the night, the dawn will break.", "African proverb"],
+    ["What we achieve inwardly will change outer reality.", "Plutarch"],
+    ["What we think, we become.", "The Buddha"],
+    ["Fortune favors the bold.", "Virgil"],
+    ["Go confidently in the direction of your dreams.", "Henry David Thoreau"],
+    ["Nothing in this world can take the place of persistence.", "Calvin Coolidge"],
+    ["Clarity comes from action, not thought.", ""],
+    ["Continuous effort, not strength or intelligence, is the key to unlocking our potential.", "Winston Churchill"],
+    ["It is not that we have a short time to live, but that we waste a lot of it.", "Seneca"],
+    ["Opportunity is missed by most people because it is dressed in overalls and looks like work.", "Thomas Edison"],
+    ["Make today count; you can't get it back.", ""],
+    ["Great is the art of beginning, but greater is the art of ending.", "Henry Wadsworth Longfellow"],
+    ["Discipline today, freedom tomorrow.", ""],
+    ["I am still learning.", "Michelangelo"],
+    ["He who seeks the rose must respect the thorn.", "Persian proverb"],
+    ["He who conquers himself is the mightiest warrior.", "Lao Tzu"],
+    ["Victory belongs to the most persevering.", "Napoleon Bonaparte"],
+    ["Simplify, then add lightness.", ""],
+    ["Patience and perseverance have a magical effect before which difficulties disappear.", "John Quincy Adams"],
+    ["The creation of a thousand forests is in one acorn.", "Ralph Waldo Emerson"],
+    ["Write the first line; the rest will follow.", ""],
+    ["Live as if you were to die tomorrow. Learn as if you were to live forever.", "Mahatma Gandhi"],
+    ["Every morning, the gazelle wakes up knowing it must outrun the fastest lion.", "African proverb"],
+    ["Drop by drop, a lake is formed.", "Turkish proverb"],
+    ["Close the tabs. Open the work.", ""],
+    ["Do the hard thing first.", ""],
+    ["Stay hungry, stay humble.", ""],
+    ["Arise, awake, and stop not till the goal is reached.", "Swami Vivekananda"],
+    ["Earn your rest by finishing your task.", ""],
+    ["If there is no struggle, there is no progress.", "Frederick Douglass"],
+    ["One focused hour is worth more than a distracted day.", ""],
+    ["Hard work beats talent when talent doesn't work hard.", ""],
+    ["Character is destiny.", "Heraclitus"],
+    ["Our doubts are traitors, and make us lose the good we oft might win by fearing to attempt.", "William Shakespeare"],
+    ["Stay patient and trust your journey.", ""],
+    ["Turn 'someday' into 'day one.'", ""],
+    ["Nothing in life is to be feared, it is only to be understood.", "Marie Curie"],
+    ["Always do what you are afraid to do.", "Ralph Waldo Emerson"],
+    ["Dawn does not come twice to awaken a man.", "Arabic proverb"],
+    ["Kites rise highest against the wind, not with it.", "Winston Churchill"],
+    ["I was obliged to be industrious. Whoever is equally industrious will succeed equally well.", "Johann Sebastian Bach"],
+    ["Focus on the next right step.", ""],
+    ["I have not failed. I've just found 10,000 ways that won't work.", "Thomas Edison"],
+    ["The bamboo that bends is stronger than the oak that resists.", "Japanese proverb"],
+    ["Nothing great was ever achieved without enthusiasm.", "Ralph Waldo Emerson"],
+    ["Try not to become a man of success, but rather try to become a man of value.", "Albert Einstein"],
+    ["Energy and persistence conquer all things.", "Benjamin Franklin"],
+    ["Lost time is never found again.", "Benjamin Franklin"],
+    ["Knowledge is like a garden: if it is not cultivated, it cannot be harvested.", "Guinean proverb"],
+    ["Difficulties strengthen the mind, as labor does the body.", "Seneca"],
+    ["Small steps every day add up to big results.", ""],
+    ["The morning is wiser than the evening.", "Russian proverb"],
+    ["If I have seen further it is by standing on the shoulders of giants.", "Isaac Newton"],
+    ["Be proud of how far you've come.", ""],
+    ["No one saves us but ourselves.", "The Buddha"],
+    ["The shortest way to do many things is to do only one thing at once.", "Samuel Smiles"],
+    ["Perseverance is not a long race; it is many short races one after the other.", "Walter Elliot"],
+    ["Even monkeys fall from trees.", "Japanese proverb"],
+    ["When you arise in the morning, think of what a precious privilege it is to be alive.", "Marcus Aurelius"],
+    ["Pearls don't lie on the seashore. If you want one, you must dive for it.", "Chinese proverb"],
+    ["A little progress each day adds up to big results.", ""],
+    ["Don't break the chain.", ""],
+    ["Plough deep while sluggards sleep.", "Benjamin Franklin"],
+    ["Only the educated are free.", "Epictetus"],
+    ["First say to yourself what you would be; and then do what you have to do.", "Epictetus"],
+    ["The beginning is the most important part of the work.", "Plato"],
+    ["There is no substitute for hard work.", "Thomas Edison"],
+    ["The man who moves a mountain begins by carrying away small stones.", "Confucius"],
+    ["Begin at once to live.", "Seneca"],
+    ["Small wins are still wins.", ""],
+    ["Smooth seas do not make skillful sailors.", "African proverb"],
+    ["What would life be if we had no courage to attempt anything?", "Vincent van Gogh"],
+    ["Beginning is easy; continuing is hard.", "Japanese proverb"],
+    ["In the midst of chaos, there is also opportunity.", "Sun Tzu"],
+    ["Many drops make a sea.", "Korean proverb"],
+    ["If you are patient in one moment of anger, you will escape a hundred days of sorrow.", "Chinese proverb"],
+    ["Momentum is built one day at a time.", ""],
+    ["When spider webs unite, they can tie up a lion.", "Ethiopian proverb"],
+    ["Well begun is half done.", "Aristotle"],
+    ["Knowing is not enough; we must apply. Willing is not enough; we must do.", "Johann Wolfgang von Goethe"],
+    ["Motivation gets you started; habit keeps you going.", ""],
+    ["When one door closes, another opens.", "Alexander Graham Bell"],
+    ["The heights by great men reached and kept were not attained by sudden flight.", "Henry Wadsworth Longfellow"],
+    ["Start before you feel ready.", ""],
+    ["Courage is resistance to fear, mastery of fear, not absence of fear.", "Mark Twain"],
+    ["Example is not the main thing in influencing others, it is the only thing.", "Albert Schweitzer"],
+    ["Sweat the details; users feel them.", ""],
+    ["Great design is invisible until it's missing.", ""],
+    ["Everything has beauty, but not everyone sees it.", "Confucius"],
+    ["Even a stone will grow warm if you sit on it for three years.", "Japanese proverb"],
+    ["You are one decision away from a different life.", ""],
+    ["Where there is no vision, there is no hope.", "George Washington Carver"],
+    ["The most effective way to do it, is to do it.", "Amelia Earhart"],
+    ["He who is brave is free.", "Seneca"],
+    ["Examine what is said, not who is speaking.", "Arabic proverb"]
+  ];
+  var quoteDayShown = null;
+  function renderDailyQuote(){
+    var now = new Date();
+    var dayNumber = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+    if (dayNumber === quoteDayShown) return;
+    quoteDayShown = dayNumber;
+    var q = QUOTES[dayNumber % QUOTES.length];
+    currentQuote = ["\u201C" + q[0] + "\u201D", q[1] ? "\u2014 " + q[1] : ""];
+    animateQuote(currentQuote[0], currentQuote[1]);
+  }
+  var currentQuote = null;
+  // Replay today's quote animation every 15 seconds while the page is visible.
+  setInterval(function(){
+    if (currentQuote && !document.hidden) animateQuote(currentQuote[0], currentQuote[1]);
+  }, 15000);
+  // Accent bar grows down, the quote types itself out, then the author fades in.
+  var quoteTimer = null;
+  function animateQuote(text, author){
+    var box = document.getElementById("daily-quote");
+    var textEl = document.getElementById("daily-quote-text");
+    var by = document.getElementById("daily-quote-by");
+    by.textContent = author;
+    by.hidden = !author;
+    by.classList.remove("show");
+    if (quoteTimer) clearInterval(quoteTimer);
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce){
+      textEl.textContent = text;
+      box.classList.add("done");
+      by.classList.add("show");
+      return;
+    }
+    box.classList.remove("done");
+    box.classList.remove("play");
+    void box.offsetWidth; // restart the bar animation
+    box.classList.add("play");
+    // Reserve the final height so the page below doesn't jump while typing.
+    textEl.style.minHeight = "";
+    textEl.textContent = text;
+    textEl.style.minHeight = textEl.offsetHeight + "px";
+    textEl.textContent = "";
+    textEl.classList.add("typing");
+    var i = 0;
+    setTimeout(function(){
+      quoteTimer = setInterval(function(){
+        i++;
+        textEl.textContent = text.slice(0, i);
+        if (i >= text.length){
+          clearInterval(quoteTimer);
+          quoteTimer = null;
+          setTimeout(function(){ textEl.classList.remove("typing"); }, 1200);
+          by.classList.add("show");
+        }
+      }, 32);
+    }, 450);
+  }
+  renderDailyQuote();
+  // Swap at local midnight even if the page stays open.
+  setInterval(renderDailyQuote, 60000);
+
+  // --- weekly score ---
+  // Weeks run Monday to Sunday. A day counts as active when it has at least
+  // one commit; 5 active days = 100%, each active day is worth 20%.
+  var WEEK_TARGET = 5;
+  function weekStart(d){
+    var s = new Date(d); s.setHours(0,0,0,0);
+    s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
+    return s;
+  }
+  function weekScore(start){
+    var active = 0;
+    for (var i = 0; i < 7; i++){
+      var d = new Date(start); d.setDate(d.getDate() + i);
+      if (countsAsActive(d)) active++;
+    }
+    return { active: active, pct: Math.min(100, Math.round(active / WEEK_TARGET * 100)) };
+  }
+  function scoreTone(pct){ return pct >= 100 ? "full" : pct >= 60 ? "mid" : "low"; }
+  function shortDate(d){ return MONTHS[d.getMonth()] + " " + d.getDate(); }
+  var MONTH_TARGET = 20;
+  function setRing(prefix, label, score, target){
+    var pctEl = document.getElementById(prefix + "-pct");
+    pctEl.textContent = score.pct + "%";
+    pctEl.className = "week-pct";
+    var ring = document.getElementById(prefix + "-ring-fill");
+    // With pathLength=100 the dash length is the percentage; a 0% ring shows no arc.
+    ring.setAttribute("stroke-dasharray", score.pct + " 100");
+    ring.style.opacity = score.pct ? "1" : "0"; // a round cap would otherwise leave a dot at 0%
+    // Knob at the tip of the arc (the svg is rotated so 0% sits at 12 o'clock).
+    var knob = document.getElementById(prefix + "-ring-knob");
+    var angle = (score.pct / 100) * 2 * Math.PI;
+    knob.setAttribute("cx", (60 + 50 * Math.cos(angle)).toFixed(2));
+    knob.setAttribute("cy", (60 + 50 * Math.sin(angle)).toFixed(2));
+    knob.setAttribute("opacity", score.pct ? "1" : "0");
+    var ringTone = score.pct <= 40 ? "red" : score.pct < 80 ? "" : "green";
+    ring.setAttribute("class", "ring-fill " + ringTone);
+    knob.setAttribute("class", "ring-knob " + ringTone);
+    document.getElementById(prefix + "-ring").setAttribute("aria-label", label + " " + score.pct + "%");
+  }
+  function bonusNote(active, target){
+    var extra = active - target;
+    return extra > 0 ? " (+" + extra + " bonus day" + (extra === 1 ? "" : "s") + ")" : "";
+  }
+  // Month and quarter scores start on Oct 1, 2026; September isn't evaluated.
+  var PERIOD_START = new Date(2026, 9, 1);
+  function setNotStarted(prefix, label){
+    setRing(prefix, label, { active: 0, pct: 0 }, 1);
+    var pctEl = document.getElementById(prefix + "-pct");
+    pctEl.textContent = "\u2014";
+    var startLong = "Starts " + shortDate(PERIOD_START);
+    setDual(prefix + "-left", startLong, startLong);
+  }
+  function renderMonthly(today){
+    if (today < PERIOD_START){
+      setNotStarted("month", "Monthly score");
+      document.getElementById("month-meta").textContent = "This month";
+      setDual("month-range", "Not scored in Sep", "Not scored");
+      return;
+    }
+    var first = new Date(today.getFullYear(), today.getMonth(), 1);
+    var last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    var active = 0;
+    for (var d = new Date(first); d <= last; d.setDate(d.getDate() + 1)){
+      if (countsAsActive(d)) active++;
+    }
+    var score = { active: active, pct: Math.min(100, Math.round(active / MONTH_TARGET * 100)) };
+    setRing("month", "Monthly score", score, MONTH_TARGET);
+    document.getElementById("month-meta").textContent = "This month" + bonusNote(active, MONTH_TARGET);
+    var daysLeft = Math.round((last - today) / 86400000);
+    var needed = Math.max(0, MONTH_TARGET - active);
+    setDual("month-left",
+      needed === 0 ? "Target reached" : needed + " more to go · " + daysLeft + " day" + (daysLeft === 1 ? "" : "s") + " left",
+      needed === 0 ? "Done" : needed + " to go · " + daysLeft + "d left");
+    setDual("month-range", shortDate(first) + " – " + shortDate(last), rangeShort(first, last));
+  }
+  // Quarters follow the objective roadmap (Q1 is scored Oct–Dec 2026, then
+  // calendar quarters). Target = 20 active days per month in the quarter.
+  var QUARTERS = [
+    { label: "Q1", start: [2026, 9, 1], end: [2026, 11, 31] },
+    { label: "Q2", start: [2027, 0, 1], end: [2027, 2, 31] },
+    { label: "Q3", start: [2027, 3, 1], end: [2027, 5, 30] },
+    { label: "Q4", start: [2027, 6, 1], end: [2027, 8, 30] }
+  ];
+  function currentQuarter(today){
+    for (var i = 0; i < QUARTERS.length; i++){
+      var q = QUARTERS[i];
+      var a = new Date(q.start[0], q.start[1], q.start[2]);
+      var b = new Date(q.end[0], q.end[1], q.end[2]);
+      if (today >= a && today <= b) return { label: q.label, start: a, end: b };
+    }
+    var m = Math.floor(today.getMonth() / 3) * 3;
+    return { label: "Q" + (m / 3 + 1), start: new Date(today.getFullYear(), m, 1), end: new Date(today.getFullYear(), m + 3, 0) };
+  }
+  function renderQuarterly(today){
+    if (today < PERIOD_START){
+      setNotStarted("quarter", "Quarterly score");
+      document.getElementById("quarter-meta").textContent = "This quarter";
+      setDual("quarter-range", "Q1 \u00b7 Oct 1 \u2013 Dec 31", "Q1 \u00b7 Oct\u2013Dec");
+      return;
+    }
+    var q = currentQuarter(today);
+    var months = (q.end.getFullYear() - q.start.getFullYear()) * 12 + q.end.getMonth() - q.start.getMonth() + 1;
+    var target = MONTH_TARGET * months;
+    var active = 0;
+    for (var d = new Date(q.start); d <= q.end; d.setDate(d.getDate() + 1)){
+      if (countsAsActive(d)) active++;
+    }
+    var score = { active: active, pct: Math.min(100, Math.round(active / target * 100)) };
+    setRing("quarter", "Quarterly score", score, target);
+    document.getElementById("quarter-meta").textContent = "This quarter" + bonusNote(active, target);
+    var daysLeft = Math.round((q.end - today) / 86400000);
+    var needed = Math.max(0, target - active);
+    setDual("quarter-left",
+      needed === 0 ? "Target reached" : needed + " more to go · " + daysLeft + " day" + (daysLeft === 1 ? "" : "s") + " left",
+      needed === 0 ? "Done" : needed + " to go · " + daysLeft + "d left");
+    setDual("quarter-range", q.label + " · " + shortDate(q.start) + " – " + shortDate(q.end),
+      q.label + " · " + MONTHS[q.start.getMonth()] + "–" + MONTHS[q.end.getMonth()]);
+  }
+  function renderWeekly(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var start = weekStart(today);
+    var end = new Date(start); end.setDate(end.getDate() + 6);
+    var cur = weekScore(start);
+
+    setRing("week", "Weekly score", cur, WEEK_TARGET);
+    document.getElementById("week-meta").textContent = "This week" + bonusNote(cur.active, WEEK_TARGET);
+    setDual("week-range", shortDate(start) + " – " + shortDate(end), rangeShort(start, end));
+    renderMonthly(today);
+    renderQuarterly(today);
+
+    var weekDaysLeft = Math.round((end - today) / 86400000);
+    var weekNeeded = Math.max(0, WEEK_TARGET - cur.active);
+    setDual("week-left",
+      weekNeeded === 0 ? "Target reached" : weekNeeded + " more to go · " + weekDaysLeft + " day" + (weekDaysLeft === 1 ? "" : "s") + " left",
+      weekNeeded === 0 ? "Done" : weekNeeded + " to go · " + weekDaysLeft + "d left");
+
+  }
+
+  // Render a real starting state immediately (page-at-rest requirement).
+  renderApps(FALLBACK_APPS);
+  startCountdown(FALLBACK_COUNTDOWN_TARGET);
+  renderObjective(null);
+  renderHeatmap();
+  renderWeekly();
+
+  window.claude && window.claude.use && window.claude.use("db").then(function(db){
+    if (!db) return;
+    dbRef = db;
+
+    db.doc("dashboard/apps").onSnapshot(function(snap){
+      if (snap.exists) {
+        var data = snap.data();
+        if (data && Array.isArray(data.apps) && data.apps.length) {
+          renderApps(data.apps);
+        }
+      }
+    }, function(){ /* keep fallback on error */ });
+
+    db.doc("dashboard/countdown").get().then(function(snap){
+      if (snap.exists) {
+        var d = snap.data();
+        if (d && d.targetIso) startCountdown(d.targetIso);
+      }
+    }).catch(function(){ /* keep fallback countdown on error */ });
+
+    db.collection("contributions").limit(1000).onSnapshot(function(snap){
+      var next = {};
+      snap.docs.forEach(function(doc){ next[doc.id] = doc.data() || {}; });
+      heatData = next;
+      renderHeatmap();
+      renderWeekly();
+    }, function(){ /* keep last known heatmap on error */ });
+
+    db.doc("dashboard/objectives").onSnapshot(function(snap){
+      renderObjective(snap.exists ? snap.data() : null);
+    }, function(){ /* keep fallback objective on error */ });
+  }).catch(function(){ /* no db this view — static fallback stands */ });
+})();
+</script>
+
+</body></html>
