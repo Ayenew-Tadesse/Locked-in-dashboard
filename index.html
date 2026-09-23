@@ -305,7 +305,8 @@
   }
   .today-list .task-del:hover, .today-list .task-del:focus-visible{color:var(--red);background:var(--surface);outline:none;}
   .today-empty{font-size:13px;color:var(--ink-3);margin:0;}
-  .today-list input[type="checkbox"]:disabled{cursor:default;opacity:1;}
+  /* all checklists are ticked by Claude after verifying the work: read-only on the page */
+  .checklist input[type="checkbox"]:disabled{cursor:default;opacity:1;}
   .today-note{font-size:11.5px;color:var(--ink-3);margin:10px 0 0;line-height:1.45;}
   .today-add{display:flex;gap:8px;margin-top:10px;}
   .today-add input{
@@ -1297,7 +1298,7 @@
       '<span class="obj-panel-count">' + done + ' of ' + tasks.length + ' done</span></div>' +
       '<p class="obj-panel-goal">' + esc(p.text || "") + '</p>' +
       (tasks.length
-        ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul>'
+        ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul><p class="today-note">Ticked by Claude after the work is verified.</p>'
         : '<p class="modal-empty">Nothing logged for this quarter yet.</p>');
   }
 
@@ -1371,7 +1372,7 @@
     checklistEl.innerHTML = tasks.map(function(t){
       return (
         '<li class="' + (t.done ? "done" : "") + '">' +
-          '<input type="checkbox" data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + '>' +
+          '<input type="checkbox" disabled data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + (t.done ? ' (verified done)' : ' (not done yet)') + '">' +
           '<span class="task-text">' + esc(t.text) + '</span>' +
           (t.deadline ? '<span class="deadline-pill">' + esc(t.deadline) + '</span>' : "") +
         '</li>'
@@ -1423,7 +1424,7 @@
     return tasks.map(function(t){
       return (
         '<li class="' + (t.done ? "done" : "") + '">' +
-          '<input type="checkbox" data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + '>' +
+          '<input type="checkbox" disabled data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + (t.done ? ' (verified done)' : ' (not done yet)') + '">' +
           '<span class="task-text">' + esc(t.text) + '</span>' +
           (t.deadline ? '<span class="deadline-pill">' + esc(t.deadline) + '</span>' : "") +
         '</li>'
@@ -1439,7 +1440,7 @@
       '<h3 class="app-panel-name">' + esc(app.name || "") + '</h3>' +
       appDetailsHtml(app) +
       (tasks.length
-        ? '<ul class="checklist" id="app-panel-list">' + taskListHtml(tasks) + '</ul>'
+        ? '<ul class="checklist" id="app-panel-list">' + taskListHtml(tasks) + '</ul><p class="today-note">Ticked by Claude after the work is verified.</p>'
         : '<p class="modal-empty">Nothing logged here yet \u2014 tell Claude what\'s on deck and it\'ll show up here every time you visit.</p>');
     panel.hidden = false;
   }
