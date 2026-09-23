@@ -885,6 +885,7 @@
       align-items:start;
     }
     .dash-col-b{margin-top:0;}
+    .obj-section .eyebrow{margin-top:24px !important;}
     .dash-col-a{position:sticky;top:20px;}
     /* the left column is narrow: use the compact ring labels */
     .dash-col-a .lg{display:none;}
@@ -1087,17 +1088,17 @@
       <ul class="report-list next" id="report-next-list"></ul>
     </div>
   </section>
-  </div>
-  </div>
 
-
-
-  <div class="eyebrow" style="margin-top:32px">Objective</div>
+  <section class="obj-section" aria-labelledby="obj-heading">
+  <div class="eyebrow" id="obj-heading" style="margin-top:32px">Objective</div>
   <p class="lede" id="obj-text" style="margin-top:4px">Loading…</p>
   <div class="roadmap-card">
     <div class="obj-overall" id="obj-overall"></div>
     <ol class="obj-track" id="obj-track" role="tablist" aria-label="Quarters"></ol>
     <div class="obj-panel" id="obj-panel" role="tabpanel"></div>
+  </div>
+  </section>
+  </div>
   </div>
 
   <footer class="note" id="footnote">Shows only what's been shared in chat — nothing here is estimated or filled in.</footer>
