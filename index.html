@@ -209,7 +209,18 @@
     border-radius:12px;
     padding:16px 20px 18px;
   }
-  .today-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .today-head{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    width:100%;padding:0;margin:0;
+    background:none;border:none;text-align:left;
+    font:inherit;color:inherit;cursor:pointer;
+  }
+  .today-head > span:first-child{display:flex;flex-direction:column;}
+  .today-head:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px;}
+  .today-right{display:flex;align-items:center;gap:10px;}
+  .today-caret{font-size:12px;color:var(--ink-3);transition:transform .2s ease;}
+  .today-head[aria-expanded="true"] .today-caret{transform:rotate(180deg);color:var(--accent);}
+  .today-body{animation:panelDrop .22s ease-out;}
   .today-progress{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;}
   .today-bar{height:4px;border-radius:2px;background:var(--heat-0);margin:10px 0 12px;overflow:hidden;}
   .today-bar b{display:block;height:100%;width:0;background:var(--good);border-radius:2px;transition:width .3s ease;}
@@ -862,19 +873,24 @@
   </div>
 
   <section class="today-card" id="today-card" aria-labelledby="today-title">
-    <div class="today-head">
-      <div>
-        <div class="ring-title" id="today-title">Today's checklist</div>
-        <div class="week-range" id="today-date"></div>
-      </div>
-      <div class="today-progress" id="today-progress">0/0</div>
-    </div>
+    <button type="button" class="today-head" id="today-toggle" aria-expanded="false" aria-controls="today-body">
+      <span>
+        <span class="ring-title" id="today-title">Today's checklist</span>
+        <span class="week-range" id="today-date"></span>
+      </span>
+      <span class="today-right">
+        <span class="today-progress" id="today-progress">0/0</span>
+        <span class="today-caret" aria-hidden="true">&#9662;</span>
+      </span>
+    </button>
     <div class="today-bar" aria-hidden="true"><b id="today-bar"></b></div>
-    <ul class="checklist today-list" id="today-list"></ul>
-    <form class="today-add" id="today-add" autocomplete="off">
-      <input type="text" id="today-input" placeholder="Add a task for today…" aria-label="Add a task for today" maxlength="160">
-      <button type="submit">Add</button>
-    </form>
+    <div class="today-body" id="today-body" hidden>
+      <ul class="checklist today-list" id="today-list"></ul>
+      <form class="today-add" id="today-add" autocomplete="off">
+        <input type="text" id="today-input" placeholder="Add a task for today…" aria-label="Add a task for today" maxlength="160">
+        <button type="submit">Add</button>
+      </form>
+    </div>
   </section>
 
   <div class="heat-card" id="heat-card">
@@ -2045,6 +2061,12 @@
     var key = todayKeyNow();
     saveDaily(key, dailyTasks(key).concat([{ id: "u" + Date.now().toString(36), text: text, done: false }]));
     input.value = "";
+  });
+  document.getElementById("today-toggle").addEventListener("click", function(){
+    var body = document.getElementById("today-body");
+    var open = body.hidden;
+    body.hidden = !open;
+    this.setAttribute("aria-expanded", String(open));
   });
   renderToday();
   setInterval(function(){ // roll over to a fresh list at midnight
