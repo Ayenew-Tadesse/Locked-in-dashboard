@@ -235,6 +235,8 @@
   }
   .today-list .task-del:hover, .today-list .task-del:focus-visible{color:var(--red);background:var(--surface);outline:none;}
   .today-empty{font-size:13px;color:var(--ink-3);margin:0;}
+  .today-list input[type="checkbox"]:disabled{cursor:default;opacity:1;}
+  .today-note{font-size:11.5px;color:var(--ink-3);margin:10px 0 0;line-height:1.45;}
   .today-add{display:flex;gap:8px;margin-top:10px;}
   .today-add input{
     flex:1;min-width:0;
@@ -806,6 +808,9 @@
     .heat-legend .lbl{display:none;}
     .heat-arrow{width:24px;height:24px;font-size:14px;}
     .month-left{min-height:0;white-space:nowrap;font-size:11px;}
+    .ring-title{white-space:nowrap;font-size:12.5px;}
+    .week-pct{font-size:22px;}
+    .week-ring-col .week-range{font-size:10px;}
     .week-top{gap:6px;}
     .week-ring-col .week-range{white-space:nowrap;}
       .app-chip{padding:7px 10px 9px;font-size:12.5px;}
@@ -827,6 +832,21 @@
 
   <div class="week-card" id="week-card" style="margin-top:32px">
     <div class="week-top">
+      <div class="week-ring-col">
+      <div class="ring-title" id="day-meta">Today</div>
+      <div class="week-ring" role="img" id="day-ring" aria-label="Today's score 0%">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="ring-fill" id="day-ring-fill" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="0 100"></circle>
+          <circle class="ring-knob" id="day-ring-knob" cx="110" cy="60" r="3.5" opacity="0"></circle>
+        </svg>
+        <div class="week-ring-center">
+          <div class="week-pct" id="day-pct">0%</div>
+        </div>
+      </div>
+      <div class="month-left" id="day-left"></div>
+      <div class="week-range" id="day-range"></div>
+      </div>
       <div class="week-ring-col">
       <div class="ring-title" id="week-meta">This week</div>
       <div class="week-ring" role="img" id="week-ring" aria-label="Weekly score 0%">
@@ -889,7 +909,8 @@
     <div class="today-bar" aria-hidden="true"><b id="today-bar"></b></div>
     <div class="today-body" id="today-body" hidden>
       <ul class="checklist today-list" id="today-list"></ul>
-      <form class="today-add" id="today-add" autocomplete="off">
+      <p class="today-note">Tasks are ticked by Claude after the work is checked. The day counts toward your score only when every task is done.</p>
+    <form class="today-add" id="today-add" autocomplete="off">
         <input type="text" id="today-input" placeholder="Add a task for today…" aria-label="Add a task for today" maxlength="160">
         <button type="submit">Add</button>
       </form>
@@ -1324,10 +1345,16 @@
   var heatData = FALLBACK_CONTRIBUTIONS;
   // Activity tracking starts here: scores and missed days count from this date.
   var ACTIVITY_START = "2026-09-22";
+  // A day counts toward the scores only when its daily checklist exists and
+  // every task on it is done (Claude ticks tasks after checking the work).
+  function checklistComplete(key){
+    var day = dailyData[key];
+    var tasks = day && Array.isArray(day.tasks) ? day.tasks : [];
+    return tasks.length > 0 && tasks.every(function(t){ return t.done; });
+  }
   function countsAsActive(d){
     var key = isoDay(d);
-    var e = heatData[key];
-    return key >= ACTIVITY_START && !!(e && e.count);
+    return key >= ACTIVITY_START && checklistComplete(key);
   }
   var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -1374,17 +1401,25 @@
       } else {
         var entry = heatData[key];
         var n = entry && entry.count ? entry.count : 0;
-        total += n; if (n && key >= ACTIVITY_START) activeDays++;
-        var missed = !n && firstTracked && key >= firstTracked && key < todayKey;
-        cells.push('<i class="heat-cell l' + heatLevel(n) + (missed ? ' missed' : '') + '" data-day="' + key + '"></i>');
+        total += n;
+        var tracked = key >= firstTracked;
+        var complete = tracked && checklistComplete(key);
+        if (complete) activeDays++;
+        // Before tracking: shade by commits. Tracked: green only when the checklist is complete.
+        var level = !tracked ? heatLevel(n) : (complete ? Math.max(1, heatLevel(n)) : 0);
+        var missed = tracked && !complete && key < todayKey;
+        cells.push('<i class="heat-cell l' + level + (missed ? ' missed' : '') + '" data-day="' + key + '"></i>');
       }
       if (dow === 6) col++;
     }
     document.getElementById("heat-cells").innerHTML = cells.join("");
     document.getElementById("heat-months").innerHTML = months.join("");
 
+    // Streak of completed days, ending today (or yesterday while today is still open).
     var streak = 0;
-    for (var s = new Date(today); heatData[isoDay(s)] && heatData[isoDay(s)].count; s.setDate(s.getDate() - 1)) streak++;
+    var s = new Date(today);
+    if (!checklistComplete(isoDay(s))) s.setDate(s.getDate() - 1);
+    for (; isoDay(s) >= ACTIVITY_START && checklistComplete(isoDay(s)); s.setDate(s.getDate() - 1)) streak++;
     setDual("heat-streak",
       activeDays + " active day" + (activeDays === 1 ? "" : "s") + (streak ? " · " + streak + "-day streak" : ""),
       activeDays + " day" + (activeDays === 1 ? "" : "s") + (streak ? " · " + streak + "d streak" : ""));
@@ -1935,7 +1970,7 @@
   function renderMonthly(today){
     if (today < PERIOD_START){
       setNotStarted("month", "Monthly score");
-      document.getElementById("month-meta").textContent = "This month";
+      setDual("month-meta", "This month", "Month");
       setDual("month-range", "Not scored in Sep", "Not scored");
       return;
     }
@@ -1947,12 +1982,12 @@
     }
     var score = { active: active, pct: Math.min(100, Math.round(active / MONTH_TARGET * 100)) };
     setRing("month", "Monthly score", score, MONTH_TARGET);
-    document.getElementById("month-meta").textContent = "This month" + bonusNote(active, MONTH_TARGET);
+    setDual("month-meta", "This month" + bonusNote(active, MONTH_TARGET), "Month");
     var daysLeft = Math.round((last - today) / 86400000);
     var needed = Math.max(0, MONTH_TARGET - active);
     setDual("month-left",
       needed === 0 ? "Target reached" : needed + " more to go · " + daysLeft + " day" + (daysLeft === 1 ? "" : "s") + " left",
-      needed === 0 ? "Done" : needed + " to go · " + daysLeft + "d left");
+      needed === 0 ? "Done" : needed + " to go");
     setDual("month-range", shortDate(first) + " – " + shortDate(last), rangeShort(first, last));
   }
   // Quarters follow the objective roadmap (Q1 is scored Oct–Dec 2026, then
@@ -1976,8 +2011,8 @@
   function renderQuarterly(today){
     if (today < PERIOD_START){
       setNotStarted("quarter", "Quarterly score");
-      document.getElementById("quarter-meta").textContent = "This quarter";
-      setDual("quarter-range", "Q1 \u00b7 Oct 1 \u2013 Dec 31", "Q1 \u00b7 Oct\u2013Dec");
+      setDual("quarter-meta", "This quarter", "Quarter");
+      setDual("quarter-range", "Q1 \u00b7 Oct 1 \u2013 Dec 31", "Oct\u2013Dec");
       return;
     }
     var q = currentQuarter(today);
@@ -1989,14 +2024,27 @@
     }
     var score = { active: active, pct: Math.min(100, Math.round(active / target * 100)) };
     setRing("quarter", "Quarterly score", score, target);
-    document.getElementById("quarter-meta").textContent = "This quarter" + bonusNote(active, target);
+    setDual("quarter-meta", "This quarter" + bonusNote(active, target), "Quarter");
     var daysLeft = Math.round((q.end - today) / 86400000);
     var needed = Math.max(0, target - active);
     setDual("quarter-left",
       needed === 0 ? "Target reached" : needed + " more to go · " + daysLeft + " day" + (daysLeft === 1 ? "" : "s") + " left",
-      needed === 0 ? "Done" : needed + " to go · " + daysLeft + "d left");
+      needed === 0 ? "Done" : needed + " to go");
     setDual("quarter-range", q.label + " · " + shortDate(q.start) + " – " + shortDate(q.end),
-      q.label + " · " + MONTHS[q.start.getMonth()] + "–" + MONTHS[q.end.getMonth()]);
+      MONTHS[q.start.getMonth()] + "–" + MONTHS[q.end.getMonth()]);
+  }
+  // Today's score = share of today's checklist that's done.
+  function renderDaily(today){
+    var key = isoDay(today);
+    var tasks = dailyTasks(key);
+    var done = tasks.filter(function(t){ return t.done; }).length;
+    var pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+    setRing("day", "Today's score", { active: done, pct: pct }, tasks.length || 1);
+    var left = tasks.length - done;
+    setDual("day-left",
+      !tasks.length ? "No checklist yet" : left === 0 ? "Checklist complete" : left + " task" + (left === 1 ? "" : "s") + " left",
+      !tasks.length ? "No list" : left === 0 ? "Done" : left + " left");
+    setDual("day-range", done + " of " + tasks.length + " done", done + "/" + tasks.length);
   }
   function renderWeekly(){
     var today = new Date(); today.setHours(0,0,0,0);
@@ -2005,8 +2053,9 @@
     var cur = weekScore(start);
 
     setRing("week", "Weekly score", cur, WEEK_TARGET);
-    document.getElementById("week-meta").textContent = "This week" + bonusNote(cur.active, WEEK_TARGET);
+    setDual("week-meta", "This week" + bonusNote(cur.active, WEEK_TARGET), "Week");
     setDual("week-range", shortDate(start) + " – " + shortDate(end), rangeShort(start, end));
+    renderDaily(today);
     renderMonthly(today);
     renderQuarterly(today);
 
@@ -2014,7 +2063,7 @@
     var weekNeeded = Math.max(0, WEEK_TARGET - cur.active);
     setDual("week-left",
       weekNeeded === 0 ? "Target reached" : weekNeeded + " more to go · " + weekDaysLeft + " day" + (weekDaysLeft === 1 ? "" : "s") + " left",
-      weekNeeded === 0 ? "Done" : weekNeeded + " to go · " + weekDaysLeft + "d left");
+      weekNeeded === 0 ? "Done" : weekNeeded + " to go");
 
   }
 
@@ -2032,9 +2081,8 @@
     document.getElementById("today-list").innerHTML = tasks.length
       ? tasks.map(function(t){
           return '<li class="' + (t.done ? "done" : "") + '">' +
-            '<input type="checkbox" data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + '">' +
+            '<input type="checkbox" disabled' + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + (t.done ? ' (verified done)' : ' (not done yet)') + '">' +
             '<span class="task-text">' + esc(t.text) + '</span>' +
-            '<button type="button" class="task-del" data-del-id="' + esc(t.id) + '" aria-label="Remove task">&times;</button>' +
           '</li>';
         }).join("")
       : '<li class="today-empty" style="background:none;border:none;padding:0">No tasks yet — add one below.</li>';
@@ -2042,6 +2090,8 @@
   function saveDaily(key, tasks){
     dailyData[key] = { tasks: tasks };
     renderToday();
+    renderHeatmap();
+    renderWeekly();
     if (!document.getElementById("report-card").hidden) renderReport();
     if (dbRef) dbRef.doc("daily/" + key).set({ tasks: tasks }).catch(function(){ /* local state still shows the change */ });
   }
@@ -2097,9 +2147,9 @@
     document.getElementById("report-day").textContent =
       d.toLocaleDateString("en-US", { weekday:"long", month:"short", day:"numeric", year:"numeric" });
     var status = document.getElementById("report-status");
-    if (n){ status.textContent = "Active day"; status.className = "report-status active"; }
-    else if (reportDay === todayKey){ status.textContent = "No app work yet today"; status.className = "report-status idle"; }
-    else { status.textContent = "Missed day"; status.className = "report-status missed"; }
+    if (checklistComplete(reportDay)){ status.textContent = "Checklist complete \u00b7 counts"; status.className = "report-status active"; }
+    else if (reportDay === todayKey){ status.textContent = "Checklist in progress"; status.className = "report-status idle"; }
+    else { status.textContent = "Missed \u00b7 checklist not complete"; status.className = "report-status missed"; }
 
     // Week score as of this day (Mon through this day).
     var ws = weekStart(d), weekActive = 0;
@@ -2184,6 +2234,8 @@
       snap.docs.forEach(function(doc){ next[doc.id] = doc.data() || {}; });
       dailyData = next;
       renderToday();
+      renderHeatmap();
+      renderWeekly();
       if (!document.getElementById("report-card").hidden) renderReport();
     }, function(){ /* keep the built-in lists on error */ });
 
