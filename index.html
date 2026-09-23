@@ -1543,6 +1543,46 @@
   heatCellsEl.addEventListener("mouseleave", function(){ heatTip.hidden = true; });
   document.getElementById("heat-scroll").addEventListener("scroll", function(){ heatTip.hidden = true; updateHeatNav(); });
 
+  // --- greeting: time of day, journey progress, and a nudge based on today ---
+  var JOURNEY_END = new Date(2027, 8, 23); // countdown target day
+  function renderGreeting(){
+    var now = new Date();
+    var h = now.getHours();
+    var hello = h < 5 ? "Still up," : h < 12 ? "Good morning," : h < 17 ? "Good afternoon," : "Good evening,";
+    document.getElementById("greet-hello").textContent = hello;
+
+    var today = new Date(now); today.setHours(0,0,0,0);
+    var start = dayFromKey(ACTIVITY_START);
+    var dayNo = Math.max(1, Math.round((today - start) / 86400000) + 1);
+    var totalDays = Math.round((JOURNEY_END - start) / 86400000) + 1;
+    var left = Math.max(0, Math.round((JOURNEY_END - today) / 86400000));
+    document.getElementById("greet-journey").innerHTML =
+      'Day <b>' + dayNo + '</b> of ' + totalDays + '<span class="sep" aria-hidden="true"></span><b>' + left + '</b> days to go';
+
+    var key = isoDay(today);
+    var tasks = dailyTasks(key);
+    var done = tasks.filter(function(t){ return t.done; }).length;
+    var remaining = tasks.length - done;
+
+    var streak = 0;
+    var sd = new Date(today);
+    if (!checklistComplete(isoDay(sd))) sd.setDate(sd.getDate() - 1);
+    for (; isoDay(sd) >= ACTIVITY_START && checklistComplete(isoDay(sd)); sd.setDate(sd.getDate() - 1)) streak++;
+
+    var line;
+    if (!tasks.length){
+      line = "A new day on the journey. Set today's checklist and lock in — every finished day moves Guxo Flights, Guxo and Gexi forward.";
+    } else if (remaining === 0){
+      line = "Today's checklist is done. <strong>" + (streak > 1 ? streak + " days in a row" : "One more day") + "</strong> closer to shipping the network — rest up and go again tomorrow.";
+    } else if (done === 0){
+      line = "<strong>" + remaining + " task" + (remaining === 1 ? "" : "s") + "</strong> on today's list. Start with the first one — momentum does the rest.";
+    } else {
+      line = "Good progress — <strong>" + remaining + " task" + (remaining === 1 ? "" : "s") + " left</strong> today. Finish strong" +
+        (streak ? " and keep your " + streak + "-day streak alive." : " and make today count.");
+    }
+    document.getElementById("greet-line").innerHTML = line;
+  }
+
   // --- quote of the day ---
   // 365 quotes, one per day: a new one each local calendar day, and the
   // full list plays through once before any quote repeats.
