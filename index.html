@@ -1,8 +1,8 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Aye-Noow's Locked in</title>
 <style>
-  /* Committed single look: light ground, dark text — same for every viewer,
-     regardless of system or in-app theme. */
+  /* Light by default; the sun/moon button switches to the dark set below.
+     The choice is remembered per browser. */
   :root{
     --bg:#F4F6FA;
     --surface:#FFFFFF;
@@ -29,6 +29,55 @@
     --miss:#F1B5B5;
     color-scheme:light;
   }
+  :root[data-theme="dark"]{
+    --bg:#0B1526;
+    --surface:#122036;
+    --surface-2:#182A47;
+    --ink:#F0F3FA;
+    --ink-2:#AAB6CC;
+    --ink-3:#7C88A3;
+    --line:#25385C;
+    --accent:#6EA3F2;
+    --accent-soft:#1D3B66;
+    --good:#4FCE9A;
+    --good-soft:#163A2C;
+    --warn:#E4AC4C;
+    --warn-soft:#3D2F14;
+    --idle:#8C97AF;
+    --idle-soft:#1B2A45;
+    --heat-0:#16243D;
+    --heat-1:#1C4A3A;
+    --heat-2:#23735A;
+    --heat-3:#34A07A;
+    --heat-4:#4FCE9A;
+    --orange:#F59A3C;
+    --red:#E46464;
+    --miss:#5B2A33;
+    color-scheme:dark;
+  }
+  /* theme switch */
+  .wrap{position:relative;}
+  .theme-toggle{
+    position:absolute;
+    top:0;
+    right:0;
+    width:36px;
+    height:36px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--surface);
+    color:var(--ink-2);
+    cursor:pointer;
+    padding:0;
+  }
+  .theme-toggle:hover, .theme-toggle:focus-visible{color:var(--ink);border-color:var(--accent);outline:none;}
+  .theme-toggle svg{width:18px;height:18px;}
+  .theme-toggle .moon{display:none;}
+  :root[data-theme="dark"] .theme-toggle .sun{display:none;}
+  :root[data-theme="dark"] .theme-toggle .moon{display:block;}
 
   *{box-sizing:border-box;}
   body{
@@ -826,6 +875,10 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 
 <div class="wrap">
+  <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">
+    <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
   <p class="welcome">Welcome back</p>
   <h1>Aye'</h1>
   <blockquote class="daily-quote" id="daily-quote" aria-label="Quote of the day">
@@ -1486,6 +1539,24 @@
   });
   heatCellsEl.addEventListener("mouseleave", function(){ heatTip.hidden = true; });
   document.getElementById("heat-scroll").addEventListener("scroll", function(){ heatTip.hidden = true; updateHeatNav(); });
+
+  // --- light / dark switch (remembered per browser) ---
+  function applyTheme(theme){
+    if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
+    var btn = document.getElementById("theme-toggle");
+    var label = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+  }
+  var savedTheme = null;
+  try { savedTheme = localStorage.getItem("locked-in-theme"); } catch (e) { /* storage blocked */ }
+  applyTheme(savedTheme === "dark" ? "dark" : "light");
+  document.getElementById("theme-toggle").addEventListener("click", function(){
+    var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem("locked-in-theme", next); } catch (e) { /* storage blocked */ }
+  });
 
   // --- quote of the day ---
   // 365 quotes, one per day: a new one each local calendar day, and the
