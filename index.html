@@ -384,6 +384,9 @@
   .ring-fill{fill:none;stroke:var(--orange);stroke-width:3;stroke-linecap:round;transition:stroke-dasharray .5s ease;}
   /* score tone: <=40% red, below 80% orange, 80% and up green */
   .ring-fill.red, .ring-knob.red{stroke:var(--red);}
+  .week-pct.red{color:var(--red);}
+  .week-pct.orange{color:var(--orange);}
+  .week-pct.green{color:var(--good);}
   .ring-fill.green, .ring-knob.green{stroke:var(--good);}
   .week-ring-center{
     position:absolute;inset:0;
@@ -1952,6 +1955,7 @@
     var ringTone = score.pct <= 40 ? "red" : score.pct < 80 ? "" : "green";
     ring.setAttribute("class", "ring-fill " + ringTone);
     knob.setAttribute("class", "ring-knob " + ringTone);
+    pctEl.className = "week-pct " + (ringTone || "orange"); // number matches the arc colour
     document.getElementById(prefix + "-ring").setAttribute("aria-label", label + " " + score.pct + "%");
   }
   function bonusNote(active, target){
@@ -1964,6 +1968,7 @@
     setRing(prefix, label, { active: 0, pct: 0 }, 1);
     var pctEl = document.getElementById(prefix + "-pct");
     pctEl.textContent = "\u2014";
+    pctEl.className = "week-pct"; // not scored yet: neutral
     var startLong = "Starts " + shortDate(PERIOD_START);
     setDual(prefix + "-left", startLong, startLong);
   }
