@@ -447,7 +447,7 @@
   .heat-card{position:relative;}
   .ring-title{font-size:13px;font-weight:600;color:var(--ink);}
   .month-left{font-size:12px;line-height:1.35;color:var(--ink-2);min-height:32px;display:flex;align-items:center;justify-content:center;}
-  .week-ring{position:relative;width:100%;max-width:132px;aspect-ratio:1;}
+  .week-ring{position:relative;width:100%;max-width:132px;aspect-ratio:1;container-type:inline-size;}
   .week-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
   .ring-track{fill:none;stroke:var(--heat-0);stroke-width:3;}
   .ring-knob{fill:var(--surface);stroke:var(--orange);stroke-width:2;}
@@ -467,6 +467,7 @@
     font-family:'Big Shoulders Display', sans-serif;
     font-weight:800;
     font-size:clamp(26px,8vw,40px);
+    font-size:27cqi; /* scale with the ring itself, whatever the screen size */
     line-height:.9;
     color:var(--ink);
     font-variant-numeric:tabular-nums;
@@ -889,6 +890,9 @@
     .dash-col-a .sm{display:inline;}
     .dash-col-a .month-left{white-space:nowrap;font-size:11.5px;min-height:0;}
     .dash-col-a .week-ring-col .week-range{white-space:nowrap;font-size:10.5px;}
+    /* 2x2 rings in the left column so each circle (and its number) stays large */
+    .dash-col-a .week-top{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));column-gap:12px;row-gap:22px;}
+    .dash-col-a .week-ring{max-width:124px;}
     h1{font-size:72px;}
     .greet-line{font-size:16px;}
     .daily-quote{max-width:70ch;}
@@ -910,7 +914,6 @@
     .heat-arrow{width:24px;height:24px;font-size:14px;}
     .month-left{min-height:0;white-space:nowrap;font-size:11px;}
     .ring-title{white-space:nowrap;font-size:12.5px;}
-    .week-pct{font-size:22px;}
     .week-ring-col .week-range{font-size:10px;}
     .week-top{gap:6px;}
     .week-ring-col .week-range{white-space:nowrap;}
