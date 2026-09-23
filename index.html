@@ -137,6 +137,56 @@
   }
 
   /* objectives / roadmap */
+  /* objective timeline */
+  .obj-overall{display:flex;align-items:center;gap:12px;padding:16px 0 4px;}
+  .obj-overall .bar{flex:1;height:6px;border-radius:3px;background:var(--heat-0);overflow:hidden;}
+  .obj-overall .bar b{display:block;height:100%;border-radius:3px;background:var(--good);transition:width .6s ease;}
+  .obj-overall .lbl{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:11px;letter-spacing:.06em;color:var(--ink-3);white-space:nowrap;}
+  .obj-overall .lbl b{color:var(--ink);font-weight:500;}
+  .obj-track{
+    list-style:none;margin:0;padding:16px 0 4px;
+    display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:10px;
+    position:relative;
+  }
+  .obj-track::before{ /* connecting line behind the dots */
+    content:"";position:absolute;left:12%;right:12%;top:27px;height:2px;background:var(--line);
+  }
+  .obj-step{position:relative;}
+  .obj-step button{
+    width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:0 6px 12px;border:none;background:none;cursor:pointer;
+    font:inherit;color:var(--ink-2);text-align:center;border-radius:10px;
+  }
+  .obj-step button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .obj-dot{
+    width:24px;height:24px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--surface);border:2px solid var(--line);
+    font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:10px;color:var(--ink-3);
+    position:relative;z-index:1;transition:transform .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .obj-step.now .obj-dot{border-color:var(--orange);color:var(--orange);box-shadow:0 0 0 4px color-mix(in srgb, var(--orange) 18%, transparent);}
+  .obj-step.done .obj-dot{border-color:var(--good);background:var(--good);color:var(--surface);}
+  .obj-step button[aria-selected="true"] .obj-dot{transform:scale(1.15);}
+  .obj-q{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:11px;letter-spacing:.06em;color:var(--ink);font-weight:500;}
+  .obj-months{font-size:11.5px;color:var(--ink-3);}
+  .obj-mini{width:70%;height:3px;border-radius:2px;background:var(--heat-0);overflow:hidden;margin-top:2px;}
+  .obj-mini b{display:block;height:100%;background:var(--good);}
+  .obj-badge{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;}
+  .obj-badge.now{background:color-mix(in srgb, var(--orange) 18%, transparent);color:var(--orange);}
+  .obj-badge.done{background:var(--good-soft);color:var(--good);}
+  .obj-badge.next{background:var(--idle-soft);color:var(--ink-3);}
+  .obj-step button[aria-selected="true"]{background:var(--surface-2);}
+  .obj-panel{border-top:1px solid var(--line);padding:16px 0 18px;animation:panelDrop .22s ease-out;}
+  .obj-panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+  .obj-panel-title{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:24px;line-height:1;margin:0;color:var(--ink);}
+  .obj-panel-count{font-size:12px;color:var(--ink-3);}
+  .obj-panel-goal{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px;}
+  @media (max-width:520px){
+    .obj-track{grid-template-columns:repeat(4, minmax(0,1fr));gap:4px;}
+    .obj-months, .obj-badge{display:none;}
+    .obj-mini{width:80%;}
+  }
   .roadmap-card{
     margin-top:14px;
     background:var(--surface);
@@ -1041,7 +1091,9 @@
   <div class="eyebrow" style="margin-top:32px">Objective</div>
   <p class="lede" id="obj-text" style="margin-top:4px">Loading…</p>
   <div class="roadmap-card">
-    <ol class="phases" id="obj-phases"></ol>
+    <div class="obj-overall" id="obj-overall"></div>
+    <ol class="obj-track" id="obj-track" role="tablist" aria-label="Quarters"></ol>
+    <div class="obj-panel" id="obj-panel" role="tabpanel"></div>
   </div>
 
   <footer class="note" id="footnote">Shows only what's been shared in chat — nothing here is estimated or filled in.</footer>
@@ -1182,19 +1234,68 @@
     ]
   };
 
+  // Objective timeline: each quarter is a step; the current one is marked
+  // "Now", and clicking a step opens its goal and checklist underneath.
+  var objData = null, objOpenId = null;
+  var OBJ_RANGES = { q1: [[2026,8,1],[2026,11,31]], q2: [[2027,0,1],[2027,2,31]], q3: [[2027,3,1],[2027,5,30]], q4: [[2027,6,1],[2027,8,30]] };
+  function objStatus(qid){
+    var r = OBJ_RANGES[qid]; if (!r) return "next";
+    var today = new Date(); today.setHours(0,0,0,0);
+    var a = new Date(r[0][0], r[0][1], r[0][2]), b = new Date(r[1][0], r[1][1], r[1][2]);
+    if (today > b) return "done";
+    if (today >= a) return "now";
+    return "next";
+  }
+  function objTasks(qid){ return checklistCache[qid] || []; }
   function renderObjective(data){
-    var obj = data && data.objective ? data : FALLBACK_OBJECTIVE;
+    if (data !== undefined) objData = data && data.objective ? data : FALLBACK_OBJECTIVE;
+    var obj = objData || FALLBACK_OBJECTIVE;
     document.getElementById("obj-text").textContent = obj.objective;
-    document.getElementById("obj-phases").innerHTML = (obj.phases || []).map(function(p, i){
+    var phases = obj.phases || [];
+    if (!objOpenId){
+      var cur = phases.filter(function(p, i){ return objStatus(p.id || ("q" + (i + 1))) === "now"; })[0];
+      objOpenId = cur ? (cur.id || "q1") : (phases[0] && (phases[0].id || "q1"));
+    }
+    var allDone = 0, allTotal = 0;
+    document.getElementById("obj-track").innerHTML = phases.map(function(p, i){
       var qid = p.id || ("q" + (i + 1));
-      return (
-        '<li data-quarter-id="' + esc(qid) + '" data-quarter-label="' + esc(p.tag) + '" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open breakdown for ' + esc(p.tag) + '">' +
-          '<span class="phase-tag">' + esc(p.tag) + '</span>' +
-          '<span class="phase-text">' + esc(p.text) + '</span>' +
-          '<span class="phase-arrow" aria-hidden="true">&#8250;</span>' +
-        '</li>'
-      );
+      var st = objStatus(qid);
+      var tasks = objTasks(qid), done = tasks.filter(function(t){ return t.done; }).length;
+      allDone += done; allTotal += tasks.length;
+      var parts = (p.tag || "").split("\u00b7");
+      var qLabel = (parts[0] || ("Q" + (i + 1))).trim(), months = (parts[1] || "").trim();
+      var pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+      return '<li class="obj-step ' + st + '">' +
+        '<button type="button" role="tab" data-qid="' + esc(qid) + '" aria-selected="' + (qid === objOpenId) + '" aria-controls="obj-panel">' +
+          '<span class="obj-dot">' + (st === "done" ? "\u2713" : (i + 1)) + '</span>' +
+          '<span class="obj-q">' + esc(qLabel) + '</span>' +
+          '<span class="obj-months">' + esc(months) + '</span>' +
+          '<span class="obj-badge ' + st + '">' + (st === "now" ? "Now" : st === "done" ? "Done" : "Up next") + '</span>' +
+          '<span class="obj-mini" aria-hidden="true"><b style="width:' + pct + '%"></b></span>' +
+        '</button></li>';
     }).join("");
+    var allPct = allTotal ? Math.round(allDone / allTotal * 100) : 0;
+    document.getElementById("obj-overall").innerHTML =
+      '<span class="bar" aria-hidden="true"><b style="width:' + allPct + '%"></b></span>' +
+      '<span class="lbl"><b>' + allDone + '/' + allTotal + '</b> roadmap tasks \u00b7 ' + allPct + '%</span>';
+    renderObjPanel();
+  }
+  function renderObjPanel(){
+    var obj = objData || FALLBACK_OBJECTIVE;
+    var phases = obj.phases || [];
+    var idx = -1;
+    phases.forEach(function(p, i){ if ((p.id || ("q" + (i + 1))) === objOpenId) idx = i; });
+    var panel = document.getElementById("obj-panel");
+    if (idx < 0){ panel.innerHTML = ""; return; }
+    var p = phases[idx], tasks = objTasks(objOpenId);
+    var done = tasks.filter(function(t){ return t.done; }).length;
+    panel.innerHTML =
+      '<div class="obj-panel-head"><h3 class="obj-panel-title">' + esc(p.tag || "") + '</h3>' +
+      '<span class="obj-panel-count">' + done + ' of ' + tasks.length + ' done</span></div>' +
+      '<p class="obj-panel-goal">' + esc(p.text || "") + '</p>' +
+      (tasks.length
+        ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul>'
+        : '<p class="modal-empty">Nothing logged for this quarter yet.</p>');
   }
 
   var FALLBACK_COUNTDOWN_TARGET = "2027-09-23T05:58:33Z";
@@ -1368,17 +1469,30 @@
     renderAppPanel();
     if (dbRef) dbRef.doc("checklists/" + id).set({ tasks: tasks }).catch(function(){ /* local state still reflects the tap */ });
   });
-  document.getElementById("obj-phases").addEventListener("click", function(e){
-    var row = e.target.closest("li[data-quarter-id]");
-    if (!row) return;
-    openChecklist(row.dataset.quarterId, row.dataset.quarterLabel, "Quarter breakdown");
+  document.getElementById("obj-track").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-qid]");
+    if (!btn) return;
+    objOpenId = btn.dataset.qid;
+    renderObjective();
   });
-  document.getElementById("obj-phases").addEventListener("keydown", function(e){
-    if (e.key !== "Enter" && e.key !== " ") return;
-    var row = e.target.closest("li[data-quarter-id]");
-    if (!row) return;
+  document.getElementById("obj-track").addEventListener("keydown", function(e){
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    var btns = [].slice.call(this.querySelectorAll("button[data-qid]"));
+    var i = btns.indexOf(document.activeElement);
+    if (i < 0) return;
     e.preventDefault();
-    openChecklist(row.dataset.quarterId, row.dataset.quarterLabel, "Quarter breakdown");
+    var next = btns[(i + (e.key === "ArrowRight" ? 1 : btns.length - 1)) % btns.length];
+    objOpenId = next.dataset.qid;
+    renderObjective();
+    document.querySelector('#obj-track button[data-qid="' + objOpenId + '"]').focus();
+  });
+  document.getElementById("obj-panel").addEventListener("change", function(e){
+    if (!e.target.matches('input[type="checkbox"]') || !objOpenId) return;
+    var id = objOpenId, taskId = e.target.getAttribute("data-task-id");
+    var tasks = objTasks(id).map(function(t){ return t.id === taskId ? Object.assign({}, t, { done: e.target.checked }) : t; });
+    checklistCache[id] = tasks;
+    renderObjective();
+    if (dbRef) dbRef.doc("checklists/" + id).set({ tasks: tasks }).catch(function(){ /* local state still reflects the tap */ });
   });
   document.getElementById("modal-close").addEventListener("click", closeChecklist);
   backdropEl.addEventListener("click", function(e){
@@ -2393,6 +2507,14 @@
     db.doc("dashboard/objectives").onSnapshot(function(snap){
       renderObjective(snap.exists ? snap.data() : null);
     }, function(){ /* keep fallback objective on error */ });
+    ["q1","q2","q3","q4"].forEach(function(qid){
+      db.doc("checklists/" + qid).onSnapshot(function(snap){
+        if (snap.exists && snap.data() && Array.isArray(snap.data().tasks)){
+          checklistCache[qid] = snap.data().tasks;
+          renderObjective();
+        }
+      }, function(){ /* keep the built-in checklist */ });
+    });
   }).catch(function(){ /* no db this view — static fallback stands */ });
 })();
 </script>
