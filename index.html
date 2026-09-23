@@ -380,8 +380,8 @@
   .week-ring{position:relative;width:100%;max-width:132px;aspect-ratio:1;}
   .week-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
   .ring-track{fill:none;stroke:var(--heat-0);stroke-width:3;}
-  .ring-knob{fill:var(--surface);stroke:var(--orange);stroke-width:2;transition:cx .5s ease, cy .5s ease;}
-  .ring-fill{fill:none;stroke:var(--orange);stroke-width:3;stroke-linecap:round;transition:stroke-dasharray .5s ease;}
+  .ring-knob{fill:var(--surface);stroke:var(--orange);stroke-width:2;}
+  .ring-fill{fill:none;stroke:var(--orange);stroke-width:3;stroke-linecap:round;}
   /* score tone: <=40% red, below 80% orange, 80% and up green */
   .ring-fill.red, .ring-knob.red{stroke:var(--red);}
   .week-pct.red{color:var(--red);}
@@ -1938,25 +1938,54 @@
   function scoreTone(pct){ return pct >= 100 ? "full" : pct >= 60 ? "mid" : "low"; }
   function shortDate(d){ return MONTHS[d.getMonth()] + " " + d.getDate(); }
   var MONTH_TARGET = 20;
-  function setRing(prefix, label, score, target){
-    var pctEl = document.getElementById(prefix + "-pct");
-    pctEl.textContent = score.pct + "%";
-    pctEl.className = "week-pct";
+  // Rings animate from where they were to the new score: the arc grows, the
+  // tip dot travels along it, and the number counts up, all in step.
+  var ringShown = {};   // prefix -> value currently drawn
+  var ringAnim = {};    // prefix -> requestAnimationFrame id
+  function drawRing(prefix, v){
     var ring = document.getElementById(prefix + "-ring-fill");
-    // With pathLength=100 the dash length is the percentage; a 0% ring shows no arc.
-    ring.setAttribute("stroke-dasharray", score.pct + " 100");
-    ring.style.opacity = score.pct ? "1" : "0"; // a round cap would otherwise leave a dot at 0%
-    // Knob at the tip of the arc (the svg is rotated so 0% sits at 12 o'clock).
     var knob = document.getElementById(prefix + "-ring-knob");
-    var angle = (score.pct / 100) * 2 * Math.PI;
+    ring.setAttribute("stroke-dasharray", v.toFixed(2) + " 100");
+    ring.style.opacity = v > 0.05 ? "1" : "0"; // a round cap would otherwise leave a dot at 0%
+    // The svg is rotated so 0% sits at 12 o'clock.
+    var angle = (v / 100) * 2 * Math.PI;
     knob.setAttribute("cx", (60 + 50 * Math.cos(angle)).toFixed(2));
     knob.setAttribute("cy", (60 + 50 * Math.sin(angle)).toFixed(2));
-    knob.setAttribute("opacity", score.pct ? "1" : "0");
+    knob.setAttribute("opacity", v > 0.05 ? "1" : "0");
+  }
+  function setRing(prefix, label, score, target){
+    var pctEl = document.getElementById(prefix + "-pct");
+    var ring = document.getElementById(prefix + "-ring-fill");
+    var knob = document.getElementById(prefix + "-ring-knob");
     var ringTone = score.pct <= 40 ? "red" : score.pct < 80 ? "" : "green";
     ring.setAttribute("class", "ring-fill " + ringTone);
     knob.setAttribute("class", "ring-knob " + ringTone);
     pctEl.className = "week-pct " + (ringTone || "orange"); // number matches the arc colour
     document.getElementById(prefix + "-ring").setAttribute("aria-label", label + " " + score.pct + "%");
+
+    var from = ringShown[prefix] || 0, to = score.pct;
+    if (ringAnim[prefix]) cancelAnimationFrame(ringAnim[prefix]);
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || from === to){
+      ringShown[prefix] = to;
+      drawRing(prefix, to);
+      pctEl.textContent = to + "%";
+      return;
+    }
+    var duration = 700 + Math.abs(to - from) * 9; // longer trips take a little longer
+    var start = null;
+    function step(ts){
+      if (start === null) start = ts;
+      var t = Math.min(1, (ts - start) / duration);
+      var eased = 1 - Math.pow(1 - t, 3); // ease-out
+      var v = from + (to - from) * eased;
+      ringShown[prefix] = v;
+      drawRing(prefix, v);
+      pctEl.textContent = Math.round(v) + "%";
+      if (t < 1) ringAnim[prefix] = requestAnimationFrame(step);
+      else { ringShown[prefix] = to; pctEl.textContent = to + "%"; ringAnim[prefix] = null; }
+    }
+    ringAnim[prefix] = requestAnimationFrame(step);
   }
   function bonusNote(active, target){
     var extra = active - target;
