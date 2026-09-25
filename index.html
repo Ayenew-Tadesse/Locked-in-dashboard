@@ -286,6 +286,8 @@
     font:inherit;color:inherit;cursor:pointer;
   }
   .today-head > span:first-child{display:flex;flex-direction:column;}
+  .today-top{display:flex;align-items:center;gap:10px;}
+  .today-top .today-head{flex:1;min-width:0;}
   .today-head:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px;}
   .today-right{display:flex;align-items:center;gap:10px;}
   .today-caret{font-size:12px;color:var(--ink-3);transition:transform .2s ease;}
@@ -887,6 +889,7 @@
     .dash-col-b{margin-top:0;}
     .obj-section .eyebrow{margin-top:24px !important;}
     .dash-col-a{position:sticky;top:20px;}
+    .dash-col-a.report-open{position:static;} /* a long report must stay scrollable */
     /* the left column is narrow: use the compact ring labels */
     .dash-col-a .lg{display:none;}
     .dash-col-a .sm{display:inline;}
@@ -1006,6 +1009,7 @@
   </div>
 
   <section class="today-card" id="today-card" aria-labelledby="today-title">
+    <div class="today-top">
     <button type="button" class="today-head" id="today-toggle" aria-expanded="false" aria-controls="today-body">
       <span>
         <span class="ring-title" id="today-title">Today's checklist</span>
@@ -1016,6 +1020,8 @@
         <span class="today-caret" aria-hidden="true">&#9662;</span>
       </span>
     </button>
+    <button type="button" class="report-btn" id="report-btn" aria-expanded="false" aria-controls="report-card">Daily report</button>
+    </div>
     <div class="today-bar" aria-hidden="true"><b id="today-bar"></b></div>
     <div class="today-body" id="today-body" hidden>
       <ul class="checklist today-list" id="today-list"></ul>
@@ -1026,43 +1032,6 @@
       </form>
     </div>
   </section>
-
-  </div>
-  <div class="dash-col dash-col-b">
-  <div class="heat-card" id="heat-card">
-    <div class="heat-head">
-      <div class="cd-pin" role="timer" aria-label="Year countdown">
-        <div class="cd-pin-label">Countdown <span id="cd-target">…</span></div>
-        <div class="cd-pin-row">
-          <span class="cd-num idle" id="cd-y">—</span><i>y</i>
-          <span class="cd-num idle" id="cd-mo">—</span><i>m</i>
-          <span class="cd-num idle" id="cd-d">—</span><i>d</i>
-          <span class="cd-sep"></span>
-          <span class="cd-num idle" id="cd-h">—</span><b>:</b><span class="cd-num idle" id="cd-mi">—</span><b>:</b><span class="cd-num idle" id="cd-s">—</span>
-        </div>
-      </div>
-      <button type="button" class="report-btn" id="report-btn" aria-expanded="false" aria-controls="report-card">Daily report</button>
-    </div>
-    <div class="heat-scroll" id="heat-scroll">
-      <div class="heat-grid">
-        <div></div>
-        <div class="heat-months" id="heat-months"></div>
-        <div class="heat-days" aria-hidden="true"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div>
-        <div class="heat-cells" id="heat-cells" role="img" aria-label="Commit activity over the last year"></div>
-      </div>
-    </div>
-    <div class="heat-foot">
-      <span id="heat-streak"></span>
-      <span class="heat-nav" id="heat-nav" hidden>
-        <button type="button" class="heat-arrow" id="heat-prev" aria-label="Show earlier months">&#8249;</button>
-        <button type="button" class="heat-arrow" id="heat-next" aria-label="Show later months">&#8250;</button>
-      </span>
-      <span class="heat-legend" aria-hidden="true"><span class="lbl">Less</span><i class="heat-cell"></i><i class="heat-cell l1"></i><i class="heat-cell l2"></i><i class="heat-cell l3"></i><i class="heat-cell l4"></i><span class="lbl">More</span></span>
-    </div>
-    <div class="app-chips" id="app-chips" role="list" aria-label="Apps"></div>
-    <div class="app-panel" id="app-panel" hidden></div>
-  </div>
-  <div class="heat-tip" id="heat-tip" hidden></div>
 
   <section class="report-card" id="report-card" hidden aria-label="Daily report">
     <div class="report-nav">
@@ -1088,6 +1057,43 @@
       <ul class="report-list next" id="report-next-list"></ul>
     </div>
   </section>
+
+  </div>
+  <div class="dash-col dash-col-b">
+  <div class="heat-card" id="heat-card">
+    <div class="heat-head">
+      <div class="cd-pin" role="timer" aria-label="Year countdown">
+        <div class="cd-pin-label">Countdown <span id="cd-target">…</span></div>
+        <div class="cd-pin-row">
+          <span class="cd-num idle" id="cd-y">—</span><i>y</i>
+          <span class="cd-num idle" id="cd-mo">—</span><i>m</i>
+          <span class="cd-num idle" id="cd-d">—</span><i>d</i>
+          <span class="cd-sep"></span>
+          <span class="cd-num idle" id="cd-h">—</span><b>:</b><span class="cd-num idle" id="cd-mi">—</span><b>:</b><span class="cd-num idle" id="cd-s">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="heat-scroll" id="heat-scroll">
+      <div class="heat-grid">
+        <div></div>
+        <div class="heat-months" id="heat-months"></div>
+        <div class="heat-days" aria-hidden="true"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div>
+        <div class="heat-cells" id="heat-cells" role="img" aria-label="Commit activity over the last year"></div>
+      </div>
+    </div>
+    <div class="heat-foot">
+      <span id="heat-streak"></span>
+      <span class="heat-nav" id="heat-nav" hidden>
+        <button type="button" class="heat-arrow" id="heat-prev" aria-label="Show earlier months">&#8249;</button>
+        <button type="button" class="heat-arrow" id="heat-next" aria-label="Show later months">&#8250;</button>
+      </span>
+      <span class="heat-legend" aria-hidden="true"><span class="lbl">Less</span><i class="heat-cell"></i><i class="heat-cell l1"></i><i class="heat-cell l2"></i><i class="heat-cell l3"></i><i class="heat-cell l4"></i><span class="lbl">More</span></span>
+    </div>
+    <div class="app-chips" id="app-chips" role="list" aria-label="Apps"></div>
+    <div class="app-panel" id="app-panel" hidden></div>
+  </div>
+  <div class="heat-tip" id="heat-tip" hidden></div>
+
 
   <section class="obj-section" aria-labelledby="obj-heading">
   <div class="eyebrow" id="obj-heading" style="margin-top:32px">Objective</div>
@@ -2454,6 +2460,7 @@
     var open = card.hidden;
     card.hidden = !open;
     reportBtn.setAttribute("aria-expanded", String(open));
+    document.querySelector(".dash-col-a").classList.toggle("report-open", open);
     if (open){ reportDay = null; renderReport(); }
   });
 
