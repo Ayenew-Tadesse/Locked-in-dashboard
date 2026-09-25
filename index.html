@@ -182,6 +182,13 @@
   .obj-panel-title{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:24px;line-height:1;margin:0;color:var(--ink);}
   .obj-panel-count{font-size:12px;color:var(--ink-3);}
   .obj-panel-goal{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px;}
+  /* The quarter's goal and checklist sit behind a dropdown row. */
+  .obj-drop{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:0;margin:0;background:none;border:none;color:inherit;font:inherit;text-align:left;cursor:pointer;}
+  .obj-drop:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px;}
+  .obj-drop-right{display:flex;align-items:center;gap:10px;flex:none;}
+  .obj-caret{font-size:12px;color:var(--ink-3);transition:transform .2s ease;}
+  .obj-drop[aria-expanded="true"] .obj-caret{transform:rotate(180deg);color:var(--accent);}
+  .obj-drop-body{margin-top:12px;animation:panelDrop .22s ease-out;}
   @media (max-width:520px){
     .obj-track{grid-template-columns:repeat(4, minmax(0,1fr));gap:4px;}
     .obj-months, .obj-badge{display:none;}
@@ -1313,13 +1320,25 @@
     var p = phases[idx], tasks = objTasks(objOpenId);
     var done = tasks.filter(function(t){ return t.done; }).length;
     panel.innerHTML =
-      '<div class="obj-panel-head"><h3 class="obj-panel-title">' + esc(p.tag || "") + '</h3>' +
-      '<span class="obj-panel-count">' + done + ' of ' + tasks.length + ' done</span></div>' +
-      '<p class="obj-panel-goal">' + esc(p.text || "") + '</p>' +
-      (tasks.length
-        ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul><p class="today-note">Ticked by Claude after the work is verified.</p>'
-        : '<p class="modal-empty">Nothing logged for this quarter yet.</p>');
+      '<button type="button" class="obj-drop" aria-expanded="' + objListOpen + '" aria-controls="obj-drop-body">' +
+        '<h3 class="obj-panel-title">' + esc(p.tag || "") + '</h3>' +
+        '<span class="obj-drop-right"><span class="obj-panel-count">' + done + ' of ' + tasks.length + ' done</span>' +
+        '<span class="obj-caret" aria-hidden="true">&#9662;</span></span>' +
+      '</button>' +
+      '<div class="obj-drop-body" id="obj-drop-body"' + (objListOpen ? '' : ' hidden') + '>' +
+        '<p class="obj-panel-goal">' + esc(p.text || "") + '</p>' +
+        (tasks.length
+          ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul><p class="today-note">Ticked by Claude after the work is verified.</p>'
+          : '<p class="modal-empty">Nothing logged for this quarter yet.</p>') +
+      '</div>';
   }
+  // Quarters and levels show by default; the checklist opens on demand.
+  var objListOpen = false;
+  document.getElementById("obj-panel").addEventListener("click", function(e){
+    if (!e.target.closest(".obj-drop")) return;
+    objListOpen = !objListOpen;
+    renderObjPanel();
+  });
 
   var FALLBACK_COUNTDOWN_TARGET = "2027-09-23T05:58:33Z";
   var countdownIntervalId = null;
