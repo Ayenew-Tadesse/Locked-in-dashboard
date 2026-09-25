@@ -280,6 +280,25 @@
     border:1px solid var(--line);
     border-radius:12px;
     padding:18px 20px 16px;
+    position:relative;
+  }
+  /* LED border: a point of light runs around the score card's edge. */
+  @property --led-angle{syntax:'<angle>';initial-value:0deg;inherits:false;}
+  .week-card::before, .week-card::after{
+    content:"";position:absolute;inset:-1px;border-radius:13px;padding:1.5px;pointer-events:none;
+    background:conic-gradient(from var(--led-angle),
+      transparent 0deg, transparent 200deg,
+      color-mix(in srgb, var(--good) 35%, transparent) 250deg,
+      var(--good) 300deg, var(--accent) 335deg, #fff 352deg, transparent 360deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    animation:ledRun 4s linear infinite;
+  }
+  .week-card::after{filter:blur(6px);opacity:.75;} /* the glow */
+  @keyframes ledRun{to{--led-angle:360deg;}}
+  @media (prefers-reduced-motion: reduce){
+    .week-card::before, .week-card::after{animation:none;--led-angle:300deg;}
   }
   .week-top{
     display:flex;
