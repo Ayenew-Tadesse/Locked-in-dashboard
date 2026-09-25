@@ -38,6 +38,15 @@
     padding-block:36px 56px;
   }
   .wrap{max-width:840px;margin:0 auto;}
+  /* Log out shares the greeting's line, top right, so it never covers the name. */
+  .page-top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .logout-btn{
+    order:2;flex:none;display:inline-flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Sans', sans-serif;font-size:12px;font-weight:600;color:var(--ink-2);
+    background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;
+  }
+  .logout-btn:hover, .logout-btn:focus-visible{color:var(--ink);border-color:var(--accent);outline:none;}
+  .logout-btn[hidden]{display:none;}
 
   .eyebrow{
     font-family:'IBM Plex Mono', ui-monospace, monospace;
@@ -1017,7 +1026,28 @@
 </script>
 
 <div class="wrap">
+  <div class="page-top">
+  <button type="button" class="logout-btn" id="logout-btn" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>Log out</button>
+  <script>
+    // Only offered when the dashboard has a password. Logging out forgets
+    // this device (including "Remember this device") and locks the page.
+    (function(){
+      var btn = document.getElementById("logout-btn");
+      if (!ACCESS_HASH) return;
+      btn.hidden = false;
+      btn.addEventListener("click", function(){
+        try { sessionStorage.removeItem("lockedin_unlock"); localStorage.removeItem("lockedin_unlock"); } catch (e) {}
+        document.getElementById("gate-pw").value = "";
+        document.getElementById("gate-error").hidden = true;
+        document.getElementById("gate-remember").checked = false;
+        document.documentElement.classList.add("is-locked");
+        window.scrollTo(0, 0);
+        setTimeout(function(){ document.getElementById("gate-pw").focus(); }, 50);
+      });
+    })();
+  </script>
   <p class="welcome" id="greet-hello">Welcome back,</p>
+  </div>
   <h1>Mr. Ayenew Shiferaw</h1>
   <p class="journey" id="greet-journey"></p>
   <p class="greet-line" id="greet-line"></p>
