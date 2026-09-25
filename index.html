@@ -38,10 +38,10 @@
     padding-block:36px 56px;
   }
   .wrap{max-width:840px;margin:0 auto;}
-  /* Log out shares the greeting's line, top right, so it never covers the name. */
-  .page-top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  /* Log out gets its own row above the greeting, on the right. */
+  .page-top{display:flex;flex-direction:column;}
   .logout-btn{
-    order:2;flex:none;display:inline-flex;align-items:center;gap:6px;
+    align-self:flex-end;margin-bottom:14px;flex:none;display:inline-flex;align-items:center;gap:6px;
     font-family:'IBM Plex Sans', sans-serif;font-size:12px;font-weight:600;color:var(--ink-2);
     background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;
   }
