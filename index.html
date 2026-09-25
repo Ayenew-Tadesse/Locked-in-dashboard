@@ -1145,12 +1145,14 @@
       stage: "Case study drafted",
       facts: [
         "First case study drafted",
-        "Covers a redesigned booking flow — improved mobile experience, faster task completion"
+        "Covers a redesigned booking flow — improved mobile experience, faster task completion",
+        "React Native app (Expo) on GitHub — a screen-by-screen port of the web prototype"
       ],
       caseStudy: "Drafted",
-      lastNoted: "Sep 21, 2026",
+      lastNoted: "Sep 25, 2026",
       webAppLink: "https://ayenew-tadesse.github.io/Guxo-Flights/",
-      repoLink: "https://github.com/Ayenew-Tadesse/Guxo-Flights"
+      repoLink: "https://github.com/Ayenew-Tadesse/Guxo-Flights",
+      appRepoLink: "https://github.com/Ayenew-Tadesse/guxo-flights-app"
     },
     {
       id: "guxo",
@@ -1216,7 +1218,9 @@
     var label = STATUS_LABEL[status] || "Not started";
     var actions = '';
     if (app.webAppLink) actions += '<a class="cta" href="' + esc(app.webAppLink) + '" target="_blank" rel="noopener">View Web App</a>';
-    if (app.repoLink) actions += '<a class="cta" href="' + esc(app.repoLink) + '" target="_blank" rel="noopener">View Repo</a>';
+    // Web prototype repo, plus the React Native app's repo when there is one.
+    if (app.repoLink) actions += '<a class="cta" href="' + esc(app.repoLink) + '" target="_blank" rel="noopener">' + (app.appRepoLink ? 'Web Repo' : 'View Repo') + '</a>';
+    if (app.appRepoLink) actions += '<a class="cta" href="' + esc(app.appRepoLink) + '" target="_blank" rel="noopener">App Repo</a>';
     return (
       '<div class="app-cat"><span class="pill ' + status + '">' + esc(label) + '</span> &nbsp;' + esc(app.category || "") + '</div>' +
       '<ul class="facts">' + (app.facts || []).map(function(f){ return '<li>' + esc(f) + '</li>'; }).join("") + '</ul>' +
