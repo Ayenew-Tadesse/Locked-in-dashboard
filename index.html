@@ -300,7 +300,14 @@
   @media (prefers-reduced-motion: reduce){
     .week-card::before, .week-card::after{animation:none;--led-angle:300deg;}
   }
-  /* Rings in two columns and two rows: Today and Week, then Month and Quarter. */
+  /* Two pages of rings: Today and Week first, Month and Quarter after Next. */
+  .score-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 10px;}
+  .score-top .card-label{margin:0;}
+  .score-nav{display:flex;align-items:center;gap:6px;}
+  .score-page-num{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:10.5px;color:var(--ink-3);margin-right:2px;}
+  .week-card[data-page="1"] .week-ring-col[data-page="2"],
+  .week-card[data-page="2"] .week-ring-col[data-page="1"]{display:none;}
+  .week-ring-col{animation:panelDrop .22s ease-out;}
   .week-top{
     display:grid;
     grid-template-columns:repeat(2, minmax(0,1fr));
@@ -1076,10 +1083,17 @@
 
   <div class="dash-grid">
   <div class="dash-col dash-col-a">
-  <div class="week-card" id="week-card">
-    <span class="card-label">Your score</span>
+  <div class="week-card" id="week-card" data-page="1">
+    <div class="score-top">
+      <span class="card-label">Your score</span>
+      <span class="score-nav">
+        <span class="score-page-num" id="score-page-num">1/2</span>
+        <button type="button" class="heat-arrow" id="score-prev" aria-label="Back to Today and Week" disabled>&#8249;</button>
+        <button type="button" class="heat-arrow" id="score-next" aria-label="Next: Month and Quarter">&#8250;</button>
+      </span>
+    </div>
     <div class="week-top">
-      <div class="week-ring-col">
+      <div class="week-ring-col" data-page="1">
       <div class="ring-title" id="day-meta">Today</div>
       <div class="week-ring" role="img" id="day-ring" aria-label="Today's score 0%">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -1094,7 +1108,7 @@
       <div class="month-left" id="day-left"></div>
       <div class="week-range" id="day-range"></div>
       </div>
-      <div class="week-ring-col">
+      <div class="week-ring-col" data-page="1">
       <div class="ring-title" id="week-meta">This week</div>
       <div class="week-ring" role="img" id="week-ring" aria-label="Weekly score 0%">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -1109,7 +1123,7 @@
       <div class="month-left" id="week-left"></div>
       <div class="week-range" id="week-range"></div>
       </div>
-      <div class="week-ring-col">
+      <div class="week-ring-col" data-page="2">
       <div class="ring-title" id="month-meta">This month</div>
       <div class="week-ring" role="img" id="month-ring" aria-label="Monthly score 0%">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -1124,7 +1138,7 @@
       <div class="month-left" id="month-left"></div>
       <div class="week-range" id="month-range"></div>
       </div>
-      <div class="week-ring-col">
+      <div class="week-ring-col" data-page="2">
       <div class="ring-title" id="quarter-meta">This quarter</div>
       <div class="week-ring" role="img" id="quarter-ring" aria-label="Quarterly score 0%">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -2473,6 +2487,19 @@
       weekNeeded === 0 ? "Done" : weekNeeded + " to go");
 
   }
+
+  // Score card pages: Today and Week first; Next shows Month and Quarter.
+  function setScorePage(n){
+    document.getElementById("week-card").setAttribute("data-page", String(n));
+    document.getElementById("score-prev").disabled = n === 1;
+    document.getElementById("score-next").disabled = n === 2;
+    document.getElementById("score-page-num").textContent = n + "/2";
+    // Replay the fill animation for the rings coming into view.
+    (n === 1 ? ["day", "week"] : ["month", "quarter"]).forEach(function(p){ ringShown[p] = 0; });
+    renderWeekly();
+  }
+  document.getElementById("score-next").addEventListener("click", function(){ setScorePage(2); });
+  document.getElementById("score-prev").addEventListener("click", function(){ setScorePage(1); });
 
   // --- today's checklist ---
   function todayKeyNow(){ var t = new Date(); t.setHours(0,0,0,0); return isoDay(t); }
