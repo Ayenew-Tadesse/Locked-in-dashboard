@@ -939,9 +939,82 @@
     .phases li{flex-direction:column;gap:4px;}
     .phase-tag{width:auto;}
   }
+  /* Password screen: the dashboard stays hidden until it's unlocked. */
+  html.is-locked .wrap, html.is-locked .modal-backdrop, html.is-locked .heat-tip{display:none !important;}
+  html:not(.is-locked) .gate{display:none;}
+  .gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);}
+  .gate-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 24px 24px;display:flex;flex-direction:column;gap:12px;}
+  .gate-lock{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;}
+  .gate-title{font-family:'Big Shoulders Display', 'Arial Narrow', sans-serif;font-weight:800;font-size:30px;line-height:1;margin:6px 0 0;color:var(--ink);}
+  .gate-sub{font-size:13.5px;color:var(--ink-2);margin:0 0 4px;line-height:1.5;}
+  .gate-card input[type="password"]{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;}
+  .gate-card input[type="password"]:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent;}
+  .gate-remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;}
+  .gate-remember input{accent-color:var(--accent);width:16px;height:16px;margin:0;}
+  .gate-error{font-size:13px;color:var(--red);margin:0;}
+  .gate-card button{font:inherit;font-size:14px;font-weight:600;color:var(--surface);background:var(--accent);border:none;border-radius:9px;padding:11px 16px;cursor:pointer;margin-top:4px;}
+  .gate-card button:hover, .gate-card button:focus-visible{filter:brightness(1.08);outline:none;}
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<script>
+  // Fingerprint (SHA-256) of the dashboard password, set with
+  // tools/set-password.mjs. Empty means no password yet.
+  var ACCESS_HASH = "13c80a1f65f7035cd81d83ef541e1515b14bfc31124861ca149f88d0cca66a25";
+  (function(){
+    if (!ACCESS_HASH) return;
+    var ok = false;
+    try { ok = sessionStorage.getItem("lockedin_unlock") === ACCESS_HASH || localStorage.getItem("lockedin_unlock") === ACCESS_HASH; } catch (e) {}
+    if (!ok) document.documentElement.classList.add("is-locked");
+  })();
+</script>
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <span class="gate-lock" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+    <h2 class="gate-title" id="gate-title">Aye-Noow's Locked in</h2>
+    <p class="gate-sub">Enter your password to open the dashboard.</p>
+    <input type="text" name="username" value="Locked in dashboard" autocomplete="username" hidden>
+    <input type="password" id="gate-pw" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
+    <label class="gate-remember"><input type="checkbox" id="gate-remember"> Remember this device</label>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password isn't right. Try again.</p>
+    <button type="submit">Unlock</button>
+  </form>
+</div>
+<script>
+  (function(){
+    var form = document.getElementById("gate-form");
+    function sha256Hex(text){
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function(buf){
+        return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0" + b.toString(16)).slice(-2); }).join("");
+      });
+    }
+    if (document.documentElement.classList.contains("is-locked")) {
+      setTimeout(function(){ document.getElementById("gate-pw").focus(); }, 50);
+    }
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      var pw = document.getElementById("gate-pw").value;
+      sha256Hex("locked-in:" + pw).then(function(hash){
+        if (hash !== ACCESS_HASH) {
+          document.getElementById("gate-error").hidden = false;
+          document.getElementById("gate-pw").select();
+          return;
+        }
+        try {
+          sessionStorage.setItem("lockedin_unlock", hash);
+          if (document.getElementById("gate-remember").checked) localStorage.setItem("lockedin_unlock", hash);
+        } catch (err) {}
+        document.getElementById("gate-pw").value = "";
+        document.documentElement.classList.remove("is-locked");
+        // The heatmap was laid out while hidden; scroll it to today again.
+        var sc = document.getElementById("heat-scroll");
+        if (sc) sc.scrollLeft = sc.scrollWidth;
+        window.dispatchEvent(new Event("resize"));
+      });
+    });
+  })();
+</script>
 
 <div class="wrap">
   <p class="welcome" id="greet-hello">Welcome back,</p>
