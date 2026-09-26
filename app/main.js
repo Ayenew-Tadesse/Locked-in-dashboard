@@ -123,7 +123,12 @@ function render({ keepFocus } = {}) {
   }
   window.scrollTo(0, scrollY);
   if (overview) {
-    try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
+    // The Tasks card (Day/Week/Month/Quarter) is for the team owner; members
+    // use the New task tile, Today and Calendar.
+    document.documentElement.classList.toggle("li-member", !state.isOwner);
+    if (state.isOwner) {
+      try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
+    }
   }
   $("#li-footer-links").innerHTML = `<a href="#/settings" class="li-link${r.name === "settings" ? " active" : ""}"${r.name === "settings" ? ' aria-current="page"' : ""}>Settings</a>`;
   feedLegacy();
