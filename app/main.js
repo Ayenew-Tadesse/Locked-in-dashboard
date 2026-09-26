@@ -58,8 +58,7 @@ function route() {
 
 function renderNav(active) {
   $("#li-nav").innerHTML = `<div class="li-nav-scroll">${NAV.map((k) =>
-    `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link${k === active ? " active" : ""}"${k === active ? ' aria-current="page"' : ""}>${VIEWS[k].label}</a>`).join("")}</div>
-    <button type="button" class="li-btn primary li-nav-add" data-new-task="${state.today}" aria-label="New task">+ <span>New task</span></button>`;
+    `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link${k === active ? " active" : ""}"${k === active ? ' aria-current="page"' : ""}>${VIEWS[k].label}</a>`).join("")}</div>`;
 }
 
 const LEVELS = { danger: 0, warn: 1, info: 2 };

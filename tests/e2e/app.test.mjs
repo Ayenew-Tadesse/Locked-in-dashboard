@@ -247,8 +247,8 @@ test("every view fits a phone screen without sideways scrolling", async () => {
     assert.deepEqual(page.errors, [], `${v || "overview"} has no errors`);
     await page.close();
   }
-  const page = await open("today", { width: 375, height: 800 });
-  await page.click(".li-nav-add");
+  const page = await open("", { width: 375, height: 800 });
+  await page.click(".li-tile-add");
   const modal = await page.locator("#li-modal .modal").boundingBox();
   assert.ok(modal.width <= 375, "task form fits the phone");
   await page.close();
@@ -295,7 +295,14 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
   assert.ok(!(await page.locator("#week-card").isVisible()), "the Your score (rings) card is gone");
   assert.equal(await page.locator("#li-overview .card-label", { hasText: "Deadlines" }).count(), 0, "the Deadlines card is gone");
-  assert.equal(await page.locator("#li-overview .card-label", { hasText: "Milestones" }).count(), 1);
+  assert.equal(await page.locator("#li-overview .card-label", { hasText: "Milestones" }).count(), 0, "the Milestones card is gone");
+  // New task is the first tile, before Today's progress, and opens the form.
+  const tiles = await page.locator("#li-overview .li-kpis .li-tile-label").allInnerTexts();
+  assert.deepEqual(tiles.slice(0, 2).map((t) => t.toLowerCase()), ["new task", "today's progress"]);
+  assert.equal(await page.locator("#li-nav button").count(), 0, "no New task button in the tab row");
+  await page.click(".li-tile-add");
+  await page.waitForSelector("#li-modal [name=title]");
+  await page.locator("#li-modal [data-close]").first().click();
   const card = page.locator("#li-tasks-card");
   const colTop = (await page.locator(".dash-col-a").boundingBox()).y;
   assert.ok(Math.abs((await card.boundingBox()).y - colTop) < 2, "Tasks card leads the left column");

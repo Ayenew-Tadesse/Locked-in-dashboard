@@ -45,7 +45,6 @@ html.app-mode:not(.app-booting) .li-nav:not(:empty){
 .li-nav-link:hover{color:var(--ink);background:var(--surface);}
 .li-nav-link:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
 .li-nav-link.active{color:var(--ink);background:var(--surface-2);box-shadow:inset 0 -2px 0 var(--good);}
-.li-nav-add{flex:none;}
 
 /* ---- Warnings ------------------------------------------------------------ */
 .li-warnings{display:flex;flex-direction:column;gap:6px;margin-top:14px;}
@@ -120,6 +119,13 @@ code, .li-mono{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:12
   text-decoration:none;color:inherit;
 }
 .li-tile[data-href]{cursor:pointer;}
+/* The New task tile: an accent-tinted button that opens the task form. */
+button.li-tile{font:inherit;text-align:left;cursor:pointer;}
+.li-tile-add{background:var(--accent-soft);border-color:color-mix(in srgb, var(--accent) 55%, var(--line));}
+.li-tile-add .li-tile-label{color:var(--accent);}
+.li-tile-add .li-tile-value{color:var(--accent);}
+.li-tile-add:hover, .li-tile-add:focus-visible{border-color:var(--accent);outline:none;}
+.li-tile-add:focus-visible{box-shadow:0 0 0 2px var(--accent);}
 .li-tile[data-href]:hover{border-color:var(--accent);}
 .li-tile-label{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);}
 .li-tile-value{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:32px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;}
@@ -369,8 +375,6 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
 /* ---- Phones -------------------------------------------------------------------------------- */
 @media (max-width:640px){
   html.app-mode:not(.app-booting) .li-nav:not(:empty){margin-top:16px;padding:8px 16px;margin-left:-20px;margin-right:-20px;}
-  .li-nav-add span{display:none;}
-  .li-nav-add{width:36px;height:34px;padding:0;font-size:18px;}
   .li-card{padding:14px 14px 16px;}
   .li-kpis{grid-template-columns:repeat(2, minmax(0,1fr));gap:8px;}
   .li-tile{padding:10px 12px;}
