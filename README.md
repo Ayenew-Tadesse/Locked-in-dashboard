@@ -30,6 +30,11 @@ extended into a productivity and milestone tracker backed by a real database.
 - **Search and filters:** by text, date range, status, priority, category, deadline and milestone
 - **Warnings:** overdue, deadlines and milestones approaching, quarter ending,
   low completion. At most three, each dismissible for the day.
+- **Year plan to launch (Sep 23, 2027):** quarterly goals, all 23 roadmap milestones, and a ticket for every
+  weekday morning (Oct–Dec in full; later months get week-by-week plans, turned into daily tickets monthly).
+  Each ticket explains the Goal, How it works, Steps and Done when. See `app/plan/year-plan.js`.
+- **Learning log and Daily report PDF:** completing a task asks what changed, how, and what problem it solved;
+  the Daily report's **Download PDF** turns that, the ticket's notes and the day's GitHub commits into a PDF.
 - **Transparent scoring:** the formula is shown and editable in Settings; see [docs/SCORING.md](docs/SCORING.md)
 - **API for Claude:** token-protected `/api/v1` endpoints; see [docs/API.md](docs/API.md)
 - **Your data:** stored in Postgres with Row Level Security, synced across
@@ -45,7 +50,7 @@ the rings show the new scores, and ticking Today's checklist completes the real 
 | Supabase | `config.js` has a Supabase URL (the Vercel build writes it) | Sign-in, all features, data saved in the database |
 | Original | No `config.js` (claude.ai artifact, GitHub Pages, opening the file) | Exactly the original dashboard with its password screen |
 | Demo | Add `?demo=1` to the URL | All features with sample data held in memory. Nothing is saved. |
-| History preview | Add `?demo=history` to the URL | All features showing your tracking history from the original dashboard (Sep 23–25 checklists, daily reports, the quarterly roadmap), loaded through the same import the real app uses. Nothing is saved. |
+| History preview | Add `?demo=history` to the URL | All features showing your tracking history from the original dashboard (Sep 23–25 checklists, daily reports) and the year plan, loaded through the same "Set up my year" step the real app uses. Nothing is saved. |
 
 A deployment without a database can open in a preview mode by default: build with
 `DEMO_MODE=history` (or `DEMO_MODE=sample`).
@@ -81,6 +86,9 @@ supabase/migrations/         database schema, triggers, RLS policies, API functi
 scripts/                     build (writes dist/ and config.js), local server
 tests/                       unit, database, browser (e2e) and integration tests
 docs/                        architecture, scoring, API, deployment, testing
+app/plan/                    the year plan and "Set up my year"
+app/report/                  daily report PDF (jsPDF is shipped in app/vendor/, MIT licence)
+scripts/stamp.mjs            version-stamps files so every device loads each update
 tools/set-password.mjs       password for the original lock screen
 ```
 

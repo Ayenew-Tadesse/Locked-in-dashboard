@@ -48,6 +48,12 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
 }
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
 function shift(key, n) { const d = new Date(key + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+// Completing a task asks for a Learning log; tests that don't need it skip it.
+async function skipLearningLog(page) {
+  await page.waitForSelector("#li-modal .li-learning, #li-modal textarea[name=learning_changed]");
+  await page.locator("#li-modal .li-form-actions [data-close]").click();
+  await page.waitForSelector("#li-modal", { state: "detached" });
+}
 // Visible rows only: the Overview's Tasks card stays in the page (hidden) on other tabs.
 const row = (page, title) => page.locator(".li-task:visible", { has: page.locator(".li-task-title", { hasText: title }) });
 
@@ -78,6 +84,7 @@ test("create a task with every field, then edit it", async () => {
   assert.match(await r.locator(".li-task-notes").innerText(), /Draft first/);
 
   await r.locator(".li-task-title").click();
+  await page.click('#li-modal [data-detail="edit"]');
   await page.locator("#li-modal [name=title]").fill("E2E: publish launch post");
   await page.locator("#li-modal [name=priority]").selectOption("urgent");
   await page.locator("#li-modal button[type=submit]").click();
@@ -93,6 +100,7 @@ test("complete, reopen and change status; scores and the original checklist upda
   const scoreBefore = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
   const r = row(page, "Test keyboard handling on iOS");
   await r.locator("[data-act=toggle]").click();
+  await skipLearningLog(page);
   await page.waitForFunction(() => document.querySelector('.li-task.st-completed .li-task-title')?.textContent);
   assert.match(await row(page, "Test keyboard handling on iOS").getAttribute("class"), /st-completed/);
   const scoreAfter = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
@@ -155,8 +163,10 @@ test("milestones: create, link tasks, automatic completion", async () => {
   }
   assert.match(await page.locator(".li-dl").innerText(), /2 total · 0 completed · 2 remaining/);
   await row(page, "E2E ms task A").locator("[data-act=toggle]").click();
+  await skipLearningLog(page);
   await page.waitForFunction(() => document.querySelector(".li-ms-progress.big > b").textContent === "50%");
   await row(page, "E2E ms task B").locator("[data-act=toggle]").click();
+  await skipLearningLog(page);
   await page.waitForFunction(() => document.querySelector(".li-ms-progress.big > b").textContent === "100%");
   assert.match(await page.locator(".li-dl").innerText(), /Completed/);
   await page.goto(BASE + "?demo=1#/milestones?show=done");
@@ -261,14 +271,15 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(BASE + "?demo=history#/tasks");
   await page.waitForSelector("#li-nav .li-nav-link");
-  assert.equal(await page.locator(".li-h2").innerText(), "14 tasks", "the Sep 23-25 checklist items");
+  // The Sep 23-25 history plus the year plan's daily tickets (Tasks page shows 30 days either side by default: all).
   assert.equal(await row(page, "Rename the app from Hid-Go to Guxo Flights").count(), 1);
-  assert.equal(await page.locator(".li-task.st-completed").count(), 14);
+  assert.equal(await page.locator(".li-task.st-completed:visible").count(), 14, "history tasks are done");
+  assert.equal(await row(page, "Map the booking flow and choose a state library").count(), 1, "the plan's first ticket");
   await page.goto(BASE + "?demo=history#/milestones?show=all");
   await page.waitForFunction(() => document.querySelector(".li-h2")?.textContent === "23 total");
   await page.goto(BASE + "?demo=history#/quarter?q=4&y=2026");
   await page.waitForSelector(".li-goals");
-  assert.match(await page.locator(".li-goals").innerText(), /33%[\s\S]*Q1 roadmap: Build the shared foundation/);
+  assert.match(await page.locator(".li-goals").innerText(), /33%[\s\S]*Build the shared foundation/);
   await page.goto(BASE + "?demo=history#/calendar?month=2026-09&day=2026-09-24");
   await page.waitForSelector("#li-cal-day");
   assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);
@@ -326,6 +337,65 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   await page.waitForSelector(".li-formula");
   assert.ok(await page.locator("#daily-quote").isVisible(), "quote stays on other pages");
   assert.ok(await page.locator('#li-footer-links a[href="#/settings"]').isVisible());
+  await page.close();
+});
+
+test("year plan: tickets explain how it works; completing one asks for a learning log", async () => {
+  const page = await unlockedPage({ viewport: { width: 1280, height: 900 } });
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.goto(BASE + "?demo=history#/calendar?month=2026-09&day=2026-09-28");
+  await page.waitForSelector("#li-cal-day");
+  const r = row(page, "Map the booking flow and choose a state library");
+  await r.locator(".li-task-title").click();
+  const ticket = page.locator("#li-modal .li-ticket");
+  await ticket.waitFor();
+  for (const h of ["Goal", "How it works", "Steps", "Done when"]) assert.match(await ticket.innerText(), new RegExp(h, "i"));
+  assert.match(await ticket.innerText(), /Zustand/);
+  assert.match(await page.locator("#li-modal .eyebrow").innerText(), /state management/i, "ticket names its milestone");
+  // Complete from the ticket: the learning log opens.
+  await page.click('#li-modal [data-detail="toggle"]');
+  await page.waitForSelector("#li-modal textarea[name=learning_changed]");
+  await page.fill("#li-modal [name=learning_changed]", "Wrote docs/booking-state.md");
+  await page.fill("#li-modal [name=learning_how]", "Listed each screen's data");
+  await page.fill("#li-modal [name=learning_solved]", "Know the data shape before coding");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.match(await r.getAttribute("class"), /st-completed/);
+  await r.locator(".li-task-title").click();
+  assert.match(await page.locator("#li-modal .li-ticket").innerText(), /Know the data shape before coding/, "log shown on the ticket");
+  await page.close();
+});
+
+test("daily report: Download PDF includes what changed, how, the problem solved and the day's commits", async () => {
+  const page = await unlockedPage({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.route("https://api.github.com/**", (route) => {
+    const url = route.request().url();
+    if (/\/commits\/[0-9a-f]+/.test(url)) return route.fulfill({ json: { files: [{ filename: "src/store/booking.ts", status: "added", additions: 42, deletions: 0 }] } });
+    return route.fulfill({ json: [{ sha: "a1b2c3d4e5f6", commit: { message: "Add the booking store", author: { date: new Date().toISOString() } } }] });
+  });
+  await page.goto(BASE + "?demo=1#/today");
+  await page.waitForSelector("#li-nav .li-nav-link");
+  const r = row(page, "Test keyboard handling on iOS");
+  await r.locator("[data-act=toggle]").click();
+  await page.fill("#li-modal [name=learning_changed]", "Screens move up with the keyboard");
+  await page.fill("#li-modal [name=learning_how]", "KeyboardAvoidingView per screen");
+  await page.fill("#li-modal [name=learning_solved]", "Inputs were hidden behind the keyboard on iOS");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  // Open the Daily report from the Overview's Tasks card, then download.
+  await page.click('#li-nav a[href="#/"]');
+  await page.click("#li-tasks-card [data-report]");
+  await page.waitForSelector("#li-report-pdf");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.click("#li-report-pdf")]);
+  assert.match(download.suggestedFilename(), /^locked-in-daily-report-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const pdf = readFileSync(await download.path()).toString("latin1");
+  assert.ok(pdf.startsWith("%PDF-"), "a real PDF");
+  for (const s of ["Test keyboard handling on iOS", "What was modified", "Screens move up with the keyboard",
+    "How it was modified", "KeyboardAvoidingView per screen", "What problem was solved",
+    "Inputs were hidden behind the keyboard on iOS", "Add the booking store", "src/store/booking.ts"]) {
+    assert.ok(pdf.includes(s), `PDF contains "${s}"`);
+  }
   await page.close();
 });
 

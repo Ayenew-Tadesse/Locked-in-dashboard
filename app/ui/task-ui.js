@@ -2,7 +2,7 @@
 import { state, saveTask, updateTask, deleteTask, toast } from "../state.js";
 import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
-import { esc, statusPill, priorityPill, openModal, confirmDialog, options } from "./dom.js";
+import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
 
 export function taskRow(t, { showDate = false, compact = false } = {}) {
   const today = state.today;
@@ -48,9 +48,9 @@ document.addEventListener("click", async (e) => {
   if (btn.dataset.act === "toggle") {
     const done = t.status === "completed";
     await updateTask(id, done ? { status: t.completion_percentage && t.completion_percentage < 100 ? "in_progress" : "not_started" } : { status: "completed" })
-      .then(() => toast(done ? "Marked not done" : "Task completed"), () => {});
+      .then((saved) => { toast(done ? "Marked not done" : "Task completed"); if (!done) askForLearningLog(saved); }, () => {});
   } else if (btn.dataset.act === "edit") {
-    openTaskForm(t);
+    openTaskDetail(t);
   } else if (btn.dataset.act === "delete") {
     if (await confirmDialog(`Delete "${t.title}"?`)) await deleteTask(id).then(() => toast("Task deleted"), () => {});
   }
@@ -61,7 +61,10 @@ document.addEventListener("change", async (e) => {
   const id = sel.closest(".li-task").dataset.taskId;
   const patch = { status: sel.value };
   if (sel.value === "not_started") patch.completion_percentage = 0;
-  await updateTask(id, patch).then(() => toast(`Marked ${STATUSES[sel.value].toLowerCase()}`), () => {});
+  await updateTask(id, patch).then((saved) => {
+    toast(`Marked ${STATUSES[sel.value].toLowerCase()}`);
+    if (sel.value === "completed") askForLearningLog(saved);
+  }, () => {});
 });
 
 /** Add (no task, or defaults without id) or edit a task. */
@@ -88,7 +91,10 @@ export function openTaskForm(task = {}) {
       <label class="li-field">Actual minutes<input type="number" name="actual_minutes" min="0" max="100000" step="5" inputmode="numeric" value="${esc(t.actual_minutes ?? "")}"></label>
       <label class="li-field full">Completion <output name="pct_out">${esc(t.completion_percentage)}%</output>
         <input type="range" name="completion_percentage" min="0" max="100" step="5" value="${esc(t.completion_percentage)}"></label>
-      <label class="li-field full">Notes<textarea name="notes" rows="3" maxlength="10000">${esc(t.notes || "")}</textarea></label>`,
+      <label class="li-field full">Notes<textarea name="notes" rows="3" maxlength="10000">${esc(t.notes || "")}</textarea></label>
+      <fieldset class="full li-learning"><legend>Learning log (for your daily report PDF)</legend>
+        ${learningFields(t)}
+      </fieldset>`,
     onReady(form) {
       const range = form.elements.completion_percentage, out = form.elements.pct_out, status = form.elements.status;
       range.addEventListener("input", () => {
@@ -137,3 +143,92 @@ document.addEventListener("click", (e) => {
   const form = b.closest("form[data-quick-add]");
   openTaskForm({ title: form.elements.title.value.trim(), date: form.dataset.quickAdd });
 });
+
+// ---------------------------------------------------------------------------
+// Ticket view and Learning log
+// ---------------------------------------------------------------------------
+
+const LEARNING = [
+  ["learning_changed", "What did you change?", "e.g. Added a booking store and moved the search form onto it"],
+  ["learning_how", "How did you do it?", "e.g. A Zustand store with a search slice; screens read it with a selector"],
+  ["learning_solved", "What problem did it solve? What did you learn?", "e.g. Search data no longer gets lost between screens; learned client vs server state"],
+];
+function learningFields(t) {
+  return LEARNING.map(([k, label, ph]) =>
+    `<label class="li-field full">${esc(label)}<textarea name="${k}" rows="2" maxlength="5000" placeholder="${esc(ph)}">${esc(t[k] || "")}</textarea></label>`).join("");
+}
+const hasLearning = (t) => !!(t && (t.learning_changed || t.learning_how || t.learning_solved));
+
+/** Right after completing a task, ask what was learned (skippable). */
+function askForLearningLog(t) {
+  if (!t || hasLearning(t)) return;
+  openLearningLog(t, { justCompleted: true });
+}
+
+export function openLearningLog(t, { justCompleted = false } = {}) {
+  openModal({
+    eyebrow: justCompleted ? "Task completed · Learning log" : "Learning log",
+    title: t.title,
+    submitLabel: "Save learning log",
+    body: `<p class="li-sub full">Three short answers. They go into your Daily report PDF so you can look back on what you learned.</p>${learningFields(t)}`,
+    async onSubmit(v) {
+      await saveTask({ ...t, ...Object.fromEntries(LEARNING.map(([k]) => [k, v[k].trim() || null])) });
+      toast("Learning log saved");
+    },
+  });
+  const cancel = document.querySelector("#li-modal .li-form-actions [data-close]");
+  if (cancel && justCompleted) cancel.textContent = "Skip";
+}
+
+/** Formats a ticket description ("Goal: ...", "Steps: 1. ..."), or plain text. */
+function ticketHtml(description) {
+  if (!description) return "";
+  const parts = description.split(/\n\n(?=(?:Goal|How it works|Steps|Done when):)/);
+  return parts.map((p) => {
+    const m = /^(Goal|How it works|Steps|Done when):\s*([\s\S]*)$/.exec(p);
+    if (!m) return `<p class="li-prose">${esc(p)}</p>`;
+    const lines = m[2].split("\n").map((l) => l.trim()).filter(Boolean);
+    const list = lines.every((l) => /^(\d+\.|-)\s/.test(l));
+    const body = list
+      ? `<${/^\d/.test(lines[0]) ? "ol" : "ul"} class="li-ticket-list">${lines.map((l) => `<li>${esc(l.replace(/^(\d+\.|-)\s/, ""))}</li>`).join("")}</${/^\d/.test(lines[0]) ? "ol" : "ul"}>`
+      : `<p class="li-prose">${esc(m[2])}</p>`;
+    return `<section class="li-ticket-sec${m[1] === "How it works" ? " how" : ""}"><h3 class="li-group-h">${esc(m[1])}</h3>${body}</section>`;
+  }).join("");
+}
+
+export function openTaskDetail(t) {
+  const today = state.today;
+  const eff = effectiveStatus(t, today);
+  const ms = t.milestone_id && state.milestones.find((m) => m.id === t.milestone_id);
+  const done = t.status === "completed";
+  openModal({
+    eyebrow: ms ? `Ticket · ${ms.title}` : "Task",
+    title: t.title,
+    wide: true,
+    body: `<div class="full li-ticket">
+      <div class="li-task-meta">${statusPill(eff)}${priorityPill(t.priority)}
+        <span class="li-meta">${esc(formatDay(t.date, { weekday: "short", month: "short", day: "numeric" }))}</span>
+        ${t.due_date ? `<span class="li-meta ${eff === "overdue" ? "danger" : ""}">Due ${esc(formatDay(t.due_date, { weekday: "short", month: "short", day: "numeric" }))}</span>` : ""}
+        ${t.estimated_minutes ? `<span class="li-meta">Estimate ${esc(formatMinutes(t.estimated_minutes))}</span>` : ""}</div>
+      ${ticketHtml(t.description) || `<p class="li-empty">No description.</p>`}
+      ${t.notes ? `<section class="li-ticket-sec"><h3 class="li-group-h">Notes</h3><p class="li-prose">${esc(t.notes)}</p></section>` : ""}
+      ${hasLearning(t) ? `<section class="li-ticket-sec learned"><h3 class="li-group-h">Your learning log</h3>
+        ${LEARNING.filter(([k]) => t[k]).map(([k, label]) => `<p class="li-prose"><b>${esc(label)}</b><br>${esc(t[k])}</p>`).join("")}</section>` : ""}
+    </div>`,
+    extraButtons: `<button type="button" class="li-btn primary" data-detail="toggle">${done ? "Mark not done" : "Mark complete"}</button>
+      <button type="button" class="li-btn" data-detail="learn">Learning log</button>
+      <button type="button" class="li-btn" data-detail="edit">Edit</button>`,
+    onReady(form) {
+      form.querySelector("[data-close]:not(.modal-close)")?.replaceChildren("Close");
+      form.querySelector('[data-detail="edit"]').addEventListener("click", () => openTaskForm(t));
+      form.querySelector('[data-detail="learn"]').addEventListener("click", () => openLearningLog(t));
+      form.querySelector('[data-detail="toggle"]').addEventListener("click", async () => {
+        const saved = await updateTask(t.id, done ? { status: "not_started" } : { status: "completed" }).catch(() => null);
+        if (!saved) return;
+        toast(done ? "Marked not done" : "Task completed");
+        if (!done && !hasLearning(saved)) openLearningLog(saved, { justCompleted: true });
+        else closeModal();
+      });
+    },
+  });
+}

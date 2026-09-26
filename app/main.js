@@ -5,7 +5,7 @@
 import { state, subscribe, loadAll, setToast, updateTask, saveTask } from "./state.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
 import { demoSeed, emptySeed } from "./demo.js";
-import { buildLegacyImport } from "./legacy-import.js";
+import { buildYearSetup } from "./plan/setup.js";
 import { showAuth, hideAuth } from "./ui/auth.js";
 import { showToast, esc, $ } from "./ui/dom.js";
 import { openTaskForm } from "./ui/task-ui.js";
@@ -22,6 +22,7 @@ import { renderMilestones } from "./views/milestones.js";
 import { renderAnalytics } from "./views/analytics.js";
 import { renderSettings } from "./views/settings.js";
 import { renderTasksCard } from "./views/tasks-card.js";
+import { DEFAULT_REPOS, fetchCommits, buildDailyReport, renderDailyReportPdf } from "./report/daily-report.js";
 
 const VIEWS = {
   overview: { label: "Overview", render: renderOverview },
@@ -178,6 +179,39 @@ function feedLegacy() {
   L.update({ daily, contributions, reports, scores, unit: ["task completed", "tasks completed"] });
 }
 
+// ---------------------------------------------------------------------------
+// Daily report PDF: a button on the (original) Daily report card. It uses the
+// day the card is showing, so past days can be downloaded too.
+// ---------------------------------------------------------------------------
+function addReportPdfButton() {
+  const nav = document.querySelector("#report-card .report-nav");
+  if (!nav || document.getElementById("li-report-pdf")) return;
+  nav.insertAdjacentHTML("afterend", `<div class="li-report-actions">
+    <button type="button" class="li-btn small" id="li-report-pdf">Download PDF</button>
+    <span class="li-sub">What was modified, how, and what problem it solved</span></div>`);
+  document.getElementById("li-report-pdf").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const day = window.LockedInLegacy?.reportDay?.() || state.today;
+    btn.disabled = true;
+    btn.textContent = "Preparing…";
+    try {
+      const github = await fetchCommits(state.settings.preferences?.githubRepos || DEFAULT_REPOS, day);
+      const s = scoreDay(state.tasks, day, state.cfg, { today: state.today, timeZone: state.timeZone });
+      const report = buildDailyReport({ day, tasks: state.tasks, milestones: state.milestones, dailyNote: state.daily[day]?.notes,
+        score: s.score, github, timeZone: state.timeZone });
+      const doc = await renderDailyReportPdf(report);
+      doc.save(`locked-in-daily-report-${day}.pdf`);
+      showToast("Daily report downloaded");
+    } catch (err) {
+      console.error(err);
+      showToast("Couldn't make the PDF: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Download PDF";
+    }
+  });
+}
+
 // Hooks the original "Today's checklist" card uses in app mode (installed at start).
 const legacyHooks = {
   toggleTask(id, done) {
@@ -204,6 +238,7 @@ async function start(store) {
   }
   started = true;
   window.LockedInHooks = legacyHooks;
+  addReportPdfButton();
   document.documentElement.classList.remove("app-booting");
   $("#footnote").textContent = store.mode === "demo"
     ? (demoMode === "history"
@@ -223,11 +258,12 @@ async function boot() {
   let store;
   try {
     if (demoMode === "history") {
-      // The original dashboard's history, loaded through the same import the
-      // real app uses (Settings -> Import the original dashboard's history).
+      // The original dashboard's history plus the year plan, loaded through
+      // the same import the real app uses (Settings -> Set up my year).
       store = createMemoryStore(emptySeed());
-      await store.importData(buildLegacyImport(window.LockedInLegacy.data(), store.newId));
+      await store.importData(buildYearSetup(window.LockedInLegacy.data(), store.newId));
       await store.markLegacyImported();
+      await store.markPlanLoaded();
     } else {
       store = demo ? createMemoryStore(demoSeed()) : await createSupabaseStore(config);
     }

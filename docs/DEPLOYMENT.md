@@ -34,6 +34,9 @@ git-ignored).
 2. Paste the whole of
    [`supabase/migrations/20260926000000_init.sql`](../supabase/migrations/20260926000000_init.sql)
    and click **Run**. It should say *Success. No rows returned.*
+3. Open another **New query**, paste
+   [`supabase/migrations/20260926100000_learning_log.sql`](../supabase/migrations/20260926100000_learning_log.sql)
+   (the Learning log and preferences) and click **Run**.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.
@@ -76,9 +79,9 @@ After that, every push to `main` deploys automatically, and pull requests
 get preview URLs. Then:
 
 1. Put the production URL into Supabase's Site URL and Redirect URLs (step 4).
-2. Open the site, sign in, and go to **Settings → Import the original
-   dashboard's history** once. This copies your existing daily checklists,
-   daily reports and quarterly roadmap into the database.
+2. Open the site, sign in, and go to **Settings → Set up my year** once. This
+   copies your daily checklists and reports from the original dashboard and
+   loads the year plan (quarterly goals, milestones and daily tickets).
 3. Check the API: `https://<your-site>/api/v1` should list the endpoints.
 
 Local preview: `npm run dev` (serves `dist/` at http://localhost:5173). Add
