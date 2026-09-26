@@ -164,3 +164,14 @@ greeting preference, not gender, so nobody is asked for or guessed at.
   title (`app/core/people.js`), never the email address.
 * Each person changes their own in Settings → Profile; the owner can read them
   but not change them (the existing profile policies).
+
+## Removing a member (added later)
+
+Migration `20260928000000_remove_member.sql` adds
+`public.remove_member_completely(member)`. The owner's **Remove from team**
+button calls it after they type the person's name. It checks that the caller
+owns the member's team, cancels open invitations for their email, and deletes
+their auth account, which cascades to their profile, tasks, scores, learning
+logs, notes, settings, personal milestones/goals, tokens and membership. Team
+milestone progress is recalculated by the task triggers. It can't be undone,
+and they can only return if invited again. Covered by `tests/db/teams.sql`.

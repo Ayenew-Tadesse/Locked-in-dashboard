@@ -96,7 +96,12 @@ export function supabaseStoreFromClient(sb) {
       return check(await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId }).select().single());
     },
     async revokeInvite(id) { check(await sb.from("team_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
-    async removeMember(teamId, memberId) { check(await sb.from("team_members").delete().eq("team_id", teamId).eq("user_id", memberId)); },
+    /** Deletes the member's account and all their data (owner only; see 20260928000000_remove_member.sql). */
+    async removeMember(teamId, memberId) {
+      const { error } = await sb.rpc("remove_member_completely", { member: memberId });
+      if (error && /remove_member_completely|schema cache/.test(error.message)) throw new Error("run the latest SQL update in Supabase first (20260928000000_remove_member.sql)");
+      if (error) throw new Error(error.message);
+    },
     async renameTeam(teamId, name) { return check(await sb.from("teams").update({ name }).eq("id", teamId).select().single()); },
 
     async saveTask(t) {
@@ -248,7 +253,8 @@ export function createMemoryStore(seed) {
     async revokeInvite(id) { db.invites = db.invites.filter((i) => i.id !== id); },
     async removeMember(teamId, memberId) {
       db.members = db.members.filter((m) => m.user_id !== memberId);
-      db.tasks = db.tasks.filter((t) => t.user_id !== memberId); // as RLS hides them
+      db.tasks = db.tasks.filter((t) => t.user_id !== memberId); // their data is deleted
+      recalc();
     },
     async renameTeam(teamId, name) { db.team = { ...db.team, name }; return { id: teamId, name }; },
     async deleteTask(id) { db.tasks = db.tasks.filter((t) => t.id !== id); recalc(); },

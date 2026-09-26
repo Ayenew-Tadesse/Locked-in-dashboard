@@ -148,8 +148,27 @@ function renderMember(el, userId) {
     } catch (err) { toast("Couldn't make the PDF: " + err.message, "error"); }
     finally { btn.disabled = false; }
   });
-  el.querySelector("#li-remove-member")?.addEventListener("click", async () => {
-    if (!(await confirmDialog(`Remove ${m.name} from the team? Their account stays, but you'll no longer see their work.`, "Remove"))) return;
-    await removeMember(userId).then(() => { toast(`${m.name} removed`); location.hash = "#/team"; }, () => {});
+  el.querySelector("#li-remove-member")?.addEventListener("click", () => confirmRemoval(m));
+}
+
+// Removal deletes the person's account and all their data, so it asks for
+// their name (without the title) to be typed first.
+const withoutTitle = (s) => (s || "").trim().replace(/^(mr|ms|mrs|dr)\.\s+/i, "");
+function confirmRemoval(m) {
+  const typeThis = withoutTitle(m.name) || m.email;
+  openModal({
+    eyebrow: "Permanent",
+    title: `Remove ${m.name} completely?`,
+    submitLabel: "Remove permanently",
+    body: `<p class="li-sub">This deletes their account and everything in it: tasks, scores, learning logs, notes and settings.
+        They won't be able to sign in, and it <b>can't be undone</b>. Team milestones are recalculated without their tasks.</p>
+      <p class="li-sub">Want a record first? Cancel and use <b>Today's report (PDF)</b>.</p>
+      <label class="li-field">Type <b>${esc(typeThis)}</b> to confirm<input name="confirm" autocomplete="off" required></label>`,
+    async onSubmit(v) {
+      if (withoutTitle(v.confirm).toLowerCase() !== typeThis.toLowerCase()) throw new Error("The name doesn't match.");
+      await removeMember(m.user_id);
+      toast(`${m.name} was removed and their data deleted`);
+      location.hash = "#/team";
+    },
   });
 }
