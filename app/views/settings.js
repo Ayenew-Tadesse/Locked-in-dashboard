@@ -69,7 +69,7 @@ export function renderSettings(el) {
       <p class="li-sub">Everything is stored in your database${state.store.mode === "demo" ? " (demo mode: in memory only, nothing is saved)" : ""}. Download a full copy at any time.</p>
       <div class="li-btn-row">
         <button type="button" class="li-btn" id="li-export">Download backup (JSON)</button>
-        <button type="button" class="li-btn" id="li-import-legacy">Set up my year</button>
+        ${!state.team || state.isOwner ? `<button type="button" class="li-btn" id="li-import-legacy">Set up my year</button>` : ""}
       </div>
       <p class="li-sub">"Set up my year" brings in the original dashboard's history (daily checklists and reports) and the year plan:
         ${PLAN_STATS.goals} quarterly goals, ${PLAN_STATS.milestones} milestones and ${PLAN_STATS.tickets} daily tickets from ${esc(formatDay(PLAN_STATS.first, { month: "short", day: "numeric" }))} to ${esc(formatDay(PLAN_STATS.last, { month: "short", day: "numeric" }))}.</p>
@@ -158,10 +158,10 @@ export function renderSettings(el) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  el.querySelector("#li-import-legacy").addEventListener("click", async () => {
+  el.querySelector("#li-import-legacy")?.addEventListener("click", async () => {
     const legacy = window.LockedInLegacy && window.LockedInLegacy.data();
     if (!legacy) { toast("The original dashboard data isn't available on this page.", "error"); return; }
-    const bundle = buildYearSetup(legacy, state.store.newId);
+    const bundle = buildYearSetup(legacy, state.store.newId, { teamId: state.team?.id || null });
     const again = state.settings.plan_loaded_at || state.settings.legacy_imported_at
       ? " This was already done once; doing it again creates duplicates." : "";
     if (!(await confirmDialog(`Add ${bundle.tasks.length} tasks (your history and the year's daily tickets), ${bundle.goals.length} quarterly goals, ${bundle.milestones.length} milestones and ${bundle.dailyNotes.length} daily reports?${again}`, "Set up"))) return;

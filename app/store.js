@@ -6,9 +6,11 @@ import { computeMilestone, computeGoal } from "./core/insights.js";
 const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "status", "category", "estimated_minutes",
   "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved"];
 const MILESTONE_FIELDS = ["title", "description", "category", "start_date", "deadline", "target", "current_progress",
-  "progress_mode", "status", "priority", "notes", "goal_id"];
+  "progress_mode", "status", "priority", "notes", "goal_id", "team_id"];
 const GOAL_FIELDS = ["title", "description", "quarter", "year", "deadline", "target", "current_progress", "progress_mode",
-  "status", "notes"];
+  "status", "notes", "team_id"];
+// A task's user_id is who does it: the team owner can set it to assign work.
+const taskRow = (t) => ({ ...pick(t, TASK_FIELDS), ...(t.user_id ? { user_id: t.user_id } : {}) });
 
 const pick = (obj, fields) => Object.fromEntries(fields.filter((f) => f in obj).map((f) => [f, obj[f] === "" ? null : obj[f]]));
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now().toString(36) + Math.random().toString(36).slice(2));
@@ -68,11 +70,32 @@ export function supabaseStoreFromClient(sb) {
         sb.from("user_settings").select("*").eq("user_id", userId).maybeSingle().then(check),
         all("tasks"), all("milestones"), all("quarterly_goals"), all("daily_scores", "date"), all("weekly_scores", "week_start"),
       ]);
-      return { profile, settings, tasks, milestones, goals, daily, weekly };
+      const team = await this.loadTeam();
+      return { profile, settings, tasks, milestones, goals, daily, weekly, me: userId, ...team };
     },
 
+    /** Your team, its members (names from profiles) and, for the owner, open invitations. */
+    async loadTeam() {
+      const mine = check(await sb.from("team_members").select("team_id, role, teams(name)").eq("user_id", userId));
+      if (!mine.length) return { team: null, members: [], invites: [] };
+      const m = mine[0];
+      const team = { id: m.team_id, name: m.teams?.name || "My team", role: m.role };
+      const members = check(await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email)").eq("team_id", team.id))
+        .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, name: r.profiles?.name || r.profiles?.email || "Member", email: r.profiles?.email || "" }));
+      const invites = team.role === "owner"
+        ? check(await sb.from("team_invites").select("*").eq("team_id", team.id).is("accepted_at", null).is("revoked_at", null).order("created_at"))
+        : [];
+      return { team, members, invites };
+    },
+    async inviteMember(teamId, email) {
+      return check(await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId }).select().single());
+    },
+    async revokeInvite(id) { check(await sb.from("team_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
+    async removeMember(teamId, memberId) { check(await sb.from("team_members").delete().eq("team_id", teamId).eq("user_id", memberId)); },
+    async renameTeam(teamId, name) { return check(await sb.from("teams").update({ name }).eq("id", teamId).select().single()); },
+
     async saveTask(t) {
-      const row = pick(t, TASK_FIELDS);
+      const row = taskRow(t);
       return t.id ? check(await sb.from("tasks").update(row).eq("id", t.id).select().single())
         : check(await sb.from("tasks").insert(row).select().single());
     },
@@ -158,6 +181,12 @@ export function supabaseStoreFromClient(sb) {
 
 export function createMemoryStore(seed) {
   const db = JSON.parse(JSON.stringify(seed));
+  // A preview account owns a team (sample colleagues come from the seed).
+  db.me = db.me || db.profile?.id || "demo";
+  db.team = db.team || { id: "team-preview", name: "My team", role: "owner" };
+  db.members = db.members || [{ user_id: db.me, role: "owner", name: db.profile?.name || "You", email: db.profile?.email || "" }];
+  db.invites = db.invites || [];
+  db.tasks.forEach((t) => { t.user_id = t.user_id || db.me; });
   const now = () => new Date().toISOString();
   const recalc = () => {
     db.milestones = db.milestones.map((m) => computeMilestone(m, db.tasks));
@@ -195,7 +224,28 @@ export function createMemoryStore(seed) {
       async updatePassword() {}, async signOut() { location.search = ""; },
     },
     async load() { recalc(); return JSON.parse(JSON.stringify({ ...db })); },
-    async saveTask(t) { return save("tasks", TASK_FIELDS, t); },
+    async saveTask(t) {
+      const saved = save("tasks", [...TASK_FIELDS, "user_id"], t);
+      const row = db.tasks.find((r) => r.id === saved.id);
+      row.user_id = row.user_id || db.me;
+      if (!t.id && row.user_id !== db.me) row.assigned_by = db.me; // as the database stamps it
+      return { ...row };
+    },
+    async loadTeam() { return JSON.parse(JSON.stringify({ team: db.team, members: db.members, invites: db.invites })); },
+    async inviteMember(teamId, email) {
+      const e = email.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Enter a valid email address.");
+      if (db.invites.some((i) => i.email === e) || db.members.some((m) => m.email === e)) throw new Error("That email is already invited or in the team.");
+      const inv = { id: uuid(), team_id: teamId, email: e, role: "member", created_at: now() };
+      db.invites.push(inv);
+      return { ...inv };
+    },
+    async revokeInvite(id) { db.invites = db.invites.filter((i) => i.id !== id); },
+    async removeMember(teamId, memberId) {
+      db.members = db.members.filter((m) => m.user_id !== memberId);
+      db.tasks = db.tasks.filter((t) => t.user_id !== memberId); // as RLS hides them
+    },
+    async renameTeam(teamId, name) { db.team = { ...db.team, name }; return { id: teamId, name }; },
     async deleteTask(id) { db.tasks = db.tasks.filter((t) => t.id !== id); recalc(); },
     async saveMilestone(m) { return save("milestones", MILESTONE_FIELDS, m); },
     async deleteMilestone(id) {

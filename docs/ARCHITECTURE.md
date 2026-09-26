@@ -130,3 +130,24 @@ profiles ──1:1── user_settings
 
 Documented in [SCORING.md](SCORING.md) and shown in the app under
 **Settings → Scoring formula**.
+
+## Team portal (added later)
+
+Migration `20260926200000_teams.sql` adds `teams`, `team_members` (role
+`owner` or `member`) and `team_invites`, plus `team_id` on goals and
+milestones and `assigned_by` on tasks.
+
+| Who | Sees | Can change |
+| --- | --- | --- |
+| Member | own tasks, scores, learning logs; team goals and milestones; teammates' names | own tasks and notes |
+| Owner | everything a member sees, plus every member's tasks, scores and learning logs; open invitations | team goals/milestones, members' tasks (assigning), invitations, members, team name |
+| Signed-out visitor | nothing | nothing |
+
+* Sign-up is by invitation: a trigger on `auth.users` refuses any email
+  that isn't invited, except the very first account, which becomes the owner.
+* Membership checks are small `SECURITY DEFINER` helpers
+  (`private.is_member`, `is_owner`, `owns_member`, `shares_team`) used by the
+  RLS policies.
+* A task may link its person's own milestone or a team milestone of their
+  team (trigger check). Milestone and goal progress count everyone's tasks.
+* All of it is covered by `tests/db/teams.sql` and `tests/integration/team.mjs`.

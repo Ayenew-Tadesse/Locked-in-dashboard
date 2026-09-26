@@ -300,7 +300,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.ok(appFiles.length > 20, "app files requested");
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
   const nav = await page.locator("#li-nav .li-nav-link").allInnerTexts();
-  assert.deepEqual(nav, ["Overview", "Today", "Calendar", "Milestones", "Analytics"]);
+  assert.deepEqual(nav, ["Overview", "Today", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
   const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
   assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
@@ -396,6 +396,47 @@ test("daily report: Download PDF includes what changed, how, the problem solved 
     "Inputs were hidden behind the keyboard on iOS", "Add the booking store", "src/store/booking.ts"]) {
     assert.ok(pdf.includes(s), `PDF contains "${s}"`);
   }
+  await page.close();
+});
+
+test("team: the owner sees everyone's progress, assigns tasks and invites colleagues", async () => {
+  const page = await open("today");
+  // Colleagues' tasks never mix into your own Today.
+  assert.equal(await page.locator("#li-view .li-task:visible").filter({ hasText: "(sample)" }).count(), 0);
+  const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+  assert.deepEqual(tabs, ["Overview", "Today", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
+  await page.click('#li-nav a[href="#/team"]');
+  await page.waitForSelector(".li-team-table");
+  const rows = await page.locator(".li-team-table tbody tr").allInnerTexts();
+  assert.equal(rows.length, 3, "owner + two colleagues");
+  assert.ok(rows.some((r) => r.includes("Ana (sample)")) && rows.some((r) => r.includes("Ben (sample)")));
+  // Assign a task to Ana from her row.
+  await page.locator(".li-team-table tr", { hasText: "Ana (sample)" }).locator("[data-assign]").click();
+  assert.equal(await page.locator("#li-modal [name=user_id]").inputValue(), "sample-ana", "Assign to is preselected");
+  await page.fill("#li-modal [name=title]", "E2E: review the payment screen");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.click('.li-team-table a:has-text("Ana (sample)")');
+  await page.waitForSelector(".li-h2:has-text('Ana (sample)')");
+  const assigned = row(page, "E2E: review the payment screen");
+  await assigned.waitFor();
+  assert.match(await assigned.innerText(), /For Ana \(sample\)/);
+  assert.match(await page.locator("#li-view").innerText(), /Scrolling was janky/, "their learning logs are visible to the owner");
+  // Their daily report as a PDF.
+  const [download] = await Promise.all([page.waitForEvent("download"), page.click("#li-member-pdf")]);
+  assert.match(download.suggestedFilename(), /ana-sample/);
+  // Invite a colleague, then cancel it.
+  await page.click('a:has-text("‹ Team")');
+  await page.fill("#li-invite-form [name=email]", "New.Colleague@Example.com");
+  await page.click("#li-invite-form button[type=submit]");
+  await page.waitForSelector("#li-invites li:has-text('new.colleague@example.com')");
+  await page.click("#li-invites [data-revoke-invite]");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => !document.querySelector("#li-invites").textContent.includes("new.colleague@example.com"));
+  // The assigned task isn't in the owner's own Today.
+  await page.click('#li-nav a[href="#/today"]');
+  await page.waitForSelector(".li-view-head");
+  assert.equal(await row(page, "E2E: review the payment screen").count(), 0);
   await page.close();
 });
 

@@ -61,7 +61,9 @@ export function showAuth(store, { mode = "signin", message = "" } = {}) {
       else if (mode === "reset") { await store.auth.resetPassword(email); ok.textContent = "Check your email for a reset link."; ok.hidden = false; }
       else if (mode === "update") { await store.auth.updatePassword(f.password.value); }
     } catch (ex) {
-      err.textContent = ex.message === "Invalid login credentials" ? "That email and password don't match." : ex.message;
+      err.textContent = ex.message === "Invalid login credentials" ? "That email and password don't match."
+        : /invitation only|Database error saving new user/i.test(ex.message) ? "This email hasn't been invited yet. Ask your team owner to invite it, then sign up again."
+        : ex.message;
       err.hidden = false;
     } finally { btn.disabled = false; }
   });

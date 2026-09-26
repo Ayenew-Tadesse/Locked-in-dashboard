@@ -37,6 +37,9 @@ git-ignored).
 3. Open another **New query**, paste
    [`supabase/migrations/20260926100000_learning_log.sql`](../supabase/migrations/20260926100000_learning_log.sql)
    (the Learning log and preferences) and click **Run**.
+4. Do the same with
+   [`supabase/migrations/20260926200000_teams.sql`](../supabase/migrations/20260926200000_teams.sql)
+   (the team portal). Run the three files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.
@@ -51,10 +54,18 @@ git-ignored).
    * **Site URL**: your deployed address, e.g. `https://locked-in.vercel.app`
      (update it after step 6 and again if you add a custom domain).
    * **Redirect URLs**: add the same URL, plus `http://localhost:5173` for local testing.
-3. Deploy (step 6), open the site, choose **Create an account**, confirm the email, sign in.
-4. **Recommended:** once your own account exists, turn off **Allow new users
-   to sign up** (Authentication → Sign In / Providers). Other people couldn't
-   see your data anyway, but this keeps the app to you alone.
+3. Open the site and **create your account first**. The first account
+   becomes the team **owner**; every later sign-up needs an invitation.
+4. Leave **Allow new users to sign up** switched on: the database itself
+   refuses any email you haven't invited (Team page → Invite colleagues).
+
+### Inviting colleagues
+1. Team → **Invite colleagues** → enter their email → **Invite**.
+2. Send them the site's address (the **Copy sign-up link** button). They
+   choose **Create an account** with that exact email.
+3. They appear on your Team page as members. They see their own work and
+   the team's goals and milestones; you see everyone's progress and can
+   assign them tasks.
 
 Your sign-in session stays on each device until you log out. All data lives
 in the database, so clearing browser data, switching computers or using your

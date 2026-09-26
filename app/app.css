@@ -368,6 +368,18 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
 .li-report-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-2px 0 12px;justify-content:center;}
 .li-report-actions .li-sub{font-size:11.5px;font-family:inherit;text-transform:none;letter-spacing:0;}
 
+/* ---- Team page ---------------------------------------------------------------- */
+.li-table-wrap{overflow-x:auto;margin:0 -4px;}
+.li-team-table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+.li-team-table th{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);text-align:left;font-weight:500;padding:6px 8px;}
+.li-team-table td{padding:9px 8px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.li-team-table td.tone-green{color:var(--good);}
+.li-team-table td.tone-orange{color:var(--orange);}
+.li-team-table td.tone-red{color:var(--red);}
+.li-person{font-size:14px;font-weight:600;color:var(--ink);}
+.li-meta.who{color:var(--orange);}
+.li-learned li{align-items:flex-start;}
+
 /* ---- Footer ------------------------------------------------------------------ */
 .li-footer{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;}
 .li-footer-links{display:flex;gap:14px;}

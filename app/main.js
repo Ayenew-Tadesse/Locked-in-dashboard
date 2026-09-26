@@ -21,6 +21,7 @@ import { renderQuarter } from "./views/quarter.js";
 import { renderMilestones } from "./views/milestones.js";
 import { renderAnalytics } from "./views/analytics.js";
 import { renderSettings } from "./views/settings.js";
+import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { DEFAULT_REPOS, fetchCommits, buildDailyReport, renderDailyReportPdf } from "./report/daily-report.js";
 
@@ -34,6 +35,7 @@ const VIEWS = {
   milestones: { label: "Milestones", render: renderMilestones },
   analytics: { label: "Analytics", render: renderAnalytics },
   settings: { label: "Settings", render: renderSettings },
+  team: { label: "Team", render: renderTeam },
 };
 
 // Tabs in the top row. The other pages stay reachable by link: Tasks and Week
@@ -58,7 +60,8 @@ function route() {
 }
 
 function renderNav(active) {
-  $("#li-nav").innerHTML = `<div class="li-nav-scroll">${NAV.map((k) =>
+  const tabs = state.isOwner ? [...NAV, "team"] : NAV; // Team: owner only
+  $("#li-nav").innerHTML = `<div class="li-nav-scroll">${tabs.map((k) =>
     `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link${k === active ? " active" : ""}"${k === active ? ' aria-current="page"' : ""}>${VIEWS[k].label}</a>`).join("")}</div>`;
 }
 
@@ -238,6 +241,8 @@ async function start(store) {
   }
   started = true;
   window.LockedInHooks = legacyHooks;
+  // Each person sees their own name in the heading (previews keep the original).
+  if (store.mode === "supabase" && state.profile?.name) document.querySelector(".wrap > h1").textContent = state.profile.name;
   addReportPdfButton();
   document.documentElement.classList.remove("app-booting");
   $("#footnote").textContent = store.mode === "demo"
@@ -261,7 +266,7 @@ async function boot() {
       // The original dashboard's history plus the year plan, loaded through
       // the same import the real app uses (Settings -> Set up my year).
       store = createMemoryStore(emptySeed());
-      await store.importData(buildYearSetup(window.LockedInLegacy.data(), store.newId));
+      await store.importData(buildYearSetup(window.LockedInLegacy.data(), store.newId, { teamId: "team-preview" }));
       await store.markLegacyImported();
       await store.markPlanLoaded();
     } else {

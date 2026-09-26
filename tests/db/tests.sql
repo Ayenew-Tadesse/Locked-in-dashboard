@@ -213,6 +213,8 @@ select pg_temp.check((select count(*) from tasks) = 0 and (select count(*) from 
   and (select count(*) from api_tokens) = 0, 'deleting a user removes their data');
 
 -- 11. Learning log and preferences (second migration) --------------------------
+-- Sign-up is invitation-only now (teams migration): invite c first.
+insert into team_invites (team_id, email) select id, 'c@example.com' from teams limit 1;
 insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000003', 'c@example.com');
 select pg_temp.act_as('cccccccc-0000-0000-0000-000000000003');
 insert into tasks (title, status, learning_changed, learning_how, learning_solved)
