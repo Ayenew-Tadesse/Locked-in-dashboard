@@ -1,9 +1,11 @@
 // Entry point for the productivity app. Runs only when the page has a
-// Supabase config (config.js) or is opened with ?demo=1; otherwise the
-// original dashboard runs exactly as before.
+// Supabase config (config.js) or is a preview (?demo=1 for sample data,
+// ?demo=history for the original dashboard's tracking history); otherwise
+// the original dashboard runs exactly as before.
 import { state, subscribe, loadAll, setToast, updateTask, saveTask } from "./state.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
-import { demoSeed } from "./demo.js";
+import { demoSeed, emptySeed } from "./demo.js";
+import { buildLegacyImport } from "./legacy-import.js";
 import { showAuth, hideAuth } from "./ui/auth.js";
 import { showToast, esc, $ } from "./ui/dom.js";
 import { openTaskForm } from "./ui/task-ui.js";
@@ -33,7 +35,12 @@ const VIEWS = {
 };
 
 const config = window.LOCKEDIN_CONFIG || {};
-const demo = new URLSearchParams(location.search).get("demo") === "1";
+// Preview modes come from the URL or, for a preview deployment, config.js.
+const demoMode = (() => {
+  const v = new URLSearchParams(location.search).get("demo") || config.demo;
+  return v === "history" ? "history" : v === "1" || v === "sample" || v === true ? "sample" : null;
+})();
+const demo = !!demoMode;
 let started = false;
 
 function route() {
@@ -190,7 +197,9 @@ async function start(store) {
   window.LockedInHooks = legacyHooks;
   document.documentElement.classList.remove("app-booting");
   $("#footnote").textContent = store.mode === "demo"
-    ? "Demo mode: sample data held in memory only. Nothing you change here is saved."
+    ? (demoMode === "history"
+      ? "Preview with your tracking history from the original dashboard. Changes you make here aren't saved."
+      : "Demo mode: sample data held in memory only. Nothing you change here is saved.")
     : "Your tasks, scores and milestones are saved to your database and sync across devices.";
   subscribe(() => render());
   // Roll over at midnight.
@@ -204,7 +213,15 @@ async function boot() {
   setToast(showToast);
   let store;
   try {
-    store = demo ? createMemoryStore(demoSeed()) : await createSupabaseStore(config);
+    if (demoMode === "history") {
+      // The original dashboard's history, loaded through the same import the
+      // real app uses (Settings -> Import the original dashboard's history).
+      store = createMemoryStore(emptySeed());
+      await store.importData(buildLegacyImport(window.LockedInLegacy.data(), store.newId));
+      await store.markLegacyImported();
+    } else {
+      store = demo ? createMemoryStore(demoSeed()) : await createSupabaseStore(config);
+    }
   } catch (e) {
     console.error(e);
     document.documentElement.classList.remove("app-booting");

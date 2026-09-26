@@ -100,8 +100,10 @@ export function openModal({ eyebrow = "", title, body, submitLabel = "Save", onS
     } finally { btn.disabled = false; }
   });
   onReady && onReady(form, wrap);
+  // Focus the first field now (the dialog is already in the page); a delayed
+  // focus could pull the cursor away from a field the user has started typing in.
   const first = $("input:not([type=hidden]), select, textarea", form);
-  setTimeout(() => (first || $("[data-close]", wrap)).focus(), 30);
+  (first || $("[data-close]", wrap)).focus();
   return form;
 }
 export function closeModal() {

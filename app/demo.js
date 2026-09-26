@@ -64,3 +64,12 @@ export function demoSeed(today = todayKey()) {
     weekly: [],
   };
 }
+
+/** A blank account (used by the ?demo=history preview before its import). */
+export function emptySeed() {
+  return {
+    profile: { id: "preview", name: "Ayenew Shiferaw", email: "", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    settings: { scoring: {}, legacy_imported_at: null },
+    tasks: [], milestones: [], goals: [], daily: [], weekly: [],
+  };
+}

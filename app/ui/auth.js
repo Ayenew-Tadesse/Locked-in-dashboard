@@ -43,7 +43,7 @@ export function showAuth(store, { mode = "signin", message = "" } = {}) {
   const form = el.querySelector("form");
   const err = el.querySelector(".gate-error"), ok = el.querySelector(".li-auth-ok");
   el.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => showAuth(store, { mode: b.dataset.mode })));
-  setTimeout(() => form.querySelector("input")?.focus(), 30);
+  form.querySelector("input")?.focus();
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     err.hidden = true; ok.hidden = true;

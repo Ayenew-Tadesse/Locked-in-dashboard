@@ -82,7 +82,8 @@ get preview URLs. Then:
 3. Check the API: `https://<your-site>/api/v1` should list the endpoints.
 
 Local preview: `npm run dev` (serves `dist/` at http://localhost:5173). Add
-`?demo=1` to try it with sample data and no database.
+`?demo=1` to try it with sample data, or `?demo=history` to see your
+original tracking history in the new design, with no database.
 
 ## 7. Custom domain (later)
 

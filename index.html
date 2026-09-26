@@ -996,9 +996,10 @@
      Without it the page runs as the original dashboard. -->
 <script src="config.js"></script>
 <script>
-  // App mode: a database is configured (or ?demo=1). Supabase sign-in then
+  // App mode: a database is configured, or a preview (?demo=1 sample data,
+  // ?demo=history your tracking history). Supabase sign-in then
   // replaces the password screen, and data comes from the database.
-  var APP_MODE = !!(window.LOCKEDIN_CONFIG && window.LOCKEDIN_CONFIG.supabaseUrl) || /[?&]demo=1(&|$)/.test(location.search);
+  var APP_MODE = !!(window.LOCKEDIN_CONFIG && (window.LOCKEDIN_CONFIG.supabaseUrl || window.LOCKEDIN_CONFIG.demo)) || /[?&]demo=(1|history)(&|$)/.test(location.search);
   if (APP_MODE) {
     document.documentElement.classList.add("app-mode", "app-booting");
     // If the app code can't load, show the original dashboard instead of a blank page.

@@ -238,6 +238,29 @@ test("every view fits a phone screen without sideways scrolling", async () => {
   await page.close();
 });
 
+test("?demo=history previews the original dashboard's tracking history", async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.goto(BASE + "?demo=history#/tasks");
+  await page.waitForSelector("#li-nav .li-nav-link");
+  assert.equal(await page.locator(".li-h2").innerText(), "14 tasks", "the Sep 23-25 checklist items");
+  assert.equal(await row(page, "Rename the app from Hid-Go to Guxo Flights").count(), 1);
+  assert.equal(await page.locator(".li-task.st-completed").count(), 14);
+  await page.goto(BASE + "?demo=history#/milestones?show=all");
+  await page.waitForFunction(() => document.querySelector(".li-h2")?.textContent === "23 total");
+  await page.goto(BASE + "?demo=history#/quarter?q=4&y=2026");
+  await page.waitForSelector(".li-goals");
+  assert.match(await page.locator(".li-goals").innerText(), /33%[\s\S]*Q1 roadmap: Build the shared foundation/);
+  await page.goto(BASE + "?demo=history#/calendar?month=2026-09&day=2026-09-24");
+  await page.waitForSelector("#li-cal-day");
+  assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);
+  assert.match(await page.locator("#footnote").innerText(), /tracking history/);
+  assert.deepEqual(errors, []);
+  await page.close();
+});
+
 test("without a database the original dashboard runs unchanged", async () => {
   const page = await browser.newPage();
   const errors = [];
