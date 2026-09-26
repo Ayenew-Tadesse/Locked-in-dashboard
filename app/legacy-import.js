@@ -3,6 +3,10 @@
 //
 // Mapping:
 //   daily checklist items  -> tasks (date = that day, completed if ticked)
+//   activity (commits) on days without a checklist
+//                          -> completed tasks (e.g. Sep 20-21, before checklists
+//                             existed); days with a checklist already count that
+//                             work, so their activity isn't added twice
 //   daily reports          -> notes on that day's score
 //   roadmap phases (Q1-Q4) -> quarterly goals, placed in the calendar quarter
 //                             where the phase ends (e.g. "Sep–Dec 2026" -> Q4 2026)
@@ -43,6 +47,18 @@ export function buildLegacyImport(legacy, newId, { roadmap = true } = {}) {
         id: newId(), title: clip(t.text, 300), date, status: t.done ? "completed" : "not_started",
         completion_percentage: t.done ? 100 : 0, priority: "medium", category: "Build",
         completed_at: t.done ? new Date(`${date}T17:00:00`).toISOString() : null,
+      });
+    }
+  }
+
+  for (const [date, c] of Object.entries(legacy.contributions || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (legacy.daily || {})[date]?.tasks?.length) continue;
+    for (const it of (c && c.items) || []) {
+      if (!it.text) continue;
+      tasks.push({
+        id: newId(), title: clip(it.text, 300), date, status: "completed", completion_percentage: 100,
+        priority: "medium", category: clip(it.repo, 60) || "Build",
+        completed_at: new Date(`${date}T17:00:00`).toISOString(),
       });
     }
   }

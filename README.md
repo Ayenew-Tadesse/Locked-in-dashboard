@@ -55,7 +55,7 @@ the rings show the new scores, and ticking Today's checklist completes the real 
 | Supabase | `config.js` has a Supabase URL (the Vercel build writes it) | Sign-in, all features, data saved in the database |
 | Original | No `config.js` (claude.ai artifact, GitHub Pages, opening the file) | Exactly the original dashboard with its password screen |
 | Demo | Add `?demo=1` to the URL | All features with sample data held in memory. Nothing is saved. |
-| History preview | Add `?demo=history` to the URL | All features showing your tracking history from the original dashboard (Sep 23–25 checklists, daily reports) and the year plan, loaded through the same "Set up my year" step the real app uses. Nothing is saved. |
+| History preview | Add `?demo=history` to the URL | All features showing your tracking history from the original dashboard (Sep 20–25: activity, checklists, daily reports) and the year plan, loaded through the same "Set up my year" step the real app uses. Nothing is saved. |
 
 A deployment without a database can open in a preview mode by default: build with
 `DEMO_MODE=history` (or `DEMO_MODE=sample`).

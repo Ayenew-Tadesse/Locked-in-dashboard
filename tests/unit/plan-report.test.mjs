@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildYearPlan, ticketSection, PLAN_STATS } from "../../app/plan/year-plan.js";
-import { buildYearSetup } from "../../app/plan/setup.js";
+import { buildYearSetup, buildMissingHistory } from "../../app/plan/setup.js";
 import { roadmapDone } from "../../app/legacy-import.js";
 import { weekdayIndex, addDays } from "../../app/core/dates.js";
 import { computeMilestone, computeGoal } from "../../app/core/insights.js";
@@ -16,6 +16,7 @@ const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
 const grab = (name) => JSON.parse(new RegExp(`var ${name} = (\\{.*?\\});\\n`).exec(html)[1]);
 const legacy = {
   daily: grab("FALLBACK_DAILY"), reports: grab("FALLBACK_REPORTS"), checklists: grab("FALLBACK_CHECKLISTS"),
+  contributions: grab("FALLBACK_CONTRIBUTIONS"),
   objective: { objective: "Ship three sibling apps", phases: [
     { id: "q1", tag: "Q1 · Sep–Dec 2026", text: "Foundation" }, { id: "q2", tag: "Q2 · Jan–Mar 2027", text: "Ship Guxo Flights" },
     { id: "q3", tag: "Q3 · Apr–Jun 2027", text: "Ship Guxo" }, { id: "q4", tag: "Q4 · Jul–Sep 2027", text: "Ship Gexi" }] },
@@ -58,7 +59,12 @@ test("setup: history + plan, finished roadmap items stay finished", () => {
   const setup = buildYearSetup(legacy, newId);
   assert.equal(setup.goals.length, 4, "roadmap goals come from the plan only (no duplicates)");
   assert.equal(setup.milestones.length, 23);
-  assert.equal(setup.tasks.length, 14 + PLAN_STATS.tickets, "14 history tasks + the plan's tickets");
+  assert.equal(setup.tasks.length, 16 + PLAN_STATS.tickets, "16 history tasks (14 checklist + Sep 20-21 activity) + the plan's tickets");
+  // Sep 20 and 21 had activity but no checklist: they become completed tasks.
+  const early = setup.tasks.filter((t) => t.date < "2026-09-23");
+  assert.deepEqual(early.map((t) => [t.date, t.status, t.category]), [["2026-09-20", "completed", "Guxo Flights"], ["2026-09-21", "completed", "Guxo"]]);
+  // Days with a checklist don't also get their activity (no double counting).
+  assert.equal(setup.tasks.filter((t) => t.date === "2026-09-25").length, 5);
   assert.equal(setup.dailyNotes.length, 3);
   const done = setup.milestones.filter((m) => m.status === "completed");
   assert.equal(done.length, 2);
@@ -104,4 +110,21 @@ test("report: GitHub commits are read per repository and failures are explained"
 test("report: PDF text is cleaned to what the PDF font can show", () => {
   assert.equal(pdfText("search → select — book · “done” ✓"), 'search -> select - book - "done" done');
   assert.equal(pdfText("ሰላም"), "???", "Ge'ez script falls back to ? (3 characters)");
+});
+
+test("setup: adding missing history only adds what isn't there yet", () => {
+  // An account set up before activity-only days were imported: 14 checklist tasks and 3 reports.
+  const before = buildYearSetup({ ...legacy, contributions: {} }, newId);
+  const daily = Object.fromEntries(before.dailyNotes.map((n) => [n.date, n]));
+  const missing = buildMissingHistory(legacy, newId, { tasks: before.tasks, daily });
+  assert.deepEqual(missing.tasks.map((t) => t.date), ["2026-09-20", "2026-09-21"]);
+  assert.equal(missing.dailyNotes.length, 0);
+  assert.equal(missing.goals.length + missing.milestones.length, 0, "never re-adds the plan");
+  // Running it again adds nothing.
+  const again = buildMissingHistory(legacy, newId, { tasks: [...before.tasks, ...missing.tasks], daily });
+  assert.equal(again.tasks.length + again.dailyNotes.length, 0);
+  // A fresh account gets all of it.
+  const fresh = buildMissingHistory(legacy, newId, {});
+  assert.equal(fresh.tasks.length, 16);
+  assert.equal(fresh.dailyNotes.length, 3);
 });

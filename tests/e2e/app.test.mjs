@@ -271,9 +271,10 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(BASE + "?demo=history#/tasks");
   await page.waitForSelector("#li-nav .li-nav-link");
-  // The Sep 23-25 history plus the year plan's daily tickets (Tasks page shows 30 days either side by default: all).
+  // The Sep 20-25 history plus the year plan's daily tickets (Tasks page shows 30 days either side by default: all).
   assert.equal(await row(page, "Rename the app from Hid-Go to Guxo Flights").count(), 1);
-  assert.equal(await page.locator(".li-task.st-completed:visible").count(), 14, "history tasks are done");
+  assert.equal(await row(page, "Uploaded the first version of the flight-booking app").count(), 1, "Sep 20's activity");
+  assert.equal(await page.locator(".li-task.st-completed:visible").count(), 16, "history tasks are done (14 checklist + Sep 20-21)");
   assert.equal(await row(page, "Map the booking flow and choose a state library").count(), 1, "the plan's first ticket");
   await page.goto(BASE + "?demo=history#/milestones?show=all");
   await page.waitForFunction(() => document.querySelector(".li-h2")?.textContent === "23 total");
@@ -284,6 +285,11 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.waitForSelector("#li-cal-day");
   assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);
   assert.match(await page.locator("#footnote").innerText(), /tracking history/);
+  // Already set up: Settings offers "Add missing history", which finds nothing to add.
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.click("#li-import-missing");
+  await page.waitForFunction(() => /already here/.test(document.querySelector("#li-toasts")?.textContent || ""));
+  assert.equal(await page.locator("#li-import-legacy").count(), 0, "no second full setup");
   assert.deepEqual(errors, []);
   await page.close();
 });
