@@ -1,0 +1,14 @@
+{
+  "name": "locked-in-dashboard",
+  "private": true,
+  "type": "module",
+  "description": "Personal productivity and milestone tracker built on the Locked in dashboard",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs && node scripts/serve.mjs",
+    "test": "node --test \"tests/unit/*.test.mjs\"",
+    "test:db": "tests/db/run.sh",
+    "test:e2e": "node scripts/build.mjs && node --test \"tests/e2e/*.test.mjs\""
+  }
+}
