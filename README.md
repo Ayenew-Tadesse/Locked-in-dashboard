@@ -58,10 +58,10 @@ the rings show the new scores, and ticking Today's checklist completes the real 
 A deployment without a database can open in a preview mode by default: build with
 `DEMO_MODE=history` (or `DEMO_MODE=sample`).
 
-**GitHub Pages** serves this repository as-is, using the root `config.js`. It is set
-to the history preview, behind the original password screen. Replace its line with
-your Supabase URL and publishable key (see the comments in the file) to save for real.
-Previews keep the password screen; with a database, Supabase sign-in replaces it.
+**GitHub Pages** serves this repository as-is, using the root `config.js`. It is
+connected to the team's Supabase project, so the site opens on the sign-in screen
+and everything is saved in the database. Setting that file back to
+`{ demo: "history" }` returns to the no-database preview behind the password screen.
 
 ## Getting started
 

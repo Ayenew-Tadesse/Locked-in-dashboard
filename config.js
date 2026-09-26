@@ -2,12 +2,15 @@
 // (GitHub Pages, or opening index.html). Vercel builds write their own
 // config.js from environment variables instead (scripts/build.mjs).
 //
-// Right now the site opens the new design with the tracking history from
-// the original dashboard, behind the password screen. It's a preview:
-// changes made there are not saved.
+// The site is connected to the team's Supabase project: sign-in replaces the
+// password screen and everything is saved in the database.
 //
-// To save for real, create the Supabase project (docs/DEPLOYMENT.md) and
-// replace the line below with your public values:
-//   window.LOCKEDIN_CONFIG = { supabaseUrl: "https://<ref>.supabase.co", supabaseAnonKey: "<publishable key>" };
-// Never put the secret / service_role key here.
-window.LOCKEDIN_CONFIG = { demo: "history" };
+// Both values are public by design. The publishable key only lets a browser
+// talk to the project; Row Level Security decides what each signed-in person
+// can read or change. Never put the secret / service_role key here.
+//
+// To go back to the no-database preview, use: window.LOCKEDIN_CONFIG = { demo: "history" };
+window.LOCKEDIN_CONFIG = {
+  supabaseUrl: "https://uzbgbtzcnufaebifkeab.supabase.co",
+  supabaseAnonKey: "sb_publishable_SQJ5lLAJZCKInfCnnQyXmw_VO715R2N"
+};
