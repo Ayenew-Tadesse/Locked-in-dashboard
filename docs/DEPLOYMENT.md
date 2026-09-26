@@ -118,7 +118,9 @@ original tracking history in the new design, with no database.
 
 ## GitHub Pages / claude.ai
 
-If the page is opened without `config.js` (e.g. GitHub Pages, or the original
+GitHub Pages uses the repository's root `config.js`, which holds the project's
+Supabase URL and publishable key, so https://ayenew-tadesse.github.io/Locked-in-dashboard/
+is a full deployment: add that address to Supabase's Site URL and Redirect URLs
+(step 4). If the page is opened without any `config.js` (e.g. the original
 Claude artifact), it runs exactly as the original dashboard did, with the
-password screen and built-in data. The new features appear only on the
-deployed site with Supabase configured.
+password screen and built-in data.
