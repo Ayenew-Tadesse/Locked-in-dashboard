@@ -41,7 +41,9 @@ git-ignored).
    [`supabase/migrations/20260926200000_teams.sql`](../supabase/migrations/20260926200000_teams.sql)
    (the team portal), then
    [`supabase/migrations/20260927000000_greeting.sql`](../supabase/migrations/20260927000000_greeting.sql)
-   (names and "Greet me as"). Run the files in this order.
+   (names and "Greet me as"), then
+   [`supabase/migrations/20260928000000_remove_member.sql`](../supabase/migrations/20260928000000_remove_member.sql)
+   (removing a member completely). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.

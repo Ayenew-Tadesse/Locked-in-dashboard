@@ -140,3 +140,58 @@ select pg_temp.check((select greeting = 'ms' from profiles where email = 'cara@e
 select pg_temp.act_as(:owner);
 select pg_temp.check((select greeting from profiles where id = :ana) = 'dr', 'the owner sees each member''s name and greeting');
 reset role;
+
+-- 8. Removing a member completely ----------------------------------------
+-- Cara (a member) has a task on the team milestone, a score and a token.
+select pg_temp.act_as('44444444-0000-0000-0000-000000000004');
+insert into tasks (title, date, milestone_id, status) select 'Cara task', '2026-09-28', id, 'completed' from milestones where title = 'Booking flow';
+insert into daily_scores (date, score, completed_tasks, total_tasks) values ('2026-09-28', 100, 1, 1);
+reset role;
+select pg_temp.act_as(:owner);
+insert into tasks (title, date, user_id) values ('Assigned to Cara', '2026-09-29', '44444444-0000-0000-0000-000000000004');
+insert into team_invites (team_id, email, invited_by) select team_id, 'cara@example.com', :owner from team_members where user_id = :owner;
+reset role;
+select target as before_target from milestones where title = 'Booking flow' \gset
+
+select pg_temp.act_as(:ana);
+do $$ begin
+  perform remove_member_completely('44444444-0000-0000-0000-000000000004');
+  raise exception 'FAILED: a member removed someone';
+exception when insufficient_privilege then raise notice 'ok - members cannot remove people';
+end $$;
+reset role;
+select pg_temp.act_as(:owner);
+do $$ begin
+  perform remove_member_completely(auth.uid());
+  raise exception 'FAILED: owner removed themselves';
+exception when insufficient_privilege then raise notice 'ok - the owner cannot remove themselves';
+end $$;
+select remove_member_completely('44444444-0000-0000-0000-000000000004');
+reset role;
+select pg_temp.check(not exists (select 1 from auth.users where id = '44444444-0000-0000-0000-000000000004'), 'the account is deleted (they can''t sign in)');
+select pg_temp.check(not exists (select 1 from profiles where id = '44444444-0000-0000-0000-000000000004')
+  and not exists (select 1 from tasks where user_id = '44444444-0000-0000-0000-000000000004')
+  and not exists (select 1 from daily_scores where user_id = '44444444-0000-0000-0000-000000000004')
+  and not exists (select 1 from team_members where user_id = '44444444-0000-0000-0000-000000000004'), 'their tasks, scores, profile and membership are deleted');
+select pg_temp.check((select target from milestones where title = 'Booking flow') = :before_target - 1, 'team milestone progress is recalculated without them');
+select pg_temp.check((select count(*) from team_invites where email = 'cara@example.com' and accepted_at is null and revoked_at is null) = 0, 'open invitations for their email are cancelled');
+select pg_temp.check(exists (select 1 from profiles where id = :ana), 'other members are untouched');
+do $$ begin
+  insert into auth.users (id, email) values ('66666666-0000-0000-0000-000000000006', 'cara@example.com');
+  raise exception 'FAILED: removed member signed up again uninvited';
+exception when insufficient_privilege then raise notice 'ok - they can''t sign up again unless invited';
+end $$;
+select pg_temp.act_as(:owner);
+do $$ begin
+  perform remove_member_completely('44444444-0000-0000-0000-000000000004');
+  raise exception 'FAILED: removing a missing person succeeded';
+exception when insufficient_privilege then raise notice 'ok - removing someone not on the team is refused';
+end $$;
+reset role;
+select pg_temp.act_as('');
+do $$ begin
+  perform remove_member_completely('22222222-0000-0000-0000-000000000002');
+  raise exception 'FAILED';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot remove anyone';
+end $$;
+reset role;

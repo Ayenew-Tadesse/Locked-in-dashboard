@@ -437,6 +437,21 @@ test("team: the owner sees everyone's progress, assigns tasks and invites collea
   await page.click('#li-nav a[href="#/today"]');
   await page.waitForSelector(".li-view-head");
   assert.equal(await row(page, "E2E: review the payment screen").count(), 0);
+  // Remove Ben completely: his name must be typed first.
+  await page.click('#li-nav a[href="#/team"]');
+  await page.click('.li-team-table a:has-text("Ben (sample)")');
+  await page.click("#li-remove-member");
+  assert.match(await page.textContent("#li-modal"), /can't be undone/);
+  await page.fill("#li-modal [name=confirm]", "Ana (sample)");
+  await page.click("#li-modal button[type=submit]");
+  assert.match(await page.textContent("#li-modal .li-form-error"), /doesn't match/);
+  await page.fill("#li-modal [name=confirm]", "ben (sample)");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.waitForSelector(".li-team-table");
+  const after = await page.locator(".li-team-table tbody tr").allInnerTexts();
+  assert.equal(after.length, 2, "Ben is gone");
+  assert.ok(!after.some((r) => r.includes("Ben (sample)")));
   await page.close();
 });
 

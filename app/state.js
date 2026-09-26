@@ -242,9 +242,8 @@ export async function revokeInvite(id) {
 }
 export async function removeMember(userId) {
   await guard(() => state.store.removeMember(state.team.id, userId), "Couldn't remove the member");
-  state.teamTasks = state.teamTasks.filter((t) => t.user_id !== userId);
-  await refreshTeam();
-  emit();
+  // Their account and data are gone, and team milestone progress changed: reload everything.
+  await loadAll(state.store);
 }
 export async function renameTeam(name) {
   await guard(() => state.store.renameTeam(state.team.id, name), "Couldn't rename the team");
