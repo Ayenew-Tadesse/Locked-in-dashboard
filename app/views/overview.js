@@ -1,9 +1,9 @@
-// Overview: the most important numbers first, above the original dashboard
+// Overview: the key numbers and milestones first, above the original dashboard
 // cards (which stay exactly where they were).
 import { state } from "../state.js";
 import { scoreDay, scorePeriod, scoreQuarter } from "../core/scoring.js";
-import { weekRange, quarterOf, formatMinutes, formatDay, relativeDay } from "../core/dates.js";
-import { isOverdue, isClosed, sortTasks } from "../core/tasks.js";
+import { weekRange, quarterOf, formatMinutes, relativeDay } from "../core/dates.js";
+import { isOverdue } from "../core/tasks.js";
 import { milestoneInfo, PACE_LABELS } from "../core/insights.js";
 import { esc, tile, scoreValue, scoreTone, progressBar, pct } from "../ui/dom.js";
 
@@ -16,8 +16,6 @@ export function renderOverview(el) {
   const quarter = scoreQuarter(state.tasks, state.goals, q.quarter, q.year, state.cfg, opts);
   const overdue = state.tasks.filter((t) => isOverdue(t, today));
   const c = day.counts;
-  const deadlines = sortTasks(state.tasks.filter((t) => !isClosed(t) && t.due_date && t.due_date >= today), today)
-    .sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 5);
   const ms = state.milestones.filter((m) => !["completed", "cancelled"].includes(m.status))
     .sort((a, b) => (a.deadline || "9999").localeCompare(b.deadline || "9999")).slice(0, 4);
 
@@ -29,19 +27,12 @@ export function renderOverview(el) {
       ${tile(`Q${q.quarter} progress`, quarter.goal_progress == null ? "—" : `${Math.round(quarter.goal_progress)}<small>%</small>`, `${quarter.time_elapsed_pct}% of the quarter gone · score ${quarter.score ?? "—"}`, scoreTone(quarter.goal_progress), 'data-href="#/quarter"')}
       ${tile("Overdue", String(overdue.length), overdue.length ? esc(overdue[0].title) : "All caught up", overdue.length ? "red" : "green", 'data-href="#/tasks?deadline=overdue"')}
     </div>
-    <div class="li-split">
-      <section class="li-card">
-        <div class="li-card-head"><span class="card-label">Deadlines</span><a class="li-link" href="#/tasks?deadline=next7">All</a></div>
-        ${deadlines.length ? `<ul class="li-mini">${deadlines.map((t) => `<li><span>${esc(t.title)}</span><span class="li-mini-r ${t.due_date === today ? "warn" : ""}">${esc(t.due_date === today ? "Today" : formatDay(t.due_date))}</span></li>`).join("")}</ul>`
-          : `<p class="li-empty">No upcoming deadlines.</p>`}
-      </section>
-      <section class="li-card">
+    <section class="li-card">
         <div class="li-card-head"><span class="card-label">Milestones</span><a class="li-link" href="#/milestones">All</a></div>
         ${ms.length ? `<ul class="li-mini">${ms.map((m) => {
           const info = milestoneInfo(m, state.tasks, today, state.timeZone);
           return `<li class="li-mini-ms"><a href="#/milestones/${esc(m.id)}">${esc(m.title)}</a>${progressBar(m.percentage_complete, m.title)}
             <span class="li-mini-r ${info.pace === "behind" || info.pace === "overdue" ? "warn" : ""}">${Math.round(m.percentage_complete)}% · ${esc(m.deadline ? relativeDay(m.deadline, today) : PACE_LABELS[info.pace])}</span></li>`;
         }).join("")}</ul>` : `<p class="li-empty">No open milestones. <a class="li-link" href="#/milestones">Add one</a></p>`}
-      </section>
-    </div>`;
+    </section>`;
 }
