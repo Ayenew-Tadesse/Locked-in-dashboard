@@ -6,6 +6,16 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+// Previews sit behind the original password screen. Tests unlock it the way
+// a remembered device does (the stored fingerprint of the password).
+const ACCESS_HASH = /var ACCESS_HASH = "([0-9a-f]*)";/.exec(readFileSync(new URL("../../index.html", import.meta.url), "utf8"))[1];
+async function unlockedPage(opts) {
+  const page = await browser.newPage(opts);
+  await page.addInitScript((h) => { try { sessionStorage.setItem("lockedin_unlock", h); } catch { /* ignore */ } }, ACCESS_HASH);
+  return page;
+}
 
 async function loadPlaywright() {
   try { return await import("playwright"); } catch {
@@ -27,7 +37,7 @@ before(async () => {
 after(async () => { await browser?.close(); server?.kill(); });
 
 async function open(hash = "", viewport = { width: 1280, height: 900 }) {
-  const page = await browser.newPage({ viewport });
+  const page = await unlockedPage({ viewport });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -239,7 +249,7 @@ test("every view fits a phone screen without sideways scrolling", async () => {
 });
 
 test("?demo=history previews the original dashboard's tracking history", async () => {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await unlockedPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -258,6 +268,26 @@ test("?demo=history previews the original dashboard's tracking history", async (
   assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);
   assert.match(await page.locator("#footnote").innerText(), /tracking history/);
   assert.deepEqual(errors, []);
+  await page.close();
+});
+
+test("previews stay behind the password screen until unlocked", async () => {
+  const page = await browser.newPage();
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.goto(BASE + "?demo=history");
+  await page.waitForTimeout(500);
+  assert.ok(await page.locator("#gate").isVisible(), "password screen shown");
+  assert.ok(!(await page.locator("#li-nav").isVisible()), "app hidden behind it");
+  await page.fill("#gate-pw", "wrong password");
+  await page.click("#gate-form button[type=submit]");
+  await page.waitForSelector("#gate-error:not([hidden])");
+  assert.ok(await page.locator("#gate").isVisible(), "a wrong password keeps it locked");
+  // Log out in a preview locks the page again (the original behaviour).
+  await page.evaluate((h) => sessionStorage.setItem("lockedin_unlock", h), ACCESS_HASH);
+  await page.reload();
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.click("#logout-btn");
+  assert.ok(await page.locator("#gate").isVisible(), "Log out locks the preview");
   await page.close();
 });
 

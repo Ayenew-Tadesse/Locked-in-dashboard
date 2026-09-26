@@ -997,9 +997,11 @@
 <script src="config.js"></script>
 <script>
   // App mode: a database is configured, or a preview (?demo=1 sample data,
-  // ?demo=history your tracking history). Supabase sign-in then
-  // replaces the password screen, and data comes from the database.
+  // ?demo=history your tracking history, or config.js { demo: ... }).
   var APP_MODE = !!(window.LOCKEDIN_CONFIG && (window.LOCKEDIN_CONFIG.supabaseUrl || window.LOCKEDIN_CONFIG.demo)) || /[?&]demo=(1|history)(&|$)/.test(location.search);
+  // With a database, Supabase sign-in replaces the password screen. Previews
+  // (no database) keep the password screen in front of them.
+  var DB_MODE = !!(window.LOCKEDIN_CONFIG && window.LOCKEDIN_CONFIG.supabaseUrl);
   if (APP_MODE) {
     document.documentElement.classList.add("app-mode", "app-booting");
     // If the app code can't load, show the original dashboard instead of a blank page.
@@ -1014,7 +1016,7 @@
   // tools/set-password.mjs. Empty means no password yet.
   var ACCESS_HASH = "13c80a1f65f7035cd81d83ef541e1515b14bfc31124861ca149f88d0cca66a25";
   (function(){
-    if (!ACCESS_HASH || APP_MODE) return;
+    if (!ACCESS_HASH || DB_MODE) return;
     var ok = false;
     try { ok = sessionStorage.getItem("lockedin_unlock") === ACCESS_HASH || localStorage.getItem("lockedin_unlock") === ACCESS_HASH; } catch (e) {}
     if (!ok) document.documentElement.classList.add("is-locked");
@@ -1075,7 +1077,7 @@
     // this device (including "Remember this device") and locks the page.
     (function(){
       var btn = document.getElementById("logout-btn");
-      if (!ACCESS_HASH || APP_MODE) return; // app mode signs out of Supabase instead (app/main.js)
+      if (!ACCESS_HASH || DB_MODE) return; // with a database, Log out signs out of Supabase (app/main.js)
       btn.hidden = false;
       btn.addEventListener("click", function(){
         try { sessionStorage.removeItem("lockedin_unlock"); localStorage.removeItem("lockedin_unlock"); } catch (e) {}
