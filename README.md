@@ -35,6 +35,9 @@ extended into a productivity and milestone tracker backed by a real database.
   Each ticket explains the Goal, How it works, Steps and Done when. See `app/plan/year-plan.js`.
 - **Learning log and Daily report PDF:** completing a task asks what changed, how, and what problem it solved;
   the Daily report's **Download PDF** turns that, the ticket's notes and the day's GitHub commits into a PDF.
+- **Team portal:** colleagues sign in with their own accounts (invitation only). Members see their own work and
+  the team's goals and milestones; the owner's **Team** page shows everyone's progress, their learning logs and
+  daily reports, and lets the owner assign tasks and manage invitations.
 - **Transparent scoring:** the formula is shown and editable in Settings; see [docs/SCORING.md](docs/SCORING.md)
 - **API for Claude:** token-protected `/api/v1` endpoints; see [docs/API.md](docs/API.md)
 - **Your data:** stored in Postgres with Row Level Security, synced across

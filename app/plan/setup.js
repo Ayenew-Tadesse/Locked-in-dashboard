@@ -4,12 +4,15 @@
 import { buildLegacyImport, roadmapDone } from "../legacy-import.js";
 import { buildYearPlan } from "./year-plan.js";
 
-export function buildYearSetup(legacy, newId) {
+// With a teamId, the plan's goals and milestones are shared with the team
+// (the owner's roadmap becomes the team's); tasks stay the owner's own.
+export function buildYearSetup(legacy, newId, { teamId = null } = {}) {
   const history = buildLegacyImport(legacy, newId, { roadmap: false });
   const plan = buildYearPlan(newId, roadmapDone(legacy));
+  const share = (rows) => (teamId ? rows.map((r) => ({ ...r, team_id: teamId })) : rows);
   return {
-    goals: plan.goals,
-    milestones: plan.milestones,
+    goals: share(plan.goals),
+    milestones: share(plan.milestones),
     tasks: [...history.tasks, ...plan.tasks],
     dailyNotes: history.dailyNotes,
   };

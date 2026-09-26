@@ -8,7 +8,13 @@ export const state = {
   store: null,
   profile: null,
   settings: { scoring: {} },
-  tasks: [],
+  tasks: [],      // your own tasks (Today, scores, your reports)
+  teamTasks: [],  // teammates' tasks the owner can see (Team page)
+  me: null,
+  team: null,     // { id, name, role }
+  members: [],    // [{ user_id, role, name, email }]
+  invites: [],
+  get isOwner() { return this.team?.role === "owner"; },
   milestones: [],
   goals: [],
   daily: {},   // date -> daily_scores row
@@ -38,7 +44,13 @@ export async function loadAll(store) {
   state.settings = d.settings || { scoring: {} };
   state.cfg = resolveScoring(state.settings.scoring);
   state.timeZone = d.profile?.timezone && d.profile.timezone !== "UTC" ? d.profile.timezone : undefined;
-  state.tasks = d.tasks;
+  state.me = d.me || null;
+  state.team = d.team || null;
+  state.members = d.members || [];
+  state.invites = d.invites || [];
+  const mine = (t) => !state.me || !t.user_id || t.user_id === state.me;
+  state.tasks = d.tasks.filter(mine);
+  state.teamTasks = d.tasks.filter((t) => !mine(t));
   state.milestones = d.milestones;
   state.goals = d.goals;
   state.daily = Object.fromEntries((d.daily || []).map((r) => [r.date, r]));
@@ -105,12 +117,27 @@ async function refreshProgress() {
   state.goals = p.goals;
 }
 
+/** Any task you can see: yours or (for the owner) a teammate's. */
+export function findTask(id) {
+  return state.tasks.find((x) => x.id === id) || state.teamTasks.find((x) => x.id === id) || null;
+}
+export function memberName(userId) {
+  if (!userId) return null;
+  if (userId === state.me) return "you";
+  return state.members.find((m) => m.user_id === userId)?.name || "a teammate";
+}
+function placeTask(saved) {
+  state.tasks = state.tasks.filter((x) => x.id !== saved.id);
+  state.teamTasks = state.teamTasks.filter((x) => x.id !== saved.id);
+  const mine = !state.me || !saved.user_id || saved.user_id === state.me;
+  (mine ? state.tasks : state.teamTasks).push(saved);
+}
+
 export async function saveTask(input) {
   const t = normalizeTask(input, state.today);
-  const before = t.id ? state.tasks.find((x) => x.id === t.id) : null;
+  const before = t.id ? findTask(t.id) : null;
   const saved = await guard(() => state.store.saveTask(t), "Couldn't save the task");
-  const i = state.tasks.findIndex((x) => x.id === saved.id);
-  if (i >= 0) state.tasks[i] = saved; else state.tasks.push(saved);
+  placeTask(saved);
   if (saved.milestone_id || before?.milestone_id) await refreshProgress().catch(() => {});
   markDirty([saved.date, saved.due_date, before?.date, before?.due_date, dayOf(saved.completed_at, state.timeZone), state.today]);
   emit();
@@ -118,7 +145,7 @@ export async function saveTask(input) {
 }
 
 export async function updateTask(id, patch) {
-  const t = state.tasks.find((x) => x.id === id);
+  const t = findTask(id);
   if (!t) return;
   const next = { ...t, ...patch };
   if (patch.status && patch.status !== "completed" && t.status === "completed" && patch.completion_percentage == null) next.completion_percentage = 0;
@@ -126,9 +153,10 @@ export async function updateTask(id, patch) {
 }
 
 export async function deleteTask(id) {
-  const t = state.tasks.find((x) => x.id === id);
+  const t = findTask(id);
   await guard(() => state.store.deleteTask(id), "Couldn't delete the task");
   state.tasks = state.tasks.filter((x) => x.id !== id);
+  state.teamTasks = state.teamTasks.filter((x) => x.id !== id);
   if (t?.milestone_id) await refreshProgress().catch(() => {});
   markDirty([t?.date, t?.due_date]);
   emit();
@@ -191,3 +219,32 @@ export async function saveProfile(p) {
 }
 
 export async function reload() { await loadAll(state.store); }
+
+// ---------------------------------------------------------------------------
+// Team (owner)
+// ---------------------------------------------------------------------------
+async function refreshTeam() {
+  const t = await state.store.loadTeam();
+  state.team = t.team; state.members = t.members; state.invites = t.invites;
+}
+export async function inviteMember(email) {
+  await guard(() => state.store.inviteMember(state.team.id, email), "Couldn't invite");
+  await refreshTeam();
+  emit();
+}
+export async function revokeInvite(id) {
+  await guard(() => state.store.revokeInvite(id), "Couldn't cancel the invitation");
+  await refreshTeam();
+  emit();
+}
+export async function removeMember(userId) {
+  await guard(() => state.store.removeMember(state.team.id, userId), "Couldn't remove the member");
+  state.teamTasks = state.teamTasks.filter((t) => t.user_id !== userId);
+  await refreshTeam();
+  emit();
+}
+export async function renameTeam(name) {
+  await guard(() => state.store.renameTeam(state.team.id, name), "Couldn't rename the team");
+  state.team = { ...state.team, name };
+  emit();
+}

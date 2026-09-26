@@ -1,5 +1,5 @@
 // Task rows (with quick actions) and the add/edit task form.
-import { state, saveTask, updateTask, deleteTask, toast } from "../state.js";
+import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName } from "../state.js";
 import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
@@ -16,6 +16,9 @@ export function taskRow(t, { showDate = false, compact = false } = {}) {
     showDate ? `<span class="li-meta">${esc(formatDay(t.date))}</span>` : "",
     t.due_date ? `<span class="li-meta ${eff === "overdue" ? "danger" : ""}">Due ${esc(t.due_date === today ? "today" : formatDay(t.due_date))}${eff === "overdue" ? ` (${relativeDay(t.due_date, today)})` : ""}</span>` : "",
     ms ? `<span class="li-meta ms">◆ ${esc(ms.title)}</span>` : "",
+    // Team: who a task is for (on the owner's views), or who assigned it.
+    state.me && t.user_id && t.user_id !== state.me ? `<span class="li-meta who">For ${esc(memberName(t.user_id))}</span>` : "",
+    state.me && t.assigned_by && t.assigned_by !== state.me && t.user_id === state.me ? `<span class="li-meta who">Assigned by ${esc(memberName(t.assigned_by))}</span>` : "",
     t.estimated_minutes || t.actual_minutes ? `<span class="li-meta">${t.actual_minutes != null ? formatMinutes(t.actual_minutes) : "0m"}${t.estimated_minutes ? " / " + formatMinutes(t.estimated_minutes) : ""}</span>` : "",
     !done && t.completion_percentage ? `<span class="li-meta">${t.completion_percentage}%</span>` : "",
   ].join("");
@@ -43,7 +46,7 @@ document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".li-task [data-act]");
   if (!btn || btn.tagName === "SELECT") return;
   const id = btn.closest(".li-task").dataset.taskId;
-  const t = state.tasks.find((x) => x.id === id);
+  const t = findTask(id);
   if (!t) return;
   if (btn.dataset.act === "toggle") {
     const done = t.status === "completed";
@@ -73,6 +76,9 @@ export function openTaskForm(task = {}) {
   const editing = !!t.id;
   const cats = categoriesOf(state.tasks);
   const ms = state.milestones.filter((m) => m.status !== "cancelled" || m.id === t.milestone_id);
+  // The team owner can give a task to anyone on the team.
+  const assignable = state.isOwner && state.members.length > 1;
+  const people = state.members.map((m) => [m.user_id, m.user_id === state.me ? `Me (${m.name})` : m.name]);
   openModal({
     eyebrow: editing ? "Edit task" : "New task",
     title: editing ? t.title : "Add a task",
@@ -87,6 +93,7 @@ export function openTaskForm(task = {}) {
       <label class="li-field">Status<select name="status">${options(STORED_STATUSES.map((s) => [s, STATUSES[s]]), t.status)}</select></label>
       <label class="li-field">Category<input name="category" list="li-cats" maxlength="60" value="${esc(t.category || "")}" placeholder="e.g. Work"><datalist id="li-cats">${cats.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></label>
       <label class="li-field">Milestone<select name="milestone_id">${options(ms.map((m) => [m.id, m.title]), t.milestone_id, { empty: "None" })}</select></label>
+      ${assignable ? `<label class="li-field full">Assign to<select name="user_id">${options(people, t.user_id || state.me)}</select></label>` : ""}
       <label class="li-field">Estimated minutes<input type="number" name="estimated_minutes" min="0" max="100000" step="5" inputmode="numeric" value="${esc(t.estimated_minutes ?? "")}"></label>
       <label class="li-field">Actual minutes<input type="number" name="actual_minutes" min="0" max="100000" step="5" inputmode="numeric" value="${esc(t.actual_minutes ?? "")}"></label>
       <label class="li-field full">Completion <output name="pct_out">${esc(t.completion_percentage)}%</output>
@@ -110,7 +117,7 @@ export function openTaskForm(task = {}) {
     async onSubmit(v) {
       if (!v.title.trim()) throw new Error("Give the task a title.");
       await saveTask({ ...(editing ? { id: t.id } : {}), ...v });
-      toast(editing ? "Task saved" : "Task added");
+      toast(v.user_id && v.user_id !== state.me ? `${editing ? "Saved" : "Assigned"} to ${memberName(v.user_id)}` : editing ? "Task saved" : "Task added");
     },
     extraButtons: editing ? `<button type="button" class="li-btn danger-ghost" data-del-task>Delete</button>` : "",
   });
