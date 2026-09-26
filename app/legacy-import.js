@@ -18,7 +18,21 @@ function monthEnd(label) {
   return monthRange(`${m[2]}-${pad2(MONTHS.indexOf(m[1]) + 1)}-01`).end;
 }
 
-export function buildLegacyImport(legacy, newId) {
+/** Which roadmap checklist items were done, as { "q1-1": true, ... }. */
+export function roadmapDone(legacy) {
+  const out = {};
+  for (const [q, items] of Object.entries((legacy && legacy.checklists) || {})) {
+    if (!/^q[1-4]$/.test(q)) continue;
+    for (const it of items || []) if (it.done) out[`${q}-${it.id}`] = true;
+  }
+  return out;
+}
+
+/**
+ * options.roadmap = false leaves out the roadmap goals and milestones (the
+ * year plan provides them instead, with daily tickets).
+ */
+export function buildLegacyImport(legacy, newId, { roadmap = true } = {}) {
   const goals = [], milestones = [], tasks = [], dailyNotes = [];
 
   for (const [date, day] of Object.entries(legacy.daily || {})) {
@@ -40,7 +54,7 @@ export function buildLegacyImport(legacy, newId) {
     if (notes) dailyNotes.push({ date, notes });
   }
 
-  const phases = (legacy.objective && legacy.objective.phases) || [];
+  const phases = roadmap ? (legacy.objective && legacy.objective.phases) || [] : [];
   phases.forEach((p, i) => {
     const id = p.id || "q" + (i + 1);
     // "Q1 · Sep–Dec 2026": the phase ends in the last month named.

@@ -211,3 +211,20 @@ reset role;
 delete from auth.users where id = :a;
 select pg_temp.check((select count(*) from tasks) = 0 and (select count(*) from milestones) = 0
   and (select count(*) from api_tokens) = 0, 'deleting a user removes their data');
+
+-- 11. Learning log and preferences (second migration) --------------------------
+insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000003', 'c@example.com');
+select pg_temp.act_as('cccccccc-0000-0000-0000-000000000003');
+insert into tasks (title, status, learning_changed, learning_how, learning_solved)
+  values ('Wire the store', 'completed', 'Added a booking store', 'Zustand slice per step', 'Screens no longer pass props five levels deep');
+select pg_temp.check((select learning_solved from tasks where title = 'Wire the store') like 'Screens no longer%', 'tasks keep a learning log');
+update user_settings set preferences = '{"githubRepos":["Ayenew-Tadesse/Guxo-Flights"]}', plan_loaded_at = now();
+select pg_temp.check((select preferences -> 'githubRepos' ->> 0 from user_settings) = 'Ayenew-Tadesse/Guxo-Flights', 'preferences are saved');
+do $$ begin
+  update user_settings set preferences = '[]'::jsonb;
+  raise exception 'FAILED: non-object preferences accepted';
+exception when check_violation then raise notice 'ok - preferences must be an object';
+end $$;
+select pg_temp.act_as('bbbbbbbb-0000-0000-0000-000000000002');
+select pg_temp.check((select count(*) from tasks where title = 'Wire the store') = 0, 'learning logs stay private to their owner');
+reset role;

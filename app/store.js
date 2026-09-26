@@ -4,7 +4,7 @@
 import { computeMilestone, computeGoal } from "./core/insights.js";
 
 const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "status", "category", "estimated_minutes",
-  "actual_minutes", "completion_percentage", "notes", "milestone_id"];
+  "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved"];
 const MILESTONE_FIELDS = ["title", "description", "category", "start_date", "deadline", "target", "current_progress",
   "progress_mode", "status", "priority", "notes", "goal_id"];
 const GOAL_FIELDS = ["title", "description", "quarter", "year", "deadline", "target", "current_progress", "progress_mode",
@@ -121,6 +121,12 @@ export function supabaseStoreFromClient(sb) {
     async markLegacyImported() {
       check(await sb.from("user_settings").upsert({ user_id: userId, legacy_imported_at: new Date().toISOString() }));
     },
+    async markPlanLoaded() {
+      check(await sb.from("user_settings").upsert({ user_id: userId, plan_loaded_at: new Date().toISOString() }));
+    },
+    async savePreferences(preferences) {
+      return check(await sb.from("user_settings").upsert({ user_id: userId, preferences }).select().single());
+    },
 
     async listTokens() {
       return check(await sb.from("api_tokens").select("id,name,token_prefix,scopes,created_at,last_used_at,expires_at,revoked_at").order("created_at", { ascending: false }));
@@ -211,6 +217,8 @@ export function createMemoryStore(seed) {
     async saveSettings(scoring) { db.settings = { ...db.settings, scoring }; return db.settings; },
     async saveProfile(p) { db.profile = { ...db.profile, ...pick(p, ["name", "timezone"]) }; return db.profile; },
     async markLegacyImported() { db.settings.legacy_imported_at = now(); },
+    async markPlanLoaded() { db.settings.plan_loaded_at = now(); },
+    async savePreferences(preferences) { db.settings = { ...db.settings, preferences }; return db.settings; },
     async listTokens() { return tokens.slice(); },
     async createToken({ name, scopes, expires_at }) {
       const token = newTokenString();

@@ -61,6 +61,8 @@ function taskView(t, today) {
     category: t.category, milestone_id: t.milestone_id, estimated_minutes: t.estimated_minutes,
     actual_minutes: t.actual_minutes, completion_percentage: t.completion_percentage, notes: t.notes,
     completed_at: t.completed_at,
+    learning_log: t.learning_changed || t.learning_how || t.learning_solved
+      ? { what_changed: t.learning_changed || null, how: t.learning_how || null, problem_solved: t.learning_solved || null } : null,
   };
 }
 

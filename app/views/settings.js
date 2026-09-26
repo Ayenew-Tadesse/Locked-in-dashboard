@@ -4,7 +4,9 @@ import { state, saveScoring, saveProfile, reload, toast } from "../state.js";
 import { DEFAULT_SCORING, COMPONENT_LABELS, describeFormula, resolveScoring } from "../core/scoring.js";
 import { formatDay, dayOf } from "../core/dates.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
-import { buildLegacyImport } from "../legacy-import.js";
+import { buildYearSetup } from "../plan/setup.js";
+import { PLAN_STATS } from "../plan/year-plan.js";
+import { DEFAULT_REPOS } from "../report/daily-report.js";
 
 export function renderSettings(el) {
   const cfg = state.cfg;
@@ -67,9 +69,20 @@ export function renderSettings(el) {
       <p class="li-sub">Everything is stored in your database${state.store.mode === "demo" ? " (demo mode: in memory only, nothing is saved)" : ""}. Download a full copy at any time.</p>
       <div class="li-btn-row">
         <button type="button" class="li-btn" id="li-export">Download backup (JSON)</button>
-        <button type="button" class="li-btn" id="li-import-legacy">Import the original dashboard's history</button>
+        <button type="button" class="li-btn" id="li-import-legacy">Set up my year</button>
       </div>
-      ${state.settings.legacy_imported_at ? `<p class="li-sub">Original dashboard history imported on ${esc(formatDay(dayOf(state.settings.legacy_imported_at, state.timeZone)))}.</p>` : ""}
+      <p class="li-sub">"Set up my year" brings in the original dashboard's history (daily checklists and reports) and the year plan:
+        ${PLAN_STATS.goals} quarterly goals, ${PLAN_STATS.milestones} milestones and ${PLAN_STATS.tickets} daily tickets from ${esc(formatDay(PLAN_STATS.first, { month: "short", day: "numeric" }))} to ${esc(formatDay(PLAN_STATS.last, { month: "short", day: "numeric" }))}.</p>
+      ${state.settings.plan_loaded_at ? `<p class="li-sub">Year plan loaded on ${esc(formatDay(dayOf(state.settings.plan_loaded_at, state.timeZone)))}.</p>` : ""}
+    </section>
+
+    <section class="li-card" id="report-settings">
+      <div class="li-card-head"><span class="card-label">Daily report PDF</span></div>
+      <p class="li-sub">The PDF lists the code you pushed that day in these GitHub repositories (owner/name, one per line). Public repositories only.</p>
+      <form class="li-form" id="li-repos-form">
+        <label class="li-field full">Repositories<textarea name="repos" rows="3" maxlength="1000">${esc((state.settings.preferences?.githubRepos || DEFAULT_REPOS).join("\n"))}</textarea></label>
+        <div class="li-form-actions full"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save repositories</button></div>
+      </form>
     </section>`;
 
   // Scoring
@@ -148,15 +161,28 @@ export function renderSettings(el) {
   el.querySelector("#li-import-legacy").addEventListener("click", async () => {
     const legacy = window.LockedInLegacy && window.LockedInLegacy.data();
     if (!legacy) { toast("The original dashboard data isn't available on this page.", "error"); return; }
-    const bundle = buildLegacyImport(legacy, state.store.newId);
-    const again = state.settings.legacy_imported_at ? " It was already imported once; importing again creates duplicates." : "";
-    if (!(await confirmDialog(`Import ${bundle.tasks.length} daily tasks, ${bundle.goals.length} quarterly goals, ${bundle.milestones.length} milestones and ${bundle.dailyNotes.length} daily reports from the original dashboard?${again}`, "Import"))) return;
+    const bundle = buildYearSetup(legacy, state.store.newId);
+    const again = state.settings.plan_loaded_at || state.settings.legacy_imported_at
+      ? " This was already done once; doing it again creates duplicates." : "";
+    if (!(await confirmDialog(`Add ${bundle.tasks.length} tasks (your history and the year's daily tickets), ${bundle.goals.length} quarterly goals, ${bundle.milestones.length} milestones and ${bundle.dailyNotes.length} daily reports?${again}`, "Set up"))) return;
     try {
       await state.store.importData(bundle);
       await state.store.markLegacyImported();
+      await state.store.markPlanLoaded();
       await reload();
-      toast("Imported the original dashboard's history");
-    } catch (e) { toast("Import failed: " + e.message, "error"); }
+      toast("Your year is set up");
+    } catch (e) { toast("Setup failed: " + e.message, "error"); }
+  });
+  el.querySelector("#li-repos-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const repos = e.target.elements.repos.value.split(/[\s,]+/).map((r) => r.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "")).filter(Boolean);
+    const bad = repos.filter((r) => !/^[\w.-]+\/[\w.-]+$/.test(r));
+    if (bad.length) { toast(`Use owner/name, e.g. Ayenew-Tadesse/Guxo-Flights (check: ${bad.join(", ")})`, "error"); return; }
+    try {
+      const s = await state.store.savePreferences({ ...(state.settings.preferences || {}), githubRepos: repos });
+      state.settings = { ...state.settings, ...s };
+      toast("Repositories saved");
+    } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 }
 
