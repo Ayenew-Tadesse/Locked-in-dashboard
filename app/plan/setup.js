@@ -17,3 +17,17 @@ export function buildYearSetup(legacy, newId, { teamId = null } = {}) {
     dailyNotes: history.dailyNotes,
   };
 }
+
+/**
+ * Only the history that isn't in the account yet: tasks whose day and title
+ * aren't there, and daily reports for days without notes. Safe to run again.
+ */
+export function buildMissingHistory(legacy, newId, { tasks = [], daily = {} } = {}) {
+  const history = buildLegacyImport(legacy, newId, { roadmap: false });
+  const have = new Set(tasks.map((t) => `${t.date}|${(t.title || "").trim().toLowerCase()}`));
+  return {
+    goals: [], milestones: [],
+    tasks: history.tasks.filter((t) => !have.has(`${t.date}|${t.title.trim().toLowerCase()}`)),
+    dailyNotes: history.dailyNotes.filter((n) => !(daily[n.date]?.notes || "").trim()),
+  };
+}

@@ -4,10 +4,13 @@ import { state, saveScoring, saveProfile, reload, toast } from "../state.js";
 import { DEFAULT_SCORING, COMPONENT_LABELS, describeFormula, resolveScoring } from "../core/scoring.js";
 import { formatDay, dayOf } from "../core/dates.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
-import { buildYearSetup } from "../plan/setup.js";
+import { buildYearSetup, buildMissingHistory } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
 import { DEFAULT_REPOS } from "../report/daily-report.js";
 import { greetingOptions, canGreet } from "../core/people.js";
+
+// "Set up my year" has been done: afterwards only missing history is offered.
+const setUp = () => !!(state.settings.plan_loaded_at || state.settings.legacy_imported_at);
 
 export function renderSettings(el) {
   const cfg = state.cfg;
@@ -71,11 +74,14 @@ export function renderSettings(el) {
       <p class="li-sub">Everything is stored in your database${state.store.mode === "demo" ? " (demo mode: in memory only, nothing is saved)" : ""}. Download a full copy at any time.</p>
       <div class="li-btn-row">
         <button type="button" class="li-btn" id="li-export">Download backup (JSON)</button>
-        ${!state.team || state.isOwner ? `<button type="button" class="li-btn" id="li-import-legacy">Set up my year</button>` : ""}
+        ${!state.team || state.isOwner ? (setUp()
+          ? `<button type="button" class="li-btn" id="li-import-missing">Add missing history</button>`
+          : `<button type="button" class="li-btn" id="li-import-legacy">Set up my year</button>`) : ""}
       </div>
       <p class="li-sub">"Set up my year" brings in the original dashboard's history (daily checklists and reports) and the year plan:
         ${PLAN_STATS.goals} quarterly goals, ${PLAN_STATS.milestones} milestones and ${PLAN_STATS.tickets} daily tickets from ${esc(formatDay(PLAN_STATS.first, { month: "short", day: "numeric" }))} to ${esc(formatDay(PLAN_STATS.last, { month: "short", day: "numeric" }))}.</p>
-      ${state.settings.plan_loaded_at ? `<p class="li-sub">Year plan loaded on ${esc(formatDay(dayOf(state.settings.plan_loaded_at, state.timeZone)))}.</p>` : ""}
+      ${state.settings.plan_loaded_at ? `<p class="li-sub">Year plan loaded on ${esc(formatDay(dayOf(state.settings.plan_loaded_at, state.timeZone)))}.
+        "Add missing history" adds any of the original dashboard's days that aren't here yet (like Sep 20–21) without duplicating anything.</p>` : ""}
     </section>
 
     <section class="li-card" id="report-settings">
@@ -160,6 +166,19 @@ export function renderSettings(el) {
     a.download = `locked-in-backup-${state.today}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  el.querySelector("#li-import-missing")?.addEventListener("click", async () => {
+    const legacy = window.LockedInLegacy && window.LockedInLegacy.data();
+    if (!legacy) { toast("The original dashboard data isn't available on this page.", "error"); return; }
+    const bundle = buildMissingHistory(legacy, state.store.newId, { tasks: state.tasks, daily: state.daily });
+    if (!bundle.tasks.length && !bundle.dailyNotes.length) { toast("All of your history is already here"); return; }
+    const days = [...new Set(bundle.tasks.map((t) => t.date))].sort().map((d) => formatDay(d, { month: "short", day: "numeric" }));
+    if (!(await confirmDialog(`Add ${bundle.tasks.length} task${bundle.tasks.length === 1 ? "" : "s"}${days.length ? ` (${days.join(", ")})` : ""}${bundle.dailyNotes.length ? ` and ${bundle.dailyNotes.length} daily report${bundle.dailyNotes.length === 1 ? "" : "s"}` : ""} from the original dashboard?`, "Add"))) return;
+    try {
+      await state.store.importData(bundle);
+      await reload();
+      toast("History added");
+    } catch (e) { toast("Couldn't add the history: " + e.message, "error"); }
   });
   el.querySelector("#li-import-legacy")?.addEventListener("click", async () => {
     const legacy = window.LockedInLegacy && window.LockedInLegacy.data();
