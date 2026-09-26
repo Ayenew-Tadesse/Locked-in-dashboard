@@ -105,11 +105,13 @@ test("complete, reopen and change status; scores and the original checklist upda
   assert.match(await row(page, "Test keyboard handling on iOS").getAttribute("class"), /st-completed/);
   const scoreAfter = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
   assert.ok(parseInt(scoreAfter) > parseInt(scoreBefore), `score rose (${scoreBefore} -> ${scoreAfter})`);
-  // The Overview's Tasks card reflects it too (3 of 4 done).
+  // The Overview's Tasks card reflects it too: 3 of the team's 5 today, 3 of my 4.
   // (Switch tabs in-page: reloading would reset the demo data.)
   await page.click('#li-nav a[href="#/"]');
   await page.waitForSelector("#li-tasks-card:not([hidden]) .today-progress");
-  assert.equal(await page.locator("#li-tasks-card .today-progress").innerText(), "3/4");
+  assert.equal(await page.locator("#li-tasks-card .today-progress").innerText(), "3/5");
+  await page.selectOption("#li-tasks-card [data-person]", "demo");
+  await page.waitForFunction(() => document.querySelector("#li-tasks-card .today-progress").textContent === "3/4");
   await page.click('#li-nav a[href="#/today"]');
   await row(page, "Test keyboard handling on iOS").waitFor();
 
@@ -317,11 +319,21 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   const card = page.locator("#li-tasks-card");
   const colTop = (await page.locator(".dash-col-a").boundingBox()).y;
   assert.ok(Math.abs((await card.boundingBox()).y - colTop) < 2, "Tasks card leads the left column");
-  // Day view: today's tasks; add one from the card.
-  assert.match(await card.locator(".today-progress").innerText(), /^2\/4$/);
+  // Day view: the whole team's tasks for today, grouped, with who's in charge.
+  assert.match(await card.locator(".today-progress").innerText(), /^2\/5$/);
+  assert.deepEqual(await card.locator(".li-tc-group-title").allInnerTexts(), ["AVAILABLE (2)", "ONGOING (1)", "COMPLETED (2)"], "Available / Ongoing / Completed");
+  const bens = card.locator(".li-task", { hasText: "Test the booking flow on Android" });
+  assert.match(await bens.innerText(), /👤 Ben \(sample\)/, "a colleague's task names who's in charge");
+  assert.match(await card.locator(".li-task").first().innerText(), /👤 (You|Ben \(sample\))/);
+  // Filter to one person.
+  await card.locator("[data-person]").selectOption("sample-ben");
+  await page.waitForFunction(() => document.querySelector("#li-tasks-card .today-progress").textContent === "0/1");
+  await card.locator("[data-person]").selectOption("all");
+  // Add one from the card (it's yours).
   await card.locator("input[name=title]").fill("E2E card task");
   await card.locator("button[type=submit]").click();
-  await page.waitForFunction(() => document.querySelector("#li-tasks-card .today-progress").textContent === "2/5");
+  await page.waitForFunction(() => document.querySelector("#li-tasks-card .today-progress").textContent === "2/6");
+  assert.match(await card.locator(".li-task", { hasText: "E2E card task" }).innerText(), /👤 You/);
   // Week / Month / Quarter switch the period and the completion level.
   for (const p of ["week", "month", "quarter"]) {
     await card.locator(`[data-period=${p}]`).click();
