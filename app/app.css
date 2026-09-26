@@ -5,9 +5,12 @@
 /* ---- App mode page states ---------------------------------------------- */
 html.app-booting .wrap{visibility:hidden;}
 html.li-authing .wrap{display:none;}
-html.li-subview .daily-quote,
-html.li-subview .dash-grid,
-html.li-subview #footnote{display:none;}
+/* The quote (above the tabs) and the footer show on every page; the
+   original cards only on the Overview. */
+html.li-subview .dash-grid{display:none;}
+/* The Tasks card replaces the original "Today's checklist" card. */
+html.app-mode #today-card{display:none;}
+html:not(.app-mode) .li-tasks-card{display:none;}
 html.li-modal-open{overflow:hidden;}
 .li-auth{z-index:110;}
 .li-auth input[type="email"], .li-auth input[type="text"]{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;}
@@ -169,6 +172,9 @@ code, .li-mono{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:12
 .li-task-actions select{font-size:12px !important;padding:5px 6px !important;max-width:118px;}
 .li-quick-add{margin-top:12px;}
 .li-quick-add .li-btn{flex:none;}
+/* "Details…" must not inherit the Add button's dark-on-accent colours. */
+.today-add .li-btn.ghost{color:var(--ink-2);background:none;border:1px solid var(--line);font-weight:500;}
+.today-add .li-btn.ghost:hover{color:var(--ink);border-color:var(--accent);}
 .li-group{margin-top:16px;}
 .li-group-h{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--ink-3);margin:14px 0 8px;text-transform:uppercase;}
 
@@ -237,9 +243,9 @@ code, .li-mono{font-family:'IBM Plex Mono', ui-monospace, monospace;font-size:12
 .li-ms-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
 .li-ms-title{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:22px;line-height:1.05;}
 .li-ms-progress{display:flex;align-items:center;gap:10px;}
-.li-ms-progress b{font-variant-numeric:tabular-nums;font-size:13px;min-width:3.2ch;text-align:right;}
+.li-ms-progress > b{font-variant-numeric:tabular-nums;font-size:13px;min-width:3.2ch;text-align:right;}
 .li-ms-progress.big .li-bar{height:10px;border-radius:5px;}
-.li-ms-progress.big b{font-family:'Big Shoulders Display', sans-serif;font-size:28px;}
+.li-ms-progress.big > b{font-family:'Big Shoulders Display', sans-serif;font-size:28px;}
 .li-ms-foot{font-size:12px;color:var(--ink-3);}
 .li-seg{margin-bottom:4px;}
 
@@ -323,6 +329,26 @@ i.sc.red{background:var(--red);}
 .li-cal-titles span.more{color:var(--ink-3);}
 .li-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--ink-3);margin:10px 0 0;}
 .li-legend span{display:inline-flex;align-items:center;gap:6px;}
+
+/* ---- Tasks card (Overview, under the score rings) --------------------------- */
+.li-tc-top{display:flex;justify-content:space-between;align-items:center;gap:8px 10px;flex-wrap:wrap;margin:-4px 0 12px;}
+.li-tc-top .card-label{margin:0;}
+.li-tc-seg{margin:0;gap:4px;}
+.li-tc-seg .li-btn.small{padding:4px 9px;font-size:11.5px;}
+.li-tc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.li-tc-progress{margin:8px 0 12px;}
+.li-task.compact{grid-template-columns:auto minmax(0,1fr) auto;padding:8px 9px;}
+.li-task.compact .li-task-title{font-size:13.5px;}
+.li-task.compact .li-task-notes{display:none;}
+button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:500;}
+.li-tc-more{display:block;margin-top:8px;}
+.li-tc-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;}
+
+/* ---- Footer ------------------------------------------------------------------ */
+.li-footer{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;}
+.li-footer-links{display:flex;gap:14px;}
+.li-footer-links:empty{display:none;}
+.li-footer-links a.active{color:var(--ink);text-decoration:underline;}
 
 /* ---- Toasts ------------------------------------------------------------------------------ */
 #li-toasts{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:130;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px);}

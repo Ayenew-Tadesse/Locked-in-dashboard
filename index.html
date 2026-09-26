@@ -1095,14 +1095,14 @@
   <h1>Mr. Ayenew Shiferaw</h1>
   <p class="journey" id="greet-journey"></p>
   <p class="greet-line" id="greet-line"></p>
-  <nav class="li-nav" id="li-nav" aria-label="Sections"></nav>
-  <div class="li-warnings" id="li-warnings"></div>
-  <section class="li-overview" id="li-overview" hidden aria-label="Overview"></section>
-  <main class="li-view" id="li-view" hidden></main>
   <blockquote class="daily-quote" id="daily-quote" aria-label="Quote of the day">
     <p id="daily-quote-text"></p>
     <cite id="daily-quote-by"></cite>
   </blockquote>
+  <nav class="li-nav" id="li-nav" aria-label="Sections"></nav>
+  <div class="li-warnings" id="li-warnings"></div>
+  <section class="li-overview" id="li-overview" hidden aria-label="Overview"></section>
+  <main class="li-view" id="li-view" hidden></main>
 
   <div class="dash-grid">
   <div class="dash-col dash-col-a">
@@ -1178,6 +1178,9 @@
       </div>
     </div>
   </div>
+
+  <!-- App mode: the Tasks card (app/views/tasks-card.js) replaces Today's checklist. -->
+  <section class="today-card li-tasks-card" id="li-tasks-card" hidden aria-label="Tasks"></section>
 
   <section class="today-card" id="today-card" aria-labelledby="today-title">
     <span class="card-label" id="today-title">Today's checklist</span>
@@ -1280,7 +1283,7 @@
   </div>
   </div>
 
-  <footer class="note" id="footnote">Shows only what's been shared in chat — nothing here is estimated or filled in.</footer>
+  <footer class="note li-footer"><span id="footnote">Shows only what's been shared in chat — nothing here is estimated or filled in.</span><nav class="li-footer-links" id="li-footer-links" aria-label="More"></nav></footer>
 </div>
 
 <div class="modal-backdrop" id="modal-backdrop" hidden>

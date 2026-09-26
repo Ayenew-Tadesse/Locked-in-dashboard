@@ -4,7 +4,7 @@ import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES } 
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, confirmDialog, options } from "./dom.js";
 
-export function taskRow(t, { showDate = false } = {}) {
+export function taskRow(t, { showDate = false, compact = false } = {}) {
   const today = state.today;
   const eff = effectiveStatus(t, today);
   const ms = t.milestone_id && state.milestones.find((m) => m.id === t.milestone_id);
@@ -19,7 +19,7 @@ export function taskRow(t, { showDate = false } = {}) {
     t.estimated_minutes || t.actual_minutes ? `<span class="li-meta">${t.actual_minutes != null ? formatMinutes(t.actual_minutes) : "0m"}${t.estimated_minutes ? " / " + formatMinutes(t.estimated_minutes) : ""}</span>` : "",
     !done && t.completion_percentage ? `<span class="li-meta">${t.completion_percentage}%</span>` : "",
   ].join("");
-  return `<li class="li-task st-${eff}" data-task-id="${esc(t.id)}">
+  return `<li class="li-task st-${eff}${compact ? " compact" : ""}" data-task-id="${esc(t.id)}">
     <button type="button" class="li-check" data-act="toggle" aria-pressed="${done}" aria-label="${done ? "Mark not done" : "Mark complete"}: ${esc(t.title)}">✓</button>
     <div class="li-task-main">
       <button type="button" class="li-task-title" data-act="edit">${esc(t.title)}</button>
@@ -27,7 +27,7 @@ export function taskRow(t, { showDate = false } = {}) {
       ${t.notes ? `<div class="li-task-notes">${esc(t.notes)}</div>` : ""}
     </div>
     <div class="li-task-actions">
-      <select data-act="status" aria-label="Status of ${esc(t.title)}">${options(STORED_STATUSES.map((s) => [s, STATUSES[s]]), t.status)}</select>
+      ${compact ? "" : `<select data-act="status" aria-label="Status of ${esc(t.title)}">${options(STORED_STATUSES.map((s) => [s, STATUSES[s]]), t.status)}</select>`}
       <button type="button" class="li-icon-btn" data-act="delete" aria-label="Delete ${esc(t.title)}" title="Delete">&#10005;</button>
     </div>
   </li>`;
