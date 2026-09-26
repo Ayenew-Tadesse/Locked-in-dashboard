@@ -24,6 +24,8 @@ html.li-modal-open{overflow:hidden;}
 .li-auth input[type="email"], .li-auth input[type="text"]{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;}
 .li-auth input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent;}
 .li-auth input[type="password"]{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;}
+.li-auth-greet{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--ink-2);}
+.li-auth-greet select{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;flex:1;max-width:60%;}
 .li-auth-ok{font-size:13px;color:var(--good);margin:0;}
 .li-auth-links{display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:center;margin-top:4px;}
 .gate-card .li-auth-links button{background:none;color:var(--accent);padding:4px 0;margin:0;font-size:12.5px;font-weight:500;}

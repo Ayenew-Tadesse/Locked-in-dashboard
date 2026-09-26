@@ -58,7 +58,7 @@ export function demoSeed(today = todayKey()) {
   t({ title: "Quarterly review", date: addDays(today, 7), priority: "medium", category: "Admin", estimated_minutes: 60 });
   const team = sampleColleagues(today, "demo");
   return {
-    profile: { id: "demo", name: "Demo user", email: "demo@example.com", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    profile: { id: "demo", name: "Demo user", email: "demo@example.com", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, greeting: null },
     settings: { scoring: {}, legacy_imported_at: null },
     me: "demo",
     team: { id: "team-preview", name: "Demo team", role: "owner" },
@@ -74,7 +74,7 @@ export function demoSeed(today = todayKey()) {
 export function emptySeed(today = todayKey()) {
   const team = sampleColleagues(today, "preview");
   return {
-    profile: { id: "preview", name: "Ayenew Shiferaw", email: "", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    profile: { id: "preview", name: "Ayenew Shiferaw", email: "", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, greeting: null },
     settings: { scoring: {}, legacy_imported_at: null },
     me: "preview",
     team: { id: "team-preview", name: "Guxo team", role: "owner" },

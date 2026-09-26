@@ -7,6 +7,7 @@ import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { buildYearSetup } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
 import { DEFAULT_REPOS } from "../report/daily-report.js";
+import { greetingOptions, canGreet } from "../core/people.js";
 
 export function renderSettings(el) {
   const cfg = state.cfg;
@@ -51,7 +52,8 @@ export function renderSettings(el) {
     <section class="li-card">
       <div class="li-card-head"><span class="card-label">Profile</span></div>
       <form class="li-form li-form-grid" id="li-profile-form">
-        <label class="li-field">Name<input name="name" maxlength="120" value="${esc(state.profile?.name || "")}"></label>
+        <label class="li-field">Name<input name="name" maxlength="120" required value="${esc(state.profile?.name || "")}"></label>
+        ${canGreet(state.profile) ? `<label class="li-field">Greet me as<select name="greeting"><option value="">Choose…</option>${greetingOptions(state.profile.greeting || "")}</select></label>` : ""}
         <label class="li-field">Time zone<input name="timezone" maxlength="64" value="${esc(state.profile?.timezone || "")}" placeholder="e.g. America/New_York"></label>
         <p class="li-sub full">Signed in as ${esc(state.profile?.email || "")}. The time zone decides when "today" starts for scores and the API.</p>
         <div class="li-form-actions full"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save profile</button></div>
@@ -110,7 +112,8 @@ export function renderSettings(el) {
     const f = e.target.elements;
     const tz = f.timezone.value.trim();
     try { if (tz) new Intl.DateTimeFormat("en", { timeZone: tz }); } catch { toast("That time zone isn't recognised.", "error"); return; }
-    await saveProfile({ name: f.name.value.trim(), timezone: tz || "UTC" }).then(() => toast("Profile saved"), () => {});
+    if (!f.name.value.trim()) { toast("Enter your name.", "error"); return; }
+    await saveProfile({ name: f.name.value.trim(), timezone: tz || "UTC", ...(f.greeting?.value ? { greeting: f.greeting.value } : {}) }).then(() => toast("Profile saved"), () => {});
   });
 
   // Tokens

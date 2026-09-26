@@ -3,6 +3,7 @@
 import { todayKey, weekRange, addDays, eachDay, dayOf } from "./core/dates.js";
 import { normalizeTask } from "./core/tasks.js";
 import { resolveScoring, scoreDay, scorePeriod } from "./core/scoring.js";
+import { displayName } from "./core/people.js";
 
 export const state = {
   store: null,
@@ -215,6 +216,8 @@ export async function saveScoring(scoring) {
 
 export async function saveProfile(p) {
   state.profile = await guard(() => state.store.saveProfile(p), "Couldn't save your profile");
+  // Keep your own row on the Team page in step with the new name/title.
+  state.members = state.members.map((m) => m.user_id === state.me ? { ...m, name: displayName(state.profile) || m.name, greeting: state.profile.greeting || null } : m);
   emit();
 }
 

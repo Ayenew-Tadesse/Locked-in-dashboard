@@ -39,7 +39,9 @@ git-ignored).
    (the Learning log and preferences) and click **Run**.
 4. Do the same with
    [`supabase/migrations/20260926200000_teams.sql`](../supabase/migrations/20260926200000_teams.sql)
-   (the team portal). Run the three files in this order.
+   (the team portal), then
+   [`supabase/migrations/20260927000000_greeting.sql`](../supabase/migrations/20260927000000_greeting.sql)
+   (names and "Greet me as"). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.

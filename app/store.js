@@ -2,6 +2,7 @@
 //   createSupabaseStore: the real database (Supabase Auth + RLS).
 //   createMemoryStore:   demo mode (?demo=1), in memory only, nothing is saved.
 import { computeMilestone, computeGoal } from "./core/insights.js";
+import { displayName } from "./core/people.js";
 
 const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "status", "category", "estimated_minutes",
   "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved"];
@@ -54,8 +55,8 @@ export function supabaseStoreFromClient(sb) {
       async session() { const { data } = await sb.auth.getSession(); userId = data.session?.user?.id || null; return data.session; },
       onChange(cb) { sb.auth.onAuthStateChange((event, s) => { userId = s?.user?.id || null; setTimeout(() => cb(s, event), 0); }); },
       async signIn(email, password) { check(await sb.auth.signInWithPassword({ email, password })); },
-      async signUp(email, password, name) {
-        const data = check(await sb.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: location.origin + location.pathname } }));
+      async signUp(email, password, name, greeting) {
+        const data = check(await sb.auth.signUp({ email, password, options: { data: { name, greeting }, emailRedirectTo: location.origin + location.pathname } }));
         return { needsConfirmation: !data.session };
       },
       async magicLink(email) { check(await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } })); },
@@ -80,8 +81,12 @@ export function supabaseStoreFromClient(sb) {
       if (!mine.length) return { team: null, members: [], invites: [] };
       const m = mine[0];
       const team = { id: m.team_id, name: m.teams?.name || "My team", role: m.role };
-      const members = check(await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email)").eq("team_id", team.id))
-        .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, name: r.profiles?.name || r.profiles?.email || "Member", email: r.profiles?.email || "" }));
+      // profiles.greeting comes from migration 20260927000000_greeting.sql; until
+      // it has been run, load names without it rather than failing.
+      let res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email, greeting)").eq("team_id", team.id);
+      if (res.error && /greeting/.test(res.error.message)) res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email)").eq("team_id", team.id);
+      const members = check(res)
+        .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, name: displayName(r.profiles) || "Member", greeting: r.profiles?.greeting || null, email: r.profiles?.email || "" }));
       const invites = team.role === "owner"
         ? check(await sb.from("team_invites").select("*").eq("team_id", team.id).is("accepted_at", null).is("revoked_at", null).order("created_at"))
         : [];
@@ -139,7 +144,7 @@ export function supabaseStoreFromClient(sb) {
       return check(await sb.from("user_settings").upsert({ user_id: userId, scoring }).select().single());
     },
     async saveProfile(p) {
-      return check(await sb.from("profiles").update(pick(p, ["name", "timezone"])).eq("id", userId).select().single());
+      return check(await sb.from("profiles").update(pick(p, ["name", "timezone", "greeting"])).eq("id", userId).select().single());
     },
     async markLegacyImported() {
       check(await sb.from("user_settings").upsert({ user_id: userId, legacy_imported_at: new Date().toISOString() }));
@@ -265,7 +270,7 @@ export function createMemoryStore(seed) {
     async saveDailyNote(date, notes) { return { ...upsertBy("daily", "date")({ date, notes: notes || null }) }; },
     async saveWeeklyNote(week_start, week_end, notes) { return { ...upsertBy("weekly", "week_start")({ week_start, week_end, notes: notes || null }) }; },
     async saveSettings(scoring) { db.settings = { ...db.settings, scoring }; return db.settings; },
-    async saveProfile(p) { db.profile = { ...db.profile, ...pick(p, ["name", "timezone"]) }; return db.profile; },
+    async saveProfile(p) { db.profile = { ...db.profile, ...pick(p, ["name", "timezone", "greeting"]) }; return db.profile; },
     async markLegacyImported() { db.settings.legacy_imported_at = now(); },
     async markPlanLoaded() { db.settings.plan_loaded_at = now(); },
     async savePreferences(preferences) { db.settings = { ...db.settings, preferences }; return db.settings; },

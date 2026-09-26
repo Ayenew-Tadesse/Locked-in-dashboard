@@ -38,6 +38,8 @@ extended into a productivity and milestone tracker backed by a real database.
 - **Team portal:** colleagues sign in with their own accounts (invitation only). Members see their own work and
   the team's goals and milestones; the owner's **Team** page shows everyone's progress, their learning logs and
   daily reports, and lets the owner assign tasks and manage invitations.
+- **Names and greetings:** everyone signs up with their name and picks how they're greeted (Mr., Ms., Mrs., Dr. or
+  just their name), so the dashboard says "Good morning, Mr. Ayenew Shiferaw" and the team sees names, not emails
 - **Transparent scoring:** the formula is shown and editable in Settings; see [docs/SCORING.md](docs/SCORING.md)
 - **API for Claude:** token-protected `/api/v1` endpoints; see [docs/API.md](docs/API.md)
 - **Your data:** stored in Postgres with Row Level Security, synced across

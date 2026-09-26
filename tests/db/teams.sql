@@ -115,3 +115,28 @@ select pg_temp.check((select count(*) from daily_scores) = 1, 'the owner sees me
 delete from team_members where user_id = '33333333-0000-0000-0000-000000000003';
 select pg_temp.check((select count(*) from tasks where user_id = '33333333-0000-0000-0000-000000000003') = 0, 'removed members'' tasks are no longer visible');
 reset role;
+
+-- 7. Names and "Greet me as" ---------------------------------------------
+select pg_temp.act_as(:owner);
+insert into team_invites (team_id, email, invited_by) select team_id, 'cara@example.com', :owner from team_members where user_id = :owner;
+insert into team_invites (team_id, email, invited_by) select team_id, 'dan@example.com', :owner from team_members where user_id = :owner;
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values ('44444444-0000-0000-0000-000000000004', 'cara@example.com', '{"name":"  Cara Lee ","greeting":"ms"}');
+insert into auth.users (id, email, raw_user_meta_data) values ('55555555-0000-0000-0000-000000000005', 'dan@example.com', '{"name":"","greeting":"queen"}');
+select pg_temp.check((select name = 'Cara Lee' and greeting = 'ms' from profiles where email = 'cara@example.com'), 'sign-up stores the chosen name and greeting');
+select pg_temp.check((select name = 'dan' and greeting is null from profiles where email = 'dan@example.com'), 'a blank name falls back to the email name; an unknown greeting is ignored');
+select pg_temp.check((select greeting is null from profiles where id = :ana), 'accounts without a choice have no greeting yet (the app asks)');
+select pg_temp.act_as(:ana);
+update profiles set name = 'Ana Silva', greeting = 'dr' where id = auth.uid();
+update profiles set greeting = 'mr' where email = 'cara@example.com';
+do $$ begin
+  update profiles set greeting = 'queen' where id = auth.uid();
+  raise exception 'FAILED: invalid greeting saved';
+exception when check_violation then raise notice 'ok - only the listed greetings are allowed';
+end $$;
+reset role;
+select pg_temp.check((select name = 'Ana Silva' and greeting = 'dr' from profiles where id = :ana), 'each person sets their own name and greeting');
+select pg_temp.check((select greeting = 'ms' from profiles where email = 'cara@example.com'), 'members cannot change someone else''s greeting');
+select pg_temp.act_as(:owner);
+select pg_temp.check((select greeting from profiles where id = :ana) = 'dr', 'the owner sees each member''s name and greeting');
+reset role;
