@@ -991,13 +991,29 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="app/app.css">
+<!-- config.js is generated at deploy time (public Supabase URL + anon key).
+     Without it the page runs as the original dashboard. -->
+<script src="config.js"></script>
+<script>
+  // App mode: a database is configured (or ?demo=1). Supabase sign-in then
+  // replaces the password screen, and data comes from the database.
+  var APP_MODE = !!(window.LOCKEDIN_CONFIG && window.LOCKEDIN_CONFIG.supabaseUrl) || /[?&]demo=1(&|$)/.test(location.search);
+  if (APP_MODE) {
+    document.documentElement.classList.add("app-mode", "app-booting");
+    // If the app code can't load, show the original dashboard instead of a blank page.
+    setTimeout(function(){
+      if (!window.__lockedInBoot) document.documentElement.classList.remove("app-mode", "app-booting");
+    }, 8000);
+  }
+</script>
 
 <script>
   // Fingerprint (SHA-256) of the dashboard password, set with
   // tools/set-password.mjs. Empty means no password yet.
   var ACCESS_HASH = "13c80a1f65f7035cd81d83ef541e1515b14bfc31124861ca149f88d0cca66a25";
   (function(){
-    if (!ACCESS_HASH) return;
+    if (!ACCESS_HASH || APP_MODE) return;
     var ok = false;
     try { ok = sessionStorage.getItem("lockedin_unlock") === ACCESS_HASH || localStorage.getItem("lockedin_unlock") === ACCESS_HASH; } catch (e) {}
     if (!ok) document.documentElement.classList.add("is-locked");
@@ -1058,7 +1074,7 @@
     // this device (including "Remember this device") and locks the page.
     (function(){
       var btn = document.getElementById("logout-btn");
-      if (!ACCESS_HASH) return;
+      if (!ACCESS_HASH || APP_MODE) return; // app mode signs out of Supabase instead (app/main.js)
       btn.hidden = false;
       btn.addEventListener("click", function(){
         try { sessionStorage.removeItem("lockedin_unlock"); localStorage.removeItem("lockedin_unlock"); } catch (e) {}
@@ -1076,6 +1092,10 @@
   <h1>Mr. Ayenew Shiferaw</h1>
   <p class="journey" id="greet-journey"></p>
   <p class="greet-line" id="greet-line"></p>
+  <nav class="li-nav" id="li-nav" aria-label="Sections"></nav>
+  <div class="li-warnings" id="li-warnings"></div>
+  <section class="li-overview" id="li-overview" hidden aria-label="Overview"></section>
+  <main class="li-view" id="li-view" hidden></main>
   <blockquote class="daily-quote" id="daily-quote" aria-label="Quote of the day">
     <p id="daily-quote-text"></p>
     <cite id="daily-quote-by"></cite>
@@ -1693,6 +1713,7 @@
   // database replaces it whenever it's available.
   var FALLBACK_CONTRIBUTIONS = {"2026-09-20": {"count": 1, "repos": {"Guxo Flights": 1}, "items": [{"repo": "Guxo Flights", "text": "Uploaded the first version of the flight-booking app"}]}, "2026-09-21": {"count": 1, "repos": {"Guxo": 1}, "items": [{"repo": "Guxo", "text": "Uploaded the first version of the bus-booking app"}]}, "2026-09-23": {"count": 7, "repos": {"Guxo Flights": 6, "Guxo": 1}, "items": [{"repo": "Guxo Flights", "text": "Renamed the app from Hid-Go to Guxo Flights"}, {"repo": "Guxo", "text": "Updated README links to the new Guxo Flights name"}, {"repo": "Guxo Flights", "text": "Date of birth on sign-up is now a typed mm/dd/yyyy field"}, {"repo": "Guxo Flights", "text": "Added a Continue as guest option to sign-up and log-in"}, {"repo": "Guxo Flights", "text": "Hid profile and notification buttons for guests"}, {"repo": "Guxo Flights", "text": "Guests are greeted with \"Hello there\" on one line"}, {"repo": "Guxo Flights", "text": "Guest Sign up button now opens the sign-up screen"}]}, "2026-09-24": {"count": 3, "repos": {"Guxo Flights": 3}, "items": [{"repo": "Guxo Flights", "text": "Notifications now open the page they're about, show unread/read states, and can be marked all as read"}, {"repo": "Guxo Flights", "text": "Profiles: edit personal details, save payment cards, link Guxo, and earn/spend shared Guxo Points"}, {"repo": "Guxo Flights", "text": "From Megabus review: From/To swap, flight details timeline, departure-time filter"}]}, "2026-09-25": {"count": 10, "repos": {"Guxo Flights": 10}, "items": [{"repo": "Guxo Flights", "text": "Pushed the new React Native app to github.com/Ayenew-Tadesse/guxo-flights-app"}, {"repo": "Guxo Flights", "text": "RN app: navigation and core screens (tabs, booking flow, trips, check-in)"}, {"repo": "Guxo Flights", "text": "RN app: shared Guxo design system with per-app brand theming"}, {"repo": "Guxo Flights", "text": "RN app rebuilt as a screen-by-screen port of the web prototype, including notifications, profiles and Guxo Points"}, {"repo": "Guxo Flights", "text": "Sign-up split into four steps (name, address, email or phone, password); log in with email or phone"}, {"repo": "Guxo Flights", "text": "Top-right buttons redesigned: bell with unread count, initials avatar for profile"}, {"repo": "Guxo Flights", "text": "RN app: step-by-step sign-up and the new account buttons, matching the web prototype"}, {"repo": "Guxo Flights", "text": "RN app: screens move with the keyboard; tab bar hides while typing"}, {"repo": "Guxo Flights", "text": "From/To fields open a dropdown of all destinations, filtered as you type"}, {"repo": "Guxo Flights", "text": "RN app: the same From/To airport dropdown"}]}};
   var heatData = FALLBACK_CONTRIBUTIONS;
+  var heatUnit = ["commit", "commits"];
   // Activity tracking starts here: scores and missed days count from this date.
   var ACTIVITY_START = "2026-09-22";
   // A day counts toward the scores only when its daily checklist exists and
@@ -1813,7 +1834,7 @@
           return '<li>' + (it.repo ? '<span class="muted">' + esc(it.repo) + ':</span> ' : '') + esc(it.text) + '</li>';
         }).join("") + (items.length > shown.length ? '<li class="muted">+' + (items.length - shown.length) + ' more</li>' : '') + '</ul>'
       : "";
-    heatTip.innerHTML = "<b>" + (n ? n + " commit" + (n === 1 ? "" : "s") : "No commits") + "</b> on " + label +
+    heatTip.innerHTML = "<b>" + (n ? n + " " + (n === 1 ? heatUnit[0] : heatUnit[1]) : "No " + heatUnit[1]) + "</b> on " + label +
       (repos ? '<br><span class="muted">' + repos + "</span>" : "") + list;
     heatTip.hidden = false;
     var r = cell.getBoundingClientRect();
@@ -2341,6 +2362,7 @@
     knob.setAttribute("opacity", v > 0.05 ? "1" : "0");
   }
   function setRing(prefix, label, score, target){
+    var unit = score.unit != null ? score.unit : "%";
     var pctEl = document.getElementById(prefix + "-pct");
     var ring = document.getElementById(prefix + "-ring-fill");
     var knob = document.getElementById(prefix + "-ring-knob");
@@ -2348,7 +2370,7 @@
     ring.setAttribute("class", "ring-fill " + ringTone);
     knob.setAttribute("class", "ring-knob " + ringTone);
     pctEl.className = "week-pct " + (ringTone || "orange"); // number matches the arc colour
-    document.getElementById(prefix + "-ring").setAttribute("aria-label", label + " " + score.pct + "%");
+    document.getElementById(prefix + "-ring").setAttribute("aria-label", label + " " + score.pct + (unit === "%" ? "%" : " out of 100"));
 
     var from = ringShown[prefix] || 0, to = score.pct;
     if (ringAnim[prefix]) cancelAnimationFrame(ringAnim[prefix]);
@@ -2356,7 +2378,7 @@
     if (reduce || from === to){
       ringShown[prefix] = to;
       drawRing(prefix, to);
-      pctEl.textContent = to + "%";
+      pctEl.textContent = to + unit;
       return;
     }
     var duration = 700 + Math.abs(to - from) * 9; // longer trips take a little longer
@@ -2368,9 +2390,9 @@
       var v = from + (to - from) * eased;
       ringShown[prefix] = v;
       drawRing(prefix, v);
-      pctEl.textContent = Math.round(v) + "%";
+      pctEl.textContent = Math.round(v) + unit;
       if (t < 1) ringAnim[prefix] = requestAnimationFrame(step);
-      else { ringShown[prefix] = to; pctEl.textContent = to + "%"; ringAnim[prefix] = null; }
+      else { ringShown[prefix] = to; pctEl.textContent = to + unit; ringAnim[prefix] = null; }
     }
     ringAnim[prefix] = requestAnimationFrame(step);
   }
@@ -2467,7 +2489,25 @@
       !tasks.length ? "No list" : left === 0 ? "Done" : left + " left");
     setDual("day-range", done + " of " + tasks.length + " done", done + "/" + tasks.length);
   }
+  // App mode: the rings show the database-backed scores (0-100, see docs/SCORING.md).
+  var externalScores = null;
+  function renderExternalScores(){
+    ["day", "week", "month", "quarter"].forEach(function(prefix){
+      var s = externalScores[prefix];
+      var label = { day: "Today's score", week: "Weekly score", month: "Monthly score", quarter: "Quarterly score" }[prefix];
+      setRing(prefix, label, { active: 0, pct: s.pct == null ? 0 : s.pct, unit: "" }, 1);
+      if (s.pct == null){
+        var pctEl = document.getElementById(prefix + "-pct");
+        pctEl.textContent = "\u2014";
+        pctEl.className = "week-pct";
+      }
+      setDual(prefix + "-meta", s.title, s.short);
+      setDual(prefix + "-left", s.left[0], s.left[1]);
+      setDual(prefix + "-range", s.range[0], s.range[1]);
+    });
+  }
   function renderWeekly(){
+    if (externalScores){ renderExternalScores(); return; }
     var today = new Date(); today.setHours(0,0,0,0);
     var start = weekStart(today);
     var end = new Date(start); end.setDate(end.getDate() + 6);
@@ -2514,8 +2554,9 @@
     document.getElementById("today-bar").style.width = tasks.length ? Math.round(done / tasks.length * 100) + "%" : "0%";
     document.getElementById("today-list").innerHTML = tasks.length
       ? tasks.map(function(t){
+          var hooks = window.LockedInHooks;
           return '<li class="' + (t.done ? "done" : "") + '">' +
-            '<input type="checkbox" disabled' + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + (t.done ? ' (verified done)' : ' (not done yet)') + '">' +
+            '<input type="checkbox"' + (hooks ? ' data-task-id="' + esc(t.id) + '"' : ' disabled') + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + (hooks ? '' : t.done ? ' (verified done)' : ' (not done yet)') + '">' +
             '<span class="task-text">' + esc(t.text) + '</span>' +
           '</li>';
         }).join("")
@@ -2532,6 +2573,7 @@
   }
   document.getElementById("today-list").addEventListener("change", function(e){
     if (!e.target.matches('input[type="checkbox"]')) return;
+    if (window.LockedInHooks){ window.LockedInHooks.toggleTask(e.target.getAttribute("data-task-id"), e.target.checked); return; }
     var key = todayKeyNow(), id = e.target.getAttribute("data-task-id");
     saveDaily(key, dailyTasks(key).map(function(t){ return t.id === id ? Object.assign({}, t, { done: e.target.checked }) : t; }));
   });
@@ -2546,6 +2588,7 @@
     var input = document.getElementById("today-input");
     var text = input.value.trim();
     if (!text) return;
+    if (window.LockedInHooks){ window.LockedInHooks.addTask(text); input.value = ""; return; }
     var key = todayKeyNow();
     saveDaily(key, dailyTasks(key).concat([{ id: "u" + Date.now().toString(36), text: text, done: false }]));
     input.value = "";
@@ -2594,7 +2637,7 @@
     var weekPct = Math.min(100, Math.round(weekActive / WEEK_TARGET * 100));
     var repos = entry.repos ? Object.keys(entry.repos).map(function(r){ return esc(r) + " " + esc(entry.repos[r]); }).join(" · ") : "";
     document.getElementById("report-stats").innerHTML =
-      '<span><b>' + n + '</b> commit' + (n === 1 ? '' : 's') + '</span>' +
+      '<span><b>' + n + '</b> ' + (n === 1 ? heatUnit[0] : heatUnit[1]) + '</span>' +
       (repos ? '<span>' + repos + '</span>' : '') +
       '<span>Week so far <b>' + weekPct + '%</b></span>';
 
@@ -2638,6 +2681,27 @@
     document.querySelector(".dash-col-a").classList.toggle("report-open", open);
     if (open){ reportDay = null; renderReport(); }
   });
+
+  // Bridge for app mode (app/main.js): replace this card data with database
+  // data, and expose the original data for the one-time import.
+  window.LockedInLegacy = {
+    update: function(d){
+      dailyData = d.daily;
+      heatData = d.contributions;
+      reportData = d.reports;
+      if (d.unit) heatUnit = d.unit;
+      externalScores = d.scores;
+      document.querySelector(".today-note").textContent = "Tick a task to complete it. Open Today for deadlines, time and notes.";
+      renderToday();
+      renderGreeting();
+      renderHeatmap();
+      renderWeekly();
+      if (!document.getElementById("report-card").hidden) renderReport();
+    },
+    data: function(){
+      return { daily: FALLBACK_DAILY, reports: FALLBACK_REPORTS, checklists: checklistCache, objective: objData || FALLBACK_OBJECTIVE };
+    }
+  };
 
   // Render a real starting state immediately (page-at-rest requirement).
   renderApps(FALLBACK_APPS);
@@ -2709,5 +2773,6 @@
   }).catch(function(){ /* no db this view — static fallback stands */ });
 })();
 </script>
+<script type="module" src="app/main.js"></script>
 
 </body></html>
