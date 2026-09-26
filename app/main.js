@@ -228,12 +228,15 @@ async function boot() {
     showToast("Couldn't reach the database library. Check your connection and reload.", "error");
     return;
   }
-  document.getElementById("logout-btn").hidden = false;
-  document.getElementById("logout-btn").addEventListener("click", async () => {
-    await store.auth.signOut();
-    location.hash = "";
-    location.reload();
-  });
+  // Previews keep the original password screen and its Log out button.
+  if (store.mode === "supabase") {
+    document.getElementById("logout-btn").hidden = false;
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await store.auth.signOut();
+      location.hash = "";
+      location.reload();
+    });
+  }
   const session = await store.auth.session();
   document.documentElement.classList.remove("app-booting");
   if (store.mode === "supabase") {
