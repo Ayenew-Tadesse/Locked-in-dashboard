@@ -4,7 +4,7 @@ import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES } 
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
 
-export function taskRow(t, { showDate = false, compact = false } = {}) {
+export function taskRow(t, { showDate = false, compact = false, showOwner = false } = {}) {
   const today = state.today;
   const eff = effectiveStatus(t, today);
   const ms = t.milestone_id && state.milestones.find((m) => m.id === t.milestone_id);
@@ -17,7 +17,9 @@ export function taskRow(t, { showDate = false, compact = false } = {}) {
     t.due_date ? `<span class="li-meta ${eff === "overdue" ? "danger" : ""}">Due ${esc(t.due_date === today ? "today" : formatDay(t.due_date))}${eff === "overdue" ? ` (${relativeDay(t.due_date, today)})` : ""}</span>` : "",
     ms ? `<span class="li-meta ms">◆ ${esc(ms.title)}</span>` : "",
     // Team: who a task is for (on the owner's views), or who assigned it.
-    state.me && t.user_id && t.user_id !== state.me ? `<span class="li-meta who">For ${esc(memberName(t.user_id))}</span>` : "",
+    // showOwner (the owner's team-wide Tasks card) names who's in charge of every task.
+    showOwner ? `<span class="li-meta who" title="In charge">👤 ${esc(!t.user_id || t.user_id === state.me ? "You" : memberName(t.user_id))}</span>`
+      : state.me && t.user_id && t.user_id !== state.me ? `<span class="li-meta who">For ${esc(memberName(t.user_id))}</span>` : "",
     state.me && t.assigned_by && t.assigned_by !== state.me && t.user_id === state.me ? `<span class="li-meta who">Assigned by ${esc(memberName(t.assigned_by))}</span>` : "",
     t.estimated_minutes || t.actual_minutes ? `<span class="li-meta">${t.actual_minutes != null ? formatMinutes(t.actual_minutes) : "0m"}${t.estimated_minutes ? " / " + formatMinutes(t.estimated_minutes) : ""}</span>` : "",
     !done && t.completion_percentage ? `<span class="li-meta">${t.completion_percentage}%</span>` : "",
