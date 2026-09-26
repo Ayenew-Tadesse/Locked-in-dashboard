@@ -4,6 +4,7 @@ import * as D from "../../app/core/dates.js";
 import { effectiveStatus, filterTasks, normalizeTask, wasOverdueOn, sortTasks } from "../../app/core/tasks.js";
 import { resolveScoring, scoreDay, scorePeriod, scoreWeek, scoreQuarter, describeFormula } from "../../app/core/scoring.js";
 import { computeMilestone, computeGoal, milestoneInfo, buildWarnings, planForDay } from "../../app/core/insights.js";
+import { displayName, needsProfile, greetingOptions } from "../../app/core/people.js";
 
 const TZ = "UTC";
 const cfg = resolveScoring({});
@@ -202,4 +203,16 @@ test("planning: overdue and urgent work comes first within the time budget", () 
   assert.deepEqual(plan.tasks.map((t) => t.title), ["late", "big"]);
   assert.deepEqual(plan.deferred.map((t) => t.title), ["low"]);
   assert.equal(plan.planned_minutes, 260);
+});
+test("people: display names use the chosen title; missing choices are asked for", () => {
+  assert.equal(displayName({ name: "Ayenew Shiferaw", greeting: "mr" }), "Mr. Ayenew Shiferaw");
+  assert.equal(displayName({ name: "Ana", greeting: "dr" }), "Dr. Ana");
+  assert.equal(displayName({ name: "Ben", greeting: "none" }), "Ben");
+  assert.equal(displayName({ name: "Cara", greeting: null }), "Cara");
+  assert.equal(displayName({ name: " ", email: "x@example.com", greeting: "ms" }), "Ms. x@example.com");
+  assert.equal(displayName(null), "");
+  assert.equal(needsProfile({ name: "Ana", greeting: null }), true);
+  assert.equal(needsProfile({ name: "", greeting: "ms" }), true);
+  assert.equal(needsProfile({ name: "Ana", greeting: "none" }), false);
+  assert.match(greetingOptions("mrs"), /<option value="mrs" selected>Mrs\.<\/option>/);
 });

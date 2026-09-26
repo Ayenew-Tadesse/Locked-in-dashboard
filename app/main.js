@@ -2,12 +2,13 @@
 // Supabase config (config.js) or is a preview (?demo=1 for sample data,
 // ?demo=history for the original dashboard's tracking history); otherwise
 // the original dashboard runs exactly as before.
-import { state, subscribe, loadAll, setToast, updateTask, saveTask } from "./state.js";
+import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile } from "./state.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
 import { demoSeed, emptySeed } from "./demo.js";
 import { buildYearSetup } from "./plan/setup.js";
 import { showAuth, hideAuth } from "./ui/auth.js";
-import { showToast, esc, $ } from "./ui/dom.js";
+import { showToast, esc, $, openModal } from "./ui/dom.js";
+import { displayName, needsProfile, greetingOptions } from "./core/people.js";
 import { openTaskForm } from "./ui/task-ui.js";
 import { buildWarnings } from "./core/insights.js";
 import { scoreDay, scorePeriod, scoreQuarter } from "./core/scoring.js";
@@ -99,6 +100,7 @@ document.addEventListener("click", (e) => {
 
 function render({ keepFocus } = {}) {
   if (!started) return;
+  showMyName();
   const r = route();
   renderNav(r.name);
   renderWarnings(r.name);
@@ -226,6 +228,34 @@ const legacyHooks = {
   openToday() { location.hash = "#/today"; },
 };
 
+// Each person is greeted by their own name and chosen title, e.g.
+// "Good morning, Mr. Ayenew Shiferaw". Previews keep the original heading.
+function showMyName() {
+  if (state.store?.mode !== "supabase") return;
+  const name = displayName(state.profile);
+  const h1 = document.querySelector(".wrap > h1");
+  if (name && h1.textContent !== name) h1.textContent = name;
+}
+
+// Asked once after sign-in when the name or "Greet me as" is missing
+// (e.g. accounts created before this was on the sign-up form).
+function askForProfile() {
+  openModal({
+    eyebrow: "Welcome",
+    title: "How should we greet you?",
+    submitLabel: "Save",
+    body: `<p class="li-sub">Your team sees your name instead of your email. You can change both later in Settings.</p>
+      <label class="li-field">Your name<input name="name" maxlength="120" required autocomplete="name" value="${esc(state.profile?.name || "")}"></label>
+      <label class="li-field">Greet me as<select name="greeting" required><option value="">Choose…</option>${greetingOptions(state.profile?.greeting || "")}</select></label>`,
+    async onSubmit(v) {
+      if (!v.name.trim()) throw new Error("Enter your name.");
+      if (!v.greeting) throw new Error("Choose how you'd like to be greeted.");
+      await saveProfile({ name: v.name.trim(), greeting: v.greeting });
+      showToast("Nice to meet you, " + displayName(state.profile) + "!");
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
@@ -241,8 +271,6 @@ async function start(store) {
   }
   started = true;
   window.LockedInHooks = legacyHooks;
-  // Each person sees their own name in the heading (previews keep the original).
-  if (store.mode === "supabase" && state.profile?.name) document.querySelector(".wrap > h1").textContent = state.profile.name;
   addReportPdfButton();
   document.documentElement.classList.remove("app-booting");
   $("#footnote").textContent = store.mode === "demo"
@@ -251,6 +279,7 @@ async function start(store) {
       : "Demo mode: sample data held in memory only. Nothing you change here is saved.")
     : "Your tasks, scores and milestones are saved to your database and sync across devices.";
   subscribe(() => render());
+  if (store.mode === "supabase" && needsProfile(state.profile)) askForProfile();
   // Roll over at midnight.
   let day = state.today;
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);

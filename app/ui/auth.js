@@ -1,5 +1,6 @@
 // Sign-in screen (Supabase Auth). Styled like the original password gate.
 import { esc } from "./dom.js";
+import { greetingOptions } from "../core/people.js";
 
 const MODES = {
   signin: { title: "Sign in", button: "Sign in", password: true },
@@ -27,7 +28,8 @@ export function showAuth(store, { mode = "signin", message = "" } = {}) {
       <span class="gate-lock" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
       <h2 class="gate-title" id="li-auth-title">Locked in</h2>
       <p class="gate-sub">${esc(m.title)}</p>
-      ${m.name ? `<input type="text" name="name" autocomplete="name" placeholder="Your name" aria-label="Your name" maxlength="120">` : ""}
+      ${m.name ? `<input type="text" name="name" autocomplete="name" placeholder="Your name" aria-label="Your name" maxlength="120" required>
+        <label class="li-auth-greet">Greet me as <select name="greeting" aria-label="Greet me as"><option value="">Choose…</option>${greetingOptions("")}</select></label>` : ""}
       ${m.noEmail ? "" : `<input type="email" name="email" autocomplete="email" placeholder="Email" aria-label="Email" required>`}
       ${m.password ? `<input type="password" name="password" autocomplete="${mode === "signin" ? "current-password" : "new-password"}" placeholder="Password${mode === "signin" ? "" : " (8+ characters)"}" aria-label="Password" required minlength="${mode === "signin" ? 1 : 8}">` : ""}
       <p class="gate-error" role="alert" ${message ? "" : "hidden"}>${esc(message)}</p>
@@ -50,12 +52,14 @@ export function showAuth(store, { mode = "signin", message = "" } = {}) {
     const f = form.elements, btn = form.querySelector("button[type=submit]");
     const email = f.email?.value.trim();
     if (!m.noEmail && !/^\S+@\S+\.\S+$/.test(email || "")) { err.textContent = "Enter a valid email address."; err.hidden = false; return; }
+    if (m.name && !f.name.value.trim()) { err.textContent = "Enter your name, so your team sees it instead of your email."; err.hidden = false; return; }
+    if (m.name && !f.greeting.value) { err.textContent = "Choose how you'd like to be greeted."; err.hidden = false; return; }
     if (m.password && mode !== "signin" && f.password.value.length < 8) { err.textContent = "Use at least 8 characters."; err.hidden = false; return; }
     btn.disabled = true;
     try {
       if (mode === "signin") await store.auth.signIn(email, f.password.value);
       else if (mode === "signup") {
-        const r = await store.auth.signUp(email, f.password.value, f.name.value.trim());
+        const r = await store.auth.signUp(email, f.password.value, f.name.value.trim(), f.greeting.value);
         if (r.needsConfirmation) { ok.textContent = "Check your email to confirm your account, then sign in."; ok.hidden = false; }
       } else if (mode === "magic") { await store.auth.magicLink(email); ok.textContent = "Check your email for a sign-in link."; ok.hidden = false; }
       else if (mode === "reset") { await store.auth.resetPassword(email); ok.textContent = "Check your email for a reset link."; ok.hidden = false; }

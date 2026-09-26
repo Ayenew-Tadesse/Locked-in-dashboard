@@ -151,3 +151,16 @@ milestones and `assigned_by` on tasks.
 * A task may link its person's own milestone or a team milestone of their
   team (trigger check). Milestone and goal progress count everyone's tasks.
 * All of it is covered by `tests/db/teams.sql` and `tests/integration/team.mjs`.
+
+## Names and greetings (added later)
+
+Migration `20260927000000_greeting.sql` adds `profiles.greeting`: the title
+each person picks for themselves (`mr`, `ms`, `mrs`, `dr` or `none`). It's a
+greeting preference, not gender, so nobody is asked for or guessed at.
+
+* Sign-up asks for a name and "Greet me as"; both are stored by the sign-up trigger.
+* Accounts without a greeting (created before this) are asked once after sign-in.
+* The heading, Team page, "Assigned by" labels and PDFs use the name with the
+  title (`app/core/people.js`), never the email address.
+* Each person changes their own in Settings → Profile; the owner can read them
+  but not change them (the existing profile policies).

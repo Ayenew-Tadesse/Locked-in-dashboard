@@ -473,21 +473,107 @@ test("without a database the original dashboard runs unchanged", async () => {
   await page.close();
 });
 
-test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {
+// A stand-in for supabase-js, served in place of the CDN module. `signedIn`
+// decides whether there's a session; the profile starts without a greeting.
+function fakeSupabase({ signedIn }) {
+  return `
+const profile = { id: "u1", name: "aye", email: "aye@example.com", greeting: null, timezone: "UTC" };
+window.__fakeSignUps = [];
+function builder(table) {
+  const q = { table, op: "select", cols: "", values: null, single: false };
+  const run = () => {
+    if (table === "profiles" && q.op === "update") Object.assign(profile, q.values);
+    if (table === "profiles") return q.single ? { ...profile } : [{ ...profile }];
+    if (table === "team_members" && q.cols.includes("teams(")) return [{ team_id: "t1", role: "owner", teams: { name: "My team" } }];
+    if (table === "team_members" && q.cols.includes("profiles(")) return [{ user_id: "u1", role: "owner", joined_at: "2026-09-26T00:00:00Z", profiles: { ...profile } }];
+    if (table === "user_settings" && q.single) return { user_id: "u1", scoring: {}, preferences: {}, plan_loaded_at: "2026-09-26T00:00:00Z", legacy_imported_at: "2026-09-26T00:00:00Z" };
+    return q.single ? (q.values || null) : [];
+  };
+  const b = new Proxy({}, { get(_, k) {
+    if (k === "then") return (res, rej) => Promise.resolve({ data: run(), error: null }).then(res, rej);
+    return (...a) => {
+      if (k === "select") q.cols = a[0] || "";
+      if (k === "update" || k === "insert" || k === "upsert") { q.op = k; q.values = a[0]; }
+      if (k === "single" || k === "maybeSingle") q.single = true;
+      return b;
+    };
+  } });
+  return b;
+}
+export function createClient() {
+  return {
+    from: builder,
+    rpc: async () => ({ data: null, error: null }),
+    auth: {
+      getSession: async () => ({ data: { session: ${signedIn ? '{ user: { id: "u1" } }' : "null"} } }),
+      onAuthStateChange() {},
+      signUp: async (args) => { window.__fakeSignUps.push(args); return { data: { session: null }, error: null }; },
+    },
+  };
+}`;
+}
+
+async function dbPage({ signedIn }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
-  const errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(e.message));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.route("https://api.github.com/**", (r) => r.fulfill({ json: [] }));
   await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  // A stand-in for supabase-js with nobody signed in.
-  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript",
-    body: "export function createClient() { return { auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange() {} } }; }" }));
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn }) }));
   await page.goto(BASE);
+  return page;
+}
+
+test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {
+  const page = await dbPage({ signedIn: false });
   await page.waitForSelector("#li-auth .gate-card", { state: "visible" });
   assert.ok(await page.getByRole("button", { name: "Create an account" }).isVisible(), "sign-up is offered");
   assert.ok(await page.locator('#li-auth input[type="email"]').isVisible(), "email field visible");
   assert.ok(!(await page.locator("#gate").isVisible()), "the old password screen is not used");
-  assert.deepEqual(errors, []);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("sign-up asks for a name and how to be greeted, and sends both", async () => {
+  const page = await dbPage({ signedIn: false });
+  await page.getByRole("button", { name: "Create an account" }).click();
+  await page.fill('#li-auth input[type="email"]', "cara@example.com");
+  await page.fill('#li-auth input[type="password"]', "long enough password");
+  await page.click('#li-auth button[type="submit"]');
+  assert.match(await page.textContent("#li-auth .gate-error"), /Enter your name/);
+  await page.fill('#li-auth input[name="name"]', "Cara Lee");
+  await page.click('#li-auth button[type="submit"]');
+  assert.match(await page.textContent("#li-auth .gate-error"), /greeted/);
+  await page.selectOption('#li-auth select[name="greeting"]', "ms");
+  await page.click('#li-auth button[type="submit"]');
+  await page.waitForSelector("#li-auth .li-auth-ok:not([hidden])");
+  const sent = await page.evaluate(() => window.__fakeSignUps[0].options.data);
+  assert.deepEqual(sent, { name: "Cara Lee", greeting: "ms" });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("signed in without a greeting: asked once, then greeted by title and name", async () => {
+  const page = await dbPage({ signedIn: true });
+  await page.waitForSelector("#li-modal", { state: "visible" });
+  assert.match(await page.textContent("#li-modal-title"), /How should we greet you/);
+  assert.equal(await page.textContent(".wrap > h1"), "aye", "the heading shows their own name, not the original's");
+  await page.fill('#li-modal input[name="name"]', "Ayenew Shiferaw");
+  await page.selectOption('#li-modal select[name="greeting"]', "mr");
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.equal(await page.textContent(".wrap > h1"), "Mr. Ayenew Shiferaw");
+  // The Team page lists them by name and title, not email.
+  await page.evaluate(() => { location.hash = "#/team"; });
+  await page.waitForSelector(".li-person");
+  assert.equal(await page.textContent(".li-person"), "Mr. Ayenew Shiferaw");
+  // Settings: change the greeting.
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.selectOption('#li-profile-form select[name="greeting"]', "none");
+  await page.click('#li-profile-form button[type="submit"]');
+  await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
+  assert.deepEqual(page.errors, []);
   await page.close();
 });
