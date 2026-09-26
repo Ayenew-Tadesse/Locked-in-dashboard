@@ -430,9 +430,7 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
   .li-goals .li-bar{display:block;grid-column:1 / -1;}
   .li-goal-meta{grid-column:1 / -1;}
 }
-/* Tasks card (owner): whose tasks, and Available / Ongoing / Completed groups */
-.li-tc-who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);margin:2px 0 8px;}
-.li-tc-who select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;max-width:60%;}
+/* Tasks card (owner): Available / Ongoing / Completed groups */
 .li-tc-group{margin-top:10px;}
 .li-tc-group-title{font-family:'IBM Plex Mono', monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:0 0 4px;}
 .li-tc-group .li-empty{margin:2px 0 6px;font-size:12.5px;}
