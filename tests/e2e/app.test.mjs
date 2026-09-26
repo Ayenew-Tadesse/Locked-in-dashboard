@@ -48,7 +48,8 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
 }
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
 function shift(key, n) { const d = new Date(key + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
-const row = (page, title) => page.locator(".li-task", { has: page.locator(".li-task-title", { hasText: title }) });
+// Visible rows only: the Overview's Tasks card stays in the page (hidden) on other tabs.
+const row = (page, title) => page.locator(".li-task:visible", { has: page.locator(".li-task-title", { hasText: title }) });
 
 test("create a task with every field, then edit it", async () => {
   const page = await open("today");
@@ -96,8 +97,13 @@ test("complete, reopen and change status; scores and the original checklist upda
   assert.match(await row(page, "Test keyboard handling on iOS").getAttribute("class"), /st-completed/);
   const scoreAfter = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
   assert.ok(parseInt(scoreAfter) > parseInt(scoreBefore), `score rose (${scoreBefore} -> ${scoreAfter})`);
-  // The original "Today's checklist" card reflects it too (3 of 4 done).
-  assert.equal(await page.locator("#today-progress").innerText(), "3/4");
+  // The Overview's Tasks card reflects it too (3 of 4 done).
+  // (Switch tabs in-page: reloading would reset the demo data.)
+  await page.click('#li-nav a[href="#/"]');
+  await page.waitForSelector("#li-tasks-card:not([hidden]) .today-progress");
+  assert.equal(await page.locator("#li-tasks-card .today-progress").innerText(), "3/4");
+  await page.click('#li-nav a[href="#/today"]');
+  await row(page, "Test keyboard handling on iOS").waitFor();
 
   await row(page, "Test keyboard handling on iOS").locator("select[data-act=status]").selectOption("in_progress");
   await page.waitForFunction(() => [...document.querySelectorAll(".li-task.st-in_progress .li-task-title")].some((e) => e.textContent.includes("keyboard")));
@@ -268,6 +274,39 @@ test("?demo=history previews the original dashboard's tracking history", async (
   assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);
   assert.match(await page.locator("#footnote").innerText(), /tracking history/);
   assert.deepEqual(errors, []);
+  await page.close();
+});
+
+test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings in the footer", async () => {
+  const page = await open("");
+  const nav = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+  assert.deepEqual(nav, ["Overview", "Today", "Calendar", "Milestones", "Analytics"]);
+  const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
+  assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
+  assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
+  const card = page.locator("#li-tasks-card");
+  const rings = await page.locator("#week-card").boundingBox();
+  assert.ok((await card.boundingBox()).y > rings.y + rings.height - 1, "Tasks card sits under the score rings");
+  // Day view: today's tasks; add one from the card.
+  assert.match(await card.locator(".today-progress").innerText(), /^2\/4$/);
+  await card.locator("input[name=title]").fill("E2E card task");
+  await card.locator("button[type=submit]").click();
+  await page.waitForFunction(() => document.querySelector("#li-tasks-card .today-progress").textContent === "2/5");
+  // Week / Month / Quarter switch the period and the completion level.
+  for (const p of ["week", "month", "quarter"]) {
+    await card.locator(`[data-period=${p}]`).click();
+    await page.waitForFunction((p) => document.querySelector(`#li-tasks-card [data-period=${p}]`).getAttribute("aria-pressed") === "true", p);
+    assert.match(await card.locator(".li-tc-progress").innerText(), /% complete/);
+  }
+  assert.equal(await card.locator('a[href="#/quarter"]').count(), 1, "quarter view link");
+  // Daily report opens from the card.
+  await card.locator("[data-report]").click();
+  assert.ok(await page.locator("#report-card").isVisible());
+  // Settings lives in the footer, on other pages too.
+  await page.click('#li-footer-links a[href="#/settings"]');
+  await page.waitForSelector(".li-formula");
+  assert.ok(await page.locator("#daily-quote").isVisible(), "quote stays on other pages");
+  assert.ok(await page.locator('#li-footer-links a[href="#/settings"]').isVisible());
   await page.close();
 });
 

@@ -21,6 +21,7 @@ import { renderQuarter } from "./views/quarter.js";
 import { renderMilestones } from "./views/milestones.js";
 import { renderAnalytics } from "./views/analytics.js";
 import { renderSettings } from "./views/settings.js";
+import { renderTasksCard } from "./views/tasks-card.js";
 
 const VIEWS = {
   overview: { label: "Overview", render: renderOverview },
@@ -33,6 +34,11 @@ const VIEWS = {
   analytics: { label: "Analytics", render: renderAnalytics },
   settings: { label: "Settings", render: renderSettings },
 };
+
+// Tabs in the top row. The other pages stay reachable by link: Tasks and Week
+// from the Overview, Quarter from its score tile and the Tasks card, Settings
+// from the footer.
+const NAV = ["overview", "today", "calendar", "milestones", "analytics"];
 
 const config = window.LOCKEDIN_CONFIG || {};
 // Preview modes come from the URL or, for a preview deployment, config.js.
@@ -51,8 +57,8 @@ function route() {
 }
 
 function renderNav(active) {
-  $("#li-nav").innerHTML = `<div class="li-nav-scroll">${Object.entries(VIEWS).map(([k, v]) =>
-    `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link${k === active ? " active" : ""}"${k === active ? ' aria-current="page"' : ""}>${v.label}</a>`).join("")}</div>
+  $("#li-nav").innerHTML = `<div class="li-nav-scroll">${NAV.map((k) =>
+    `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link${k === active ? " active" : ""}"${k === active ? ' aria-current="page"' : ""}>${VIEWS[k].label}</a>`).join("")}</div>
     <button type="button" class="li-btn primary li-nav-add" data-new-task="${state.today}" aria-label="New task">+ <span>New task</span></button>`;
 }
 
@@ -111,6 +117,10 @@ function render({ keepFocus } = {}) {
     if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
   }
   window.scrollTo(0, scrollY);
+  if (overview) {
+    try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
+  }
+  $("#li-footer-links").innerHTML = `<a href="#/settings" class="li-link${r.name === "settings" ? " active" : ""}"${r.name === "settings" ? ' aria-current="page"' : ""}>Settings</a>`;
   feedLegacy();
 }
 
