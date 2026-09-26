@@ -491,7 +491,7 @@ test("without a database the original dashboard runs unchanged", async () => {
 // A stand-in for supabase-js, served in place of the CDN module. `signedIn`
 // decides whether there's a session; the profile starts without a greeting.
 // `oldDb` imitates a database without the greeting migration.
-function fakeSupabase({ signedIn, oldDb = false }) {
+function fakeSupabase({ signedIn, oldDb = false, role = "owner" }) {
   return `
 const oldDb = ${oldDb};
 const profile = { id: "u1", name: "aye", email: "aye@example.com", timezone: "UTC" };
@@ -502,8 +502,8 @@ function builder(table) {
   const run = () => {
     if (table === "profiles" && q.op === "update") Object.assign(profile, q.values);
     if (table === "profiles") return q.single ? { ...profile } : [{ ...profile }];
-    if (table === "team_members" && q.cols.includes("teams(")) return [{ team_id: "t1", role: "owner", teams: { name: "My team" } }];
-    if (table === "team_members" && q.cols.includes("profiles(")) return [{ user_id: "u1", role: "owner", joined_at: "2026-09-26T00:00:00Z", profiles: { ...profile } }];
+    if (table === "team_members" && q.cols.includes("teams(")) return [{ team_id: "t1", role: "${role}", teams: { name: "My team" } }];
+    if (table === "team_members" && q.cols.includes("profiles(")) return [{ user_id: "u1", role: "${role}", joined_at: "2026-09-26T00:00:00Z", profiles: { ...profile } }];
     if (table === "user_settings" && q.single) return { user_id: "u1", scoring: {}, preferences: {}, plan_loaded_at: "2026-09-26T00:00:00Z", legacy_imported_at: "2026-09-26T00:00:00Z" };
     return q.single ? (q.values || null) : [];
   };
@@ -535,7 +535,7 @@ export function createClient() {
 }`;
 }
 
-async function dbPage({ signedIn, oldDb }) {
+async function dbPage({ signedIn, oldDb, role }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -543,7 +543,7 @@ async function dbPage({ signedIn, oldDb }) {
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: [] }));
   await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb }) }));
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role }) }));
   await page.goto(BASE);
   return page;
 }
@@ -616,4 +616,20 @@ test("before the greeting migration is run, the site still loads (greetings just
   await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("members don't get the Tasks card on their Overview; the owner does", async () => {
+  for (const role of ["member", "owner"]) {
+    const page = await dbPage({ signedIn: true, role });
+    await page.waitForSelector("#li-nav .li-nav-link");
+    await page.keyboard.press("Escape").catch(() => {});
+    await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+    await page.waitForSelector(".li-kpis");
+    assert.equal(await page.locator("#li-tasks-card").isVisible(), role === "owner", `${role}: Tasks card`);
+    assert.ok(await page.locator(".li-kpis").isVisible(), `${role}: score tiles still shown`);
+    const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+    assert.ok(tabs.includes("Today") && tabs.includes("Calendar"), `${role}: Today and Calendar remain`);
+    assert.deepEqual(page.errors, []);
+    await page.close();
+  }
 });
