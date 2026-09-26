@@ -475,9 +475,12 @@ test("without a database the original dashboard runs unchanged", async () => {
 
 // A stand-in for supabase-js, served in place of the CDN module. `signedIn`
 // decides whether there's a session; the profile starts without a greeting.
-function fakeSupabase({ signedIn }) {
+// `oldDb` imitates a database without the greeting migration.
+function fakeSupabase({ signedIn, oldDb = false }) {
   return `
-const profile = { id: "u1", name: "aye", email: "aye@example.com", greeting: null, timezone: "UTC" };
+const oldDb = ${oldDb};
+const profile = { id: "u1", name: "aye", email: "aye@example.com", timezone: "UTC" };
+if (!oldDb) profile.greeting = null;
 window.__fakeSignUps = [];
 function builder(table) {
   const q = { table, op: "select", cols: "", values: null, single: false };
@@ -490,7 +493,11 @@ function builder(table) {
     return q.single ? (q.values || null) : [];
   };
   const b = new Proxy({}, { get(_, k) {
-    if (k === "then") return (res, rej) => Promise.resolve({ data: run(), error: null }).then(res, rej);
+    if (k === "then") {
+      if (oldDb && (q.cols.includes("greeting") || (q.values && "greeting" in q.values)))
+        return (res, rej) => Promise.resolve({ data: null, error: { message: "column profiles_1.greeting does not exist" } }).then(res, rej);
+      return (res, rej) => Promise.resolve({ data: run(), error: null }).then(res, rej);
+    }
     return (...a) => {
       if (k === "select") q.cols = a[0] || "";
       if (k === "update" || k === "insert" || k === "upsert") { q.op = k; q.values = a[0]; }
@@ -513,7 +520,7 @@ export function createClient() {
 }`;
 }
 
-async function dbPage({ signedIn }) {
+async function dbPage({ signedIn, oldDb }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -521,7 +528,7 @@ async function dbPage({ signedIn }) {
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: [] }));
   await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn }) }));
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb }) }));
   await page.goto(BASE);
   return page;
 }
@@ -572,6 +579,24 @@ test("signed in without a greeting: asked once, then greeted by title and name",
   // Settings: change the greeting.
   await page.evaluate(() => { location.hash = "#/settings"; });
   await page.selectOption('#li-profile-form select[name="greeting"]', "none");
+  await page.click('#li-profile-form button[type="submit"]');
+  await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("before the greeting migration is run, the site still loads (greetings just stay hidden)", async () => {
+  const page = await dbPage({ signedIn: true, oldDb: true });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  assert.equal(await page.textContent(".wrap > h1"), "aye");
+  assert.equal(await page.locator("#li-modal").count(), 0, "no greeting prompt");
+  await page.evaluate(() => { location.hash = "#/team"; });
+  await page.waitForSelector(".li-person");
+  assert.equal(await page.textContent(".li-person"), "aye");
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.waitForSelector("#li-profile-form");
+  assert.equal(await page.locator('#li-profile-form select[name="greeting"]').count(), 0, "no greeting choice yet");
+  await page.fill('#li-profile-form input[name="name"]', "Ayenew Shiferaw");
   await page.click('#li-profile-form button[type="submit"]');
   await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
   assert.deepEqual(page.errors, []);

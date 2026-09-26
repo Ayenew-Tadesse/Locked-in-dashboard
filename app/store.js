@@ -81,7 +81,11 @@ export function supabaseStoreFromClient(sb) {
       if (!mine.length) return { team: null, members: [], invites: [] };
       const m = mine[0];
       const team = { id: m.team_id, name: m.teams?.name || "My team", role: m.role };
-      const members = check(await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email, greeting)").eq("team_id", team.id))
+      // profiles.greeting comes from migration 20260927000000_greeting.sql; until
+      // it has been run, load names without it rather than failing.
+      let res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email, greeting)").eq("team_id", team.id);
+      if (res.error && /greeting/.test(res.error.message)) res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email)").eq("team_id", team.id);
+      const members = check(res)
         .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, name: displayName(r.profiles) || "Member", greeting: r.profiles?.greeting || null, email: r.profiles?.email || "" }));
       const invites = team.role === "owner"
         ? check(await sb.from("team_invites").select("*").eq("team_id", team.id).is("accepted_at", null).is("revoked_at", null).order("created_at"))

@@ -216,3 +216,8 @@ test("people: display names use the chosen title; missing choices are asked for"
   assert.equal(needsProfile({ name: "Ana", greeting: "none" }), false);
   assert.match(greetingOptions("mrs"), /<option value="mrs" selected>Mrs\.<\/option>/);
 });
+
+test("people: without the greeting column nobody is prompted", () => {
+  assert.equal(needsProfile({ name: "Ana" }), false);
+  assert.equal(needsProfile({ name: "Ana", greeting: null }), true);
+});
