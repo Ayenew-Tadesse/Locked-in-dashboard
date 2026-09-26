@@ -472,3 +472,22 @@ test("without a database the original dashboard runs unchanged", async () => {
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
+    body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
+  // A stand-in for supabase-js with nobody signed in.
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript",
+    body: "export function createClient() { return { auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange() {} } }; }" }));
+  await page.goto(BASE);
+  await page.waitForSelector("#li-auth .gate-card", { state: "visible" });
+  assert.ok(await page.getByRole("button", { name: "Create an account" }).isVisible(), "sign-up is offered");
+  assert.ok(await page.locator('#li-auth input[type="email"]').isVisible(), "email field visible");
+  assert.ok(!(await page.locator("#gate").isVisible()), "the old password screen is not used");
+  assert.deepEqual(errors, []);
+  await page.close();
+});

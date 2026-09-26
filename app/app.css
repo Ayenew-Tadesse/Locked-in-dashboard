@@ -5,6 +5,9 @@
 /* ---- App mode page states ---------------------------------------------- */
 html.app-booting .wrap{visibility:hidden;}
 html.li-authing .wrap{display:none;}
+/* The original page hides every .gate unless its password screen is locked;
+   the Supabase sign-in screen reuses that look, so show it explicitly. */
+html.li-authing .gate.li-auth{display:flex;}
 /* The quote (above the tabs) and the footer show on every page; the
    original cards only on the Overview. */
 html.li-subview .dash-grid{display:none;}
