@@ -8,8 +8,13 @@ html.li-authing .wrap{display:none;}
 /* The quote (above the tabs) and the footer show on every page; the
    original cards only on the Overview. */
 html.li-subview .dash-grid{display:none;}
-/* The Tasks card replaces the original "Today's checklist" card. */
-html.app-mode #today-card{display:none;}
+/* The Tasks card replaces the original "Today's checklist" card, and the
+   score tiles replace the "Your score" ring card, so the Tasks card leads
+   the left column. The column no longer sticks while scrolling, so a long
+   task list stays reachable. */
+html.app-mode #today-card, html.app-mode #week-card{display:none;}
+html.app-mode .li-tasks-card{margin-top:0;}
+html.app-mode .dash-col-a{position:static;}
 html:not(.app-mode) .li-tasks-card{display:none;}
 html.li-modal-open{overflow:hidden;}
 .li-auth{z-index:110;}

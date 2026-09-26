@@ -278,15 +278,27 @@ test("?demo=history previews the original dashboard's tracking history", async (
 });
 
 test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings in the footer", async () => {
-  const page = await open("");
+  const requests = [];
+  const page = await unlockedPage({ viewport: { width: 1280, height: 900 } });
+  page.on("request", (r) => requests.push(r.url()));
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.goto(BASE + "?demo=1");
+  await page.waitForSelector("#li-nav .li-nav-link");
+  // Every app file loads by its version-stamped address (fresh after each update).
+  const appFiles = requests.filter((u) => /\/app\/.+\.(js|css)/.test(u));
+  assert.ok(appFiles.length > 20, "app files requested");
+  assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
   const nav = await page.locator("#li-nav .li-nav-link").allInnerTexts();
   assert.deepEqual(nav, ["Overview", "Today", "Calendar", "Milestones", "Analytics"]);
   const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
   assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
+  assert.ok(!(await page.locator("#week-card").isVisible()), "the Your score (rings) card is gone");
+  assert.equal(await page.locator("#li-overview .card-label", { hasText: "Deadlines" }).count(), 0, "the Deadlines card is gone");
+  assert.equal(await page.locator("#li-overview .card-label", { hasText: "Milestones" }).count(), 1);
   const card = page.locator("#li-tasks-card");
-  const rings = await page.locator("#week-card").boundingBox();
-  assert.ok((await card.boundingBox()).y > rings.y + rings.height - 1, "Tasks card sits under the score rings");
+  const colTop = (await page.locator(".dash-col-a").boundingBox()).y;
+  assert.ok(Math.abs((await card.boundingBox()).y - colTop) < 2, "Tasks card leads the left column");
   // Day view: today's tasks; add one from the card.
   assert.match(await card.locator(".today-progress").innerText(), /^2\/4$/);
   await card.locator("input[name=title]").fill("E2E card task");
