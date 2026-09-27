@@ -50,7 +50,11 @@ html.app-mode:not(.app-booting) .li-nav:not(:empty){
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);
 }
-.li-nav-scroll{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;}
+.li-nav-scroll{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;position:relative;}
+/* Soft edges where more tabs are scrolled out of view. */
+.li-nav-scroll.fade-r{-webkit-mask-image:linear-gradient(to right, #000 calc(100% - 28px), transparent);mask-image:linear-gradient(to right, #000 calc(100% - 28px), transparent);}
+.li-nav-scroll.fade-l{-webkit-mask-image:linear-gradient(to left, #000 calc(100% - 28px), transparent);mask-image:linear-gradient(to left, #000 calc(100% - 28px), transparent);}
+.li-nav-scroll.fade-l.fade-r{-webkit-mask-image:linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);mask-image:linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);}
 .li-nav-scroll::-webkit-scrollbar{display:none;}
 .li-nav-link{
   flex:none;padding:7px 11px;border-radius:8px;

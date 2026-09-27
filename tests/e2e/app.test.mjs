@@ -708,3 +708,38 @@ test("refreshing never flashes the original page: a spinner shows until the app 
   assert.deepEqual(page.errors, []);
   await page.close();
 });
+
+test("phone: tapping a tab near the edge opens it and slides it to the middle", async () => {
+  const page = await open("", { width: 375, height: 760 });
+  const sc = page.locator("#li-nav .li-nav-scroll");
+  assert.equal(await sc.evaluate((e) => e.scrollLeft), 0, "starts at the beginning");
+  assert.ok(await sc.evaluate((e) => e.classList.contains("fade-r")), "a fade shows more tabs to the right");
+  // Tap Analytics where it sits, half off the edge.
+  const tab = page.locator('#li-nav a[href="#/analytics"]');
+  const box = await tab.boundingBox();
+  await page.mouse.click(Math.min(box.x + 10, 370), box.y + box.height / 2);
+  await page.waitForFunction(() => location.hash === "#/analytics");
+  await page.waitForFunction(() => {
+    const s = document.querySelector("#li-nav .li-nav-scroll"), a = s.querySelector(".active").getBoundingClientRect(), r = s.getBoundingClientRect();
+    return a.left >= r.left && a.right <= r.right && s.scrollLeft > 0;
+  });
+  await page.waitForTimeout(700); // let the smooth scroll finish
+  const pos = await page.evaluate(() => {
+    const s = document.querySelector("#li-nav .li-nav-scroll"), a = s.querySelector(".active").getBoundingClientRect(), r = s.getBoundingClientRect();
+    const next = s.querySelector(".active").nextElementSibling?.getBoundingClientRect();
+    return { center: Math.abs((a.left + a.right) / 2 - (r.left + r.right) / 2), atEnd: s.scrollLeft >= s.scrollWidth - s.clientWidth - 2, nextVisible: !next || next.left < r.right };
+  });
+  assert.ok(pos.center < 20 || pos.atEnd, `Analytics is centred (${pos.center}px off) or the row is fully scrolled`);
+  assert.ok(pos.nextVisible, "the next tab is visible");
+  // Redraws (e.g. changing the range) keep the row where it is.
+  const before = await sc.evaluate((e) => e.scrollLeft);
+  await page.locator("#li-view .li-seg .li-btn").last().click();
+  await page.waitForTimeout(400);
+  assert.ok(Math.abs((await sc.evaluate((e) => e.scrollLeft)) - before) < 2, "no snapping back to the start");
+  // Opening the page directly on a later tab starts with it in view.
+  await page.reload();
+  await page.waitForSelector("#li-nav .li-nav-link.active");
+  assert.ok(await sc.evaluate((e) => e.scrollLeft > 0));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
