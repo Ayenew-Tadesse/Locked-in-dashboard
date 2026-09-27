@@ -63,10 +63,42 @@ function route() {
   return { name: VIEWS[name] ? name : "overview", id, params: new URLSearchParams(query) };
 }
 
+// The tab row is wider than a phone: it's built once (so redraws don't snap
+// it back to the start), and the chosen tab slides to the middle so its
+// neighbours are visible. Fades on the edges show there's more to scroll.
+let navActive = null;
 function renderNav(active) {
   const tabs = state.isOwner ? [...NAV, "team"] : NAV; // Team: owner only
-  $("#li-nav").innerHTML = `<div class="li-nav-scroll">${tabs.map((k) =>
-    `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link${k === active ? " active" : ""}"${k === active ? ' aria-current="page"' : ""}>${VIEWS[k].label}</a>`).join("")}</div>`;
+  let sc = $("#li-nav .li-nav-scroll");
+  const fresh = !sc || sc.dataset.tabs !== tabs.join();
+  if (fresh) {
+    $("#li-nav").innerHTML = `<div class="li-nav-scroll" data-tabs="${tabs.join()}">${tabs.map((k) =>
+      `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link" data-view="${k}">${VIEWS[k].label}</a>`).join("")}</div>`;
+    sc = $("#li-nav .li-nav-scroll");
+    sc.addEventListener("scroll", () => navFades(sc), { passive: true });
+    window.addEventListener("resize", () => navFades(sc));
+  }
+  let current = null;
+  sc.querySelectorAll(".li-nav-link").forEach((a) => {
+    const on = a.dataset.view === active;
+    a.classList.toggle("active", on);
+    if (on) { a.setAttribute("aria-current", "page"); current = a; } else a.removeAttribute("aria-current");
+  });
+  if (current && (fresh || active !== navActive)) centerTab(sc, current, !fresh);
+  navActive = active;
+  navFades(sc);
+}
+function centerTab(sc, tab, smooth) {
+  // While the page is still hidden (loading) the row has no width: retry once it shows.
+  if (!sc.clientWidth) { requestAnimationFrame(() => { if (sc.clientWidth) { centerTab(sc, tab, false); navFades(sc); } }); return; }
+  const left = tab.offsetLeft - (sc.clientWidth - tab.offsetWidth) / 2;
+  const motion = smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  sc.scrollTo({ left: Math.max(0, left), behavior: motion ? "smooth" : "auto" });
+}
+function navFades(sc) {
+  const max = sc.scrollWidth - sc.clientWidth;
+  sc.classList.toggle("fade-l", sc.scrollLeft > 2);
+  sc.classList.toggle("fade-r", sc.scrollLeft < max - 2);
 }
 
 const LEVELS = { danger: 0, warn: 1, info: 2 };
