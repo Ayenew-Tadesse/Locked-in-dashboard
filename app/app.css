@@ -579,3 +579,11 @@ html.li-page .li-footer{display:none !important;}
   html.app-mode #heat-card{margin-top:0;}
 }
 .li-tc-foot:not(:has(a, button)){display:none;}
+/* The Objective card sits under Tasks, in the narrower left column: when the
+   card itself is narrow, its quarters go compact (as on phones). */
+html.app-mode .roadmap-card{container-type:inline-size;}
+@container (max-width:440px){
+  .obj-track{grid-template-columns:repeat(4, minmax(0,1fr));gap:4px;}
+  .obj-months, .obj-badge{display:none;}
+  .obj-mini{width:80%;}
+}

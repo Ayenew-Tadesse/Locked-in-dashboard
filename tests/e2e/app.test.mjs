@@ -307,6 +307,10 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
     const [tasks, heat] = [await box("#li-tasks-card"), await box("#heat-card")];
     if (width >= 700) assert.ok(Math.abs(tasks.y - heat.y) < 1 && tasks.x + tasks.width <= heat.x, `side by side at ${width}px`);
     else assert.ok(heat.y >= tasks.y + tasks.height, `stacked on a phone (${width}px)`);
+    // The Objective card sits right under the Tasks card (before Activity on phones).
+    const obj = await box(".obj-section");
+    assert.ok(Math.abs(obj.x - tasks.x) < 1 && obj.y >= tasks.y + tasks.height && obj.y - (tasks.y + tasks.height) < 40, `Objective under Tasks at ${width}px`);
+    if (width < 700) assert.ok(obj.y < heat.y, `Objective before Activity on a phone (${width}px)`);
     const overlaps = () => page.evaluate(() => {
       const els = [...document.querySelectorAll("#li-overview, #li-tasks-card, #report-card, #heat-card, #li-projects, .roadmap-card")].filter((e) => e.getClientRects().length);
       const out = [];
