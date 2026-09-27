@@ -136,10 +136,39 @@ document.addEventListener("click", (e) => {
   if (add) openTaskForm({ date: add.dataset.newTask || state.today, milestone_id: add.dataset.milestone || null });
 });
 
+// Pages from the ☰ menu open full screen (no greeting, quote or tabs) with
+// a Back button to the main page.
+const MENU_PAGES = new Set(["profile", "projects", "settings"]);
+let mainHash = "#/", mainScroll = 0, fromMain = false, restoreScroll = null;
+function syncPageMode(r) {
+  const page = MENU_PAGES.has(r.name);
+  const was = document.documentElement.classList.contains("li-page");
+  if (page && !was) { mainScroll = window.scrollY; fromMain = !!started && navReady; }
+  document.documentElement.classList.toggle("li-page", page);
+  $("#li-pagebar").hidden = !page;
+  if (page) {
+    $("#li-page-title").textContent = VIEWS[r.name].label;
+    $("#li-back").setAttribute("href", mainHash);
+    if (!was) window.scrollTo(0, 0);
+  } else {
+    if (was) restoreScroll = mainScroll;
+    mainHash = location.hash || "#/";
+  }
+  return page;
+}
+let navReady = false;
+// Back: return to where you were on the main page (like the phone's back).
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#li-back")) return;
+  e.preventDefault();
+  if (fromMain) history.back(); else location.hash = mainHash;
+});
+
 function render({ keepFocus } = {}) {
   if (!started) return;
   showMyName();
   const r = route();
+  syncPageMode(r);
   renderNav(r.name);
   renderWarnings(r.name);
   const overview = r.name === "overview";
@@ -160,6 +189,7 @@ function render({ keepFocus } = {}) {
     if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
   }
   window.scrollTo(0, scrollY);
+  navReady = true;
   if (overview) {
     // The Tasks card (Day/Week/Month/Quarter) is for the team owner; members
     // use the New task tile, Today and Calendar.
@@ -170,6 +200,8 @@ function render({ keepFocus } = {}) {
     try { renderProjectCards($("#li-projects")); } catch (e) { console.error(e); }
   }
   feedLegacy();
+  // Back from a full-screen page: return to where you were, once everything is drawn.
+  if (restoreScroll != null) { window.scrollTo(0, restoreScroll); restoreScroll = null; }
 }
 
 let lastRoute = null;

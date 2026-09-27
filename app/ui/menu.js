@@ -87,5 +87,5 @@ export function closeMenu() {
   menu.hidden = true;
   btn.setAttribute("aria-expanded", "false");
   document.documentElement.classList.remove("li-modal-open");
-  if (lastFocus && document.contains(lastFocus) && lastFocus !== document.body) lastFocus.focus();
+  if (lastFocus && document.contains(lastFocus) && lastFocus !== document.body) lastFocus.focus({ preventScroll: true });
 }
