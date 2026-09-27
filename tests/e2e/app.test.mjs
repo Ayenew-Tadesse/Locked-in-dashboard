@@ -42,7 +42,8 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(BASE + "?demo=1" + (hash ? "#/" + hash : ""));
-  await page.waitForSelector("#li-nav .li-nav-link");
+  // Pages from the ☰ menu open full screen (no tab row).
+  await page.waitForSelector(/^(profile|projects|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
   page.errors = errors;
   return page;
 }
@@ -351,7 +352,12 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   await page.click('#li-menu a[href="#/settings"]');
   await page.waitForSelector(".li-formula");
   assert.ok(await page.locator("#li-menu").isHidden(), "the menu closes after choosing");
-  assert.ok(await page.locator("#daily-quote").isVisible(), "quote stays on other pages");
+  // It opens as its own page: no greeting, quote or tabs; Back returns to the main page.
+  assert.ok(await page.locator("#daily-quote").isHidden() && await page.locator("#li-nav").isHidden(), "full-screen page");
+  assert.equal(await page.textContent("#li-page-title"), "Settings");
+  await page.click("#li-back");
+  await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
+  assert.ok(await page.locator("#daily-quote").isVisible());
   await page.close();
 });
 
@@ -681,7 +687,8 @@ test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", 
   await page.fill('#li-profile-form input[name="name"]', "Ayenew Shiferaw");
   await page.click('#li-profile-form button[type="submit"]');
   await page.waitForFunction(() => /Profile saved/.test(document.querySelector("#li-toasts")?.textContent || ""));
-  // Back to dark.
+  // Back to the main page, then back to dark.
+  await page.click("#li-back");
   await btn.click();
   await page.click('#li-menu .li-menu-link:has-text("Dark mode")');
   assert.equal(await bg(), dark);
@@ -799,7 +806,7 @@ test("projects: small cards (3 a row) under Activity; details on tap; the owner 
   await page.click("#li-modal button[type=submit]");
   await page.waitForFunction(() => [...document.querySelectorAll(".li-project-list .li-project-row-name")].map((b) => b.textContent).join() === "Guxo Flights,Gexi Pay,Gexi");
   // The Overview cards follow.
-  await page.click('#li-nav a[href="#/"]');
+  await page.click("#li-back");
   await page.waitForSelector("#li-projects .li-project-tile");
   assert.deepEqual(await page.locator("#li-projects .li-pt-name").allInnerTexts(), ["Guxo Flights", "Gexi Pay", "Gexi"]);
   const payTile = page.locator('#li-projects .li-project-tile[aria-label^="Gexi Pay"]');
@@ -818,6 +825,39 @@ test("projects: members see the cards but can't change them", async () => {
   await page.evaluate(() => document.querySelector("#li-modal")?.remove());
   await page.click("#li-menu-btn");
   assert.equal(await page.locator('#li-menu a[href="#/projects"]').count(), 0, "no Projects page in a member's menu");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("☰ menu pages open full screen; Back returns to the same spot on the main page", async () => {
+  const page = await open("", { width: 390, height: 760 });
+  // "Manage projects" sits far down the Overview.
+  await page.waitForSelector(".li-project-manage a");
+  await page.locator(".li-project-manage a").scrollIntoViewIfNeeded();
+  const y = await page.evaluate(() => window.scrollY);
+  assert.ok(y > 300);
+  await page.click(".li-project-manage a");
+  await page.waitForSelector(".li-project-list");
+  const back = await page.locator("#li-back").boundingBox();
+  assert.ok(back.x < 40 && back.y < 60, "Back sits at the top left");
+  assert.equal(await page.evaluate(() => window.scrollY), 0, "the page starts at the top");
+  for (const sel of [".wrap > h1", "#daily-quote", "#li-nav", "#li-menu-btn", ".dash-grid"]) assert.ok(await page.locator(sel).first().isHidden(), `${sel} hidden`);
+  assert.equal(await page.textContent("#li-page-title"), "Projects");
+  await page.click("#li-back");
+  await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
+  assert.equal(await page.evaluate(() => location.hash), "", "back on the main page");
+  assert.ok(Math.abs((await page.evaluate(() => window.scrollY)) - y) < 5, "scrolled back to where you were");
+  // The phone's back does the same.
+  await page.click("#li-menu-btn");
+  await page.click('#li-menu a[href="#/settings"]');
+  await page.waitForSelector("#li-back");
+  await page.goBack();
+  await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
+  // Opened directly (e.g. a bookmark), Back still goes to the main page.
+  await page.goto(BASE + "?demo=1#/projects");
+  await page.waitForSelector("#li-back");
+  await page.click("#li-back");
+  await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
   assert.deepEqual(page.errors, []);
   await page.close();
 });
