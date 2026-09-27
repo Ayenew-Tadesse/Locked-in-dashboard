@@ -4,6 +4,14 @@
 
 /* ---- App mode page states ---------------------------------------------- */
 html.app-booting .wrap{visibility:hidden;}
+/* While the app loads: a small spinner on the page background, so the
+   original dashboard underneath never shows. */
+html.app-booting body::before{content:"";position:fixed;top:50%;left:50%;width:30px;height:30px;margin:-30px 0 0 -15px;
+  border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:liSpin .8s linear infinite;}
+html.app-booting body::after{content:"Loading…";position:fixed;top:50%;left:0;right:0;margin-top:14px;text-align:center;
+  font-size:13px;color:var(--ink-3);}
+@keyframes liSpin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion: reduce){html.app-booting body::before{animation-duration:2.4s;}}
 html.li-authing .wrap{display:none;}
 /* The original page hides every .gate unless its password screen is locked;
    the Supabase sign-in screen reuses that look, so show it explicitly. */
@@ -437,7 +445,8 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
 
 /* ---- ☰ menu (top left): Profile, Settings, Dark / Light ----------------- */
 .li-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
-.li-topbar .logout-btn{margin-bottom:0;margin-left:auto;}
+/* Log out lives in the ☰ menu; the old front-page button stays hidden. */
+.li-topbar .logout-btn{display:none;}
 .li-menu-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:8px;cursor:pointer;}
 .li-menu-btn:hover, .li-menu-btn:focus-visible, .li-menu-btn[aria-expanded="true"]{color:var(--ink);border-color:var(--accent);outline:none;}
 .li-menu-backdrop{position:fixed;inset:0;z-index:90;background:rgba(6,12,24,.5);}
@@ -455,9 +464,6 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
 .li-menu-link:hover, .li-menu-link:focus-visible{background:var(--surface-2);outline:none;}
 .li-menu-link.active{background:var(--accent-soft);color:var(--accent);}
 .li-menu-link.active svg{color:var(--accent);}
-.li-menu-section{padding:14px 10px 10px;margin-top:6px;border-top:1px solid var(--line);}
-.li-menu-section .card-label{margin:0 0 8px;}
-.li-theme .li-btn{flex:1;}
 .li-menu-logout{margin-top:auto;color:var(--ink-2);}
 .li-avatar{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;
   background:var(--accent-soft);color:var(--accent);font-family:'IBM Plex Mono', monospace;font-size:13px;font-weight:600;letter-spacing:.02em;}

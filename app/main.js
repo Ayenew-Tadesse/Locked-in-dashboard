@@ -273,6 +273,7 @@ async function start(store) {
     await loadAll(store);
   } catch (e) {
     console.error(e);
+    document.documentElement.classList.remove("app-booting");
     showAuth(store, { message: "Couldn't load your data: " + e.message });
     return;
   }
@@ -280,7 +281,6 @@ async function start(store) {
   window.LockedInHooks = legacyHooks;
   setupMenu({ onLogout: () => document.getElementById("logout-btn").click() });
   addReportPdfButton();
-  document.documentElement.classList.remove("app-booting");
   $("#footnote").textContent = store.mode === "demo"
     ? (demoMode === "history"
       ? "Preview with your tracking history from the original dashboard. Changes you make here aren't saved."
@@ -292,6 +292,8 @@ async function start(store) {
   let day = state.today;
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);
   render();
+  // Reveal only now that the new design is drawn (no flash of the original page).
+  document.documentElement.classList.remove("app-booting");
 }
 
 async function boot() {
@@ -325,7 +327,9 @@ async function boot() {
     });
   }
   const session = await store.auth.session();
-  document.documentElement.classList.remove("app-booting");
+  // The page stays hidden (with a loading spinner) until start() has loaded
+  // the data and drawn the app, so the original dashboard underneath never
+  // flashes on refresh. Signing in shows its own screen.
   if (store.mode === "supabase") {
     let recovering = false;
     store.auth.onChange((s, event) => {
@@ -336,7 +340,8 @@ async function boot() {
       if (!s && started) location.reload();
     });
   }
-  if (session) start(store); else showAuth(store);
+  if (session) start(store);
+  else { document.documentElement.classList.remove("app-booting"); showAuth(store); }
 }
 
 if (demo || config.supabaseUrl) boot();

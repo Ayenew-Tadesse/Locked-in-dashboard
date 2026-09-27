@@ -485,8 +485,10 @@ test("previews stay behind the password screen until unlocked", async () => {
   await page.evaluate((h) => sessionStorage.setItem("lockedin_unlock", h), ACCESS_HASH);
   await page.reload();
   await page.waitForSelector("#li-nav .li-nav-link");
-  await page.click("#logout-btn");
-  assert.ok(await page.locator("#gate").isVisible(), "Log out locks the preview");
+  assert.ok(await page.locator("#logout-btn").isHidden(), "no Log out button on the front page");
+  await page.click("#li-menu-btn");
+  await page.click("#li-menu [data-logout]");
+  assert.ok(await page.locator("#gate").isVisible(), "Log out (from the ☰ menu) locks the preview");
   await page.close();
 });
 
@@ -506,9 +508,10 @@ test("without a database the original dashboard runs unchanged", async () => {
 // A stand-in for supabase-js, served in place of the CDN module. `signedIn`
 // decides whether there's a session; the profile starts without a greeting.
 // `oldDb` imitates a database without the greeting migration.
-function fakeSupabase({ signedIn, oldDb = false, role = "owner" }) {
+function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0 }) {
   return `
 const oldDb = ${oldDb};
+const slow = ${slow};
 const profile = { id: "u1", name: "aye", email: "aye@example.com", timezone: "UTC" };
 if (!oldDb) profile.greeting = null;
 window.__fakeSignUps = [];
@@ -526,7 +529,7 @@ function builder(table) {
     if (k === "then") {
       if (oldDb && (q.cols.includes("greeting") || (q.values && "greeting" in q.values)))
         return (res, rej) => Promise.resolve({ data: null, error: { message: "column profiles_1.greeting does not exist" } }).then(res, rej);
-      return (res, rej) => Promise.resolve({ data: run(), error: null }).then(res, rej);
+      return (res, rej) => new Promise((ok) => setTimeout(ok, slow)).then(() => ({ data: run(), error: null })).then(res, rej);
     }
     return (...a) => {
       if (k === "select") q.cols = a[0] || "";
@@ -550,7 +553,7 @@ export function createClient() {
 }`;
 }
 
-async function dbPage({ signedIn, oldDb, role }) {
+async function dbPage({ signedIn, oldDb, role, slow }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -558,7 +561,7 @@ async function dbPage({ signedIn, oldDb, role }) {
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: [] }));
   await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role }) }));
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow }) }));
   await page.goto(BASE);
   return page;
 }
@@ -649,7 +652,7 @@ test("members don't get the Tasks card on their Overview; the owner does", async
   }
 });
 
-test("☰ menu: Profile, Settings and a Dark / Light background that's remembered", async () => {
+test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", async () => {
   const page = await open("", { width: 390, height: 800 });
   const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const dark = await bg();
@@ -658,12 +661,12 @@ test("☰ menu: Profile, Settings and a Dark / Light background that's remembere
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Settings"]);
-  // Light background.
-  await page.click('#li-menu [data-theme="light"]');
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Settings", "Light mode", "Log out"]);
+  // Light background: the row switches it and then offers Dark mode.
+  await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
   assert.notEqual(await bg(), dark, "the background changes");
-  assert.equal(await page.locator('#li-menu [data-theme="light"]').getAttribute("aria-pressed"), "true");
+  assert.ok(await page.locator('#li-menu .li-menu-link:has-text("Dark mode")').isVisible(), "menu stays open, now offering Dark mode");
   // Escape closes it; the choice is remembered on reload.
   await page.keyboard.press("Escape");
   assert.ok(await page.locator("#li-menu").isHidden());
@@ -680,8 +683,28 @@ test("☰ menu: Profile, Settings and a Dark / Light background that's remembere
   await page.waitForFunction(() => /Profile saved/.test(document.querySelector("#li-toasts")?.textContent || ""));
   // Back to dark.
   await btn.click();
-  await page.click('#li-menu [data-theme="dark"]');
+  await page.click('#li-menu .li-menu-link:has-text("Dark mode")');
   assert.equal(await bg(), dark);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("refreshing never flashes the original page: a spinner shows until the app is drawn", async () => {
+  const page = await dbPage({ signedIn: true, slow: 400 });
+  await page.waitForFunction(() => window.__lockedInBoot);
+  await page.waitForTimeout(300);
+  // Signed in, data still loading.
+  assert.ok(await page.evaluate(() => document.documentElement.classList.contains("app-booting")), "still loading");
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".wrap")).visibility), "hidden", "old page hidden");
+  assert.equal(await page.evaluate(() => getComputedStyle(document.body, "::after").content), '"Loading…"');
+  // Once loaded, the new design appears (and the old checklist card never does).
+  await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
+  assert.ok(await page.locator(".li-kpis").isVisible());
+  assert.ok(await page.locator("#today-card").isHidden());
+  assert.ok(await page.locator("#logout-btn").isHidden(), "no Log out on the front page");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  await page.click("#li-menu-btn");
+  assert.ok(await page.locator("#li-menu [data-logout]").isVisible(), "Log out is in the menu");
   assert.deepEqual(page.errors, []);
   await page.close();
 });

@@ -1,4 +1,5 @@
-// The ☰ menu (top left): Profile, Settings, Dark / Light, and Log out.
+// The ☰ menu (top left): Profile, Settings, Light / Dark mode, and Log out (the
+// front-page Log out button is hidden; the menu presses it).
 import { state } from "../state.js";
 import { esc } from "./dom.js";
 import { displayName } from "../core/people.js";
@@ -66,14 +67,10 @@ function renderMenu() {
     </div>
     ${link("profile", "Profile", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>`)}
     ${link("settings", "Settings", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`)}
-    <div class="li-menu-section">
-      <span class="card-label">Appearance</span>
-      <div class="li-seg li-theme" role="group" aria-label="Background">
-        <button type="button" class="li-btn small${theme === "dark" ? " on" : ""}" data-theme="dark" aria-pressed="${theme === "dark"}">Dark</button>
-        <button type="button" class="li-btn small${theme === "light" ? " on" : ""}" data-theme="light" aria-pressed="${theme === "light"}">Light</button>
-      </div>
-    </div>
-    ${state.store?.mode === "supabase" ? `<button type="button" class="li-menu-link li-menu-logout" data-logout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Log out</span></button>` : ""}`;
+    <button type="button" class="li-menu-link" data-theme="${theme === "dark" ? "light" : "dark"}" aria-label="Switch to ${theme === "dark" ? "light" : "dark"} background">${theme === "dark"
+      ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Light mode</span>`
+      : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Dark mode</span>`}</button>
+    ${document.getElementById("logout-btn") && !document.getElementById("logout-btn").hidden ? `<button type="button" class="li-menu-link li-menu-logout" data-logout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Log out</span></button>` : ""}`;
 }
 
 export function openMenu() {
