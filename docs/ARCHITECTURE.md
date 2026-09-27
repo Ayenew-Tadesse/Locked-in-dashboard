@@ -175,3 +175,21 @@ their auth account, which cascades to their profile, tasks, scores, learning
 logs, notes, settings, personal milestones/goals, tokens and membership. Team
 milestone progress is recalculated by the task triggers. It can't be undone,
 and they can only return if invited again. Covered by `tests/db/teams.sql`.
+
+## Projects (added later)
+
+Migration `20260929000000_projects.sql` adds `projects` (per team): name, code,
+category, stage, status (`good` / `warn` / `idle`), facts (list), links
+(`web`, `repo`, `app`), checklist (list of `{id, text, done, deadline}`) and
+position. Everyone on the team reads them; only the owner inserts, updates
+and deletes (RLS with `private.is_member` / `private.is_owner`).
+
+* The Overview shows a card per project under the Activity card, replacing
+  the original app buttons. The owner can tick checklist items on a card.
+* The owner's **Projects** page (☰ menu) adds, edits, reorders and deletes them.
+* The first time the owner opens the app with the table in place, the
+  original dashboard's apps and their checklists are copied in once
+  (`user_settings.preferences.projectsSeeded`), so deleting them all later
+  doesn't bring them back.
+* Before the migration is run, the original app buttons stay and the
+  Projects page explains the update that's needed.

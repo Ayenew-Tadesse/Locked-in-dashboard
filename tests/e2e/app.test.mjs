@@ -661,7 +661,7 @@ test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", 
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Settings", "Light mode", "Log out"]);
   // Light background: the row switches it and then offers Dark mode.
   await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
@@ -740,6 +740,72 @@ test("phone: tapping a tab near the edge opens it and slides it to the middle", 
   await page.reload();
   await page.waitForSelector("#li-nav .li-nav-link.active");
   assert.ok(await sc.evaluate((e) => e.scrollLeft > 0));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("projects: a card each under Activity; the owner adds, edits, reorders and deletes them", async () => {
+  const page = await open("", { width: 390, height: 900 });
+  // The original apps were copied in and show as cards, not as buttons in the Activity card.
+  await page.waitForSelector("#li-projects .li-project");
+  assert.deepEqual(await page.locator("#li-projects .li-project-name").allInnerTexts(), ["Guxo Flights", "Guxo", "Gexi"]);
+  assert.ok(await page.locator("#app-chips").isHidden(), "no project buttons in the Activity card");
+  const heat = await page.locator("#heat-card").boundingBox(), first = await page.locator("#li-projects .li-project").first().boundingBox();
+  assert.ok(first.y > heat.y + heat.height - 1, "cards sit under the Activity card");
+  const flights = page.locator('#li-projects .li-project[aria-label="Guxo Flights"]');
+  assert.match(await flights.innerText(), /FLT[\s\S]*ON TRACK[\s\S]*Web app[\s\S]*of 6 done/i);
+  // Tick a checklist item on the card.
+  const before = await flights.locator(".li-progress-line > span:last-child").innerText();
+  const item = await flights.locator("input[type=checkbox]:not(:checked)").first().getAttribute("data-item");
+  await flights.locator(`input[data-item="${item}"]`).click();
+  await page.waitForFunction((b) => document.querySelector('#li-projects .li-project[aria-label="Guxo Flights"] .li-progress-line > span:last-child').textContent !== b, before);
+  // Projects page from the ☰ menu.
+  await page.click("#li-menu-btn");
+  await page.click('#li-menu a[href="#/projects"]');
+  await page.waitForSelector(".li-project-list");
+  // Add one with a checklist item.
+  await page.click("#li-project-add");
+  await page.fill("#li-modal [name=name]", "Gexi Pay");
+  await page.fill("#li-modal [name=code]", "PAY");
+  await page.selectOption("#li-modal [name=status]", "warn");
+  await page.fill("#li-modal [name=facts]", "Payments for Gexi\nTelebirr first");
+  await page.fill("#li-modal [name=link_web]", "not a link");
+  await page.click("#li-modal [data-add-item]");
+  await page.fill("#li-modal .li-cl-text", "Pick a payment provider");
+  await page.click("#li-modal button[type=submit]");
+  assert.match(await page.textContent("#li-modal .li-form-error"), /https/);
+  await page.fill("#li-modal [name=link_web]", "https://gexi.example/pay");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const names = () => page.locator(".li-project-list .li-project-row-name").allInnerTexts();
+  assert.deepEqual(await names(), ["Guxo Flights", "Guxo", "Gexi", "Gexi Pay"]);
+  // Move it up, edit it, then delete Guxo.
+  await page.locator(".li-project-list > li", { hasText: "Gexi Pay" }).locator('[data-move="-1"]').click();
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-project-list .li-project-row-name")].map((b) => b.textContent).join() === "Guxo Flights,Guxo,Gexi Pay,Gexi");
+  await page.locator(".li-project-list > li", { hasText: "Gexi Pay" }).locator("[data-edit]").click();
+  await page.fill("#li-modal [name=stage]", "Designing");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.locator('.li-project-list > li:has(.li-project-row-name:text-is("Guxo"))').locator("[data-delete]").click();
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-project-list .li-project-row-name")].map((b) => b.textContent).join() === "Guxo Flights,Gexi Pay,Gexi");
+  // The Overview cards follow.
+  await page.click('#li-nav a[href="#/"]');
+  await page.waitForSelector("#li-projects .li-project");
+  assert.deepEqual(await page.locator("#li-projects .li-project-name").allInnerTexts(), ["Guxo Flights", "Gexi Pay", "Gexi"]);
+  const pay = page.locator('#li-projects .li-project[aria-label="Gexi Pay"]');
+  assert.match(await pay.innerText(), /PAY[\s\S]*NEEDS ATTENTION[\s\S]*Designing[\s\S]*Telebirr first[\s\S]*Web app[\s\S]*0 of 1 done/i);
+  assert.equal(await pay.locator('a[href="https://gexi.example/pay"]').getAttribute("target"), "_blank");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("projects: members see the cards but can't change them", async () => {
+  const page = await dbPage({ signedIn: true, role: "member" });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  await page.click("#li-menu-btn");
+  assert.equal(await page.locator('#li-menu a[href="#/projects"]').count(), 0, "no Projects page in a member's menu");
   assert.deepEqual(page.errors, []);
   await page.close();
 });

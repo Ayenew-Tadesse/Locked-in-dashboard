@@ -2,7 +2,7 @@
 // Supabase config (config.js) or is a preview (?demo=1 for sample data,
 // ?demo=history for the original dashboard's tracking history); otherwise
 // the original dashboard runs exactly as before.
-import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile } from "./state.js";
+import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile, seedProjects } from "./state.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
 import { demoSeed, emptySeed } from "./demo.js";
 import { buildYearSetup } from "./plan/setup.js";
@@ -23,6 +23,8 @@ import { renderMilestones } from "./views/milestones.js";
 import { renderAnalytics } from "./views/analytics.js";
 import { renderSettings } from "./views/settings.js";
 import { renderProfile } from "./views/profile.js";
+import { renderProjects } from "./views/projects.js";
+import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu } from "./ui/menu.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
@@ -39,6 +41,7 @@ const VIEWS = {
   analytics: { label: "Analytics", render: renderAnalytics },
   settings: { label: "Settings", render: renderSettings },
   profile: { label: "Profile", render: renderProfile },
+  projects: { label: "Projects", render: renderProjects },
   team: { label: "Team", render: renderTeam },
 };
 
@@ -164,6 +167,7 @@ function render({ keepFocus } = {}) {
     if (state.isOwner) {
       try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
     }
+    try { renderProjectCards($("#li-projects")); } catch (e) { console.error(e); }
   }
   feedLegacy();
 }
@@ -309,6 +313,8 @@ async function start(store) {
     showAuth(store, { message: "Couldn't load your data: " + e.message });
     return;
   }
+  // First time with the projects table: copy the original dashboard's apps in.
+  await seedProjects(window.LockedInLegacy?.data());
   started = true;
   window.LockedInHooks = legacyHooks;
   setupMenu({ onLogout: () => document.getElementById("logout-btn").click() });

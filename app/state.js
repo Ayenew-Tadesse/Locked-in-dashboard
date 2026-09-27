@@ -4,13 +4,15 @@ import { todayKey, weekRange, addDays, eachDay, dayOf } from "./core/dates.js";
 import { normalizeTask } from "./core/tasks.js";
 import { resolveScoring, scoreDay, scorePeriod } from "./core/scoring.js";
 import { displayName } from "./core/people.js";
+import { projectsFromLegacy } from "./core/projects.js";
 
 export const state = {
   store: null,
   profile: null,
   settings: { scoring: {} },
   tasks: [],      // your own tasks (Today, scores, your reports)
-  teamTasks: [],  // teammates' tasks the owner can see (Team page)
+  teamTasks: [],
+  projects: [],   // the team's projects (null: the projects table isn't set up yet)  // teammates' tasks the owner can see (Team page)
   me: null,
   team: null,     // { id, name, role }
   members: [],    // [{ user_id, role, name, email }]
@@ -49,6 +51,7 @@ export async function loadAll(store) {
   state.team = d.team || null;
   state.members = d.members || [];
   state.invites = d.invites || [];
+  state.projects = d.projects === undefined ? [] : d.projects;
   const mine = (t) => !state.me || !t.user_id || t.user_id === state.me;
   state.tasks = d.tasks.filter(mine);
   state.teamTasks = d.tasks.filter((t) => !mine(t));
@@ -249,4 +252,55 @@ export async function renameTeam(name) {
   await guard(() => state.store.renameTeam(state.team.id, name), "Couldn't rename the team");
   state.team = { ...state.team, name };
   emit();
+}
+
+// ---------------------------------------------------------------------------
+// Projects (owner edits; everyone on the team reads)
+// ---------------------------------------------------------------------------
+const byPosition = (a, b) => (a.position ?? 0) - (b.position ?? 0) || String(a.created_at || "").localeCompare(String(b.created_at || ""));
+
+/** Copies the original dashboard's apps in once, the first time the owner has none. */
+export async function seedProjects(legacy) {
+  if (!state.isOwner || !Array.isArray(state.projects) || state.projects.length || state.settings.preferences?.projectsSeeded) return;
+  const rows = projectsFromLegacy(legacy);
+  if (!rows.length) return;
+  try {
+    for (const r of rows) state.projects.push(await state.store.saveProject(state.team.id, r));
+    const s = await state.store.savePreferences({ ...(state.settings.preferences || {}), projectsSeeded: true });
+    state.settings = { ...state.settings, ...s };
+  } catch (e) { console.error("Couldn't copy the projects in", e); }
+  state.projects.sort(byPosition);
+  emit();
+}
+
+export async function saveProject(p) {
+  const row = p.id ? p : { ...p, position: state.projects.reduce((m, x) => Math.max(m, (x.position ?? 0) + 1), 0) };
+  const saved = await guard(() => state.store.saveProject(state.team.id, row), "Couldn't save the project");
+  state.projects = [...state.projects.filter((x) => x.id !== saved.id), saved].sort(byPosition);
+  emit();
+  return saved;
+}
+export async function deleteProject(id) {
+  await guard(() => state.store.deleteProject(id), "Couldn't delete the project");
+  state.projects = state.projects.filter((x) => x.id !== id);
+  emit();
+}
+/** Moves a project one place up (-1) or down (+1). */
+export async function moveProject(id, dir) {
+  const list = [...state.projects].sort(byPosition);
+  const i = list.findIndex((x) => x.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  const changed = list.map((x, k) => ({ ...x, position: k })).filter((x, k) => x.position !== state.projects.find((y) => y.id === x.id)?.position || k === i || k === j);
+  const saved = await guard(() => Promise.all(changed.map((x) => state.store.saveProject(state.team.id, { id: x.id, position: x.position }))), "Couldn't reorder");
+  const map = new Map(saved.map((x) => [x.id, x]));
+  state.projects = list.map((x, k) => map.get(x.id) || { ...x, position: k }).sort(byPosition);
+  emit();
+}
+/** Ticks or unticks one checklist item. */
+export async function toggleProjectItem(projectId, itemId) {
+  const p = state.projects.find((x) => x.id === projectId);
+  if (!p) return;
+  const checklist = (p.checklist || []).map((it) => it.id === itemId ? { ...it, done: !it.done } : it);
+  return saveProject({ id: p.id, checklist });
 }

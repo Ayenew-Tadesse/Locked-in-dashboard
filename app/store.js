@@ -8,6 +8,7 @@ const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "st
   "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved"];
 const MILESTONE_FIELDS = ["title", "description", "category", "start_date", "deadline", "target", "current_progress",
   "progress_mode", "status", "priority", "notes", "goal_id", "team_id"];
+const PROJECT_FIELDS = ["name", "code", "category", "stage", "status", "facts", "links", "checklist", "position"];
 const GOAL_FIELDS = ["title", "description", "quarter", "year", "deadline", "target", "current_progress", "progress_mode",
   "status", "notes", "team_id"];
 // A task's user_id is who does it: the team owner can set it to assign work.
@@ -72,6 +73,7 @@ export function supabaseStoreFromClient(sb) {
         all("tasks"), all("milestones"), all("quarterly_goals"), all("daily_scores", "date"), all("weekly_scores", "week_start"),
       ]);
       const team = await this.loadTeam();
+      team.projects = team.team ? await this.loadProjects(team.team.id) : null;
       return { profile, settings, tasks, milestones, goals, daily, weekly, me: userId, ...team };
     },
 
@@ -92,6 +94,18 @@ export function supabaseStoreFromClient(sb) {
         : [];
       return { team, members, invites };
     },
+    /** The team's projects, or null when the projects table isn't there yet (20260929000000_projects.sql). */
+    async loadProjects(teamId) {
+      const { data, error } = await sb.from("projects").select("*").eq("team_id", teamId).order("position").order("created_at");
+      if (error && /projects/.test(error.message)) return null;
+      return check({ data, error });
+    },
+    async saveProject(teamId, p) {
+      const row = pick(p, PROJECT_FIELDS);
+      return p.id ? check(await sb.from("projects").update(row).eq("id", p.id).select().single())
+        : check(await sb.from("projects").insert({ ...row, team_id: teamId }).select().single());
+    },
+    async deleteProject(id) { check(await sb.from("projects").delete().eq("id", id)); },
     async inviteMember(teamId, email) {
       return check(await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId }).select().single());
     },
@@ -196,6 +210,7 @@ export function createMemoryStore(seed) {
   db.team = db.team || { id: "team-preview", name: "My team", role: "owner" };
   db.members = db.members || [{ user_id: db.me, role: "owner", name: db.profile?.name || "You", email: db.profile?.email || "" }];
   db.invites = db.invites || [];
+  db.projects = db.projects || [];
   db.tasks.forEach((t) => { t.user_id = t.user_id || db.me; });
   const now = () => new Date().toISOString();
   const recalc = () => {
@@ -242,6 +257,15 @@ export function createMemoryStore(seed) {
       return { ...row };
     },
     async loadTeam() { return JSON.parse(JSON.stringify({ team: db.team, members: db.members, invites: db.invites })); },
+    async loadProjects() { return JSON.parse(JSON.stringify([...db.projects].sort((a, b) => a.position - b.position))); },
+    async saveProject(teamId, p) {
+      const row = { ...pick(p, PROJECT_FIELDS), team_id: teamId };
+      if (p.id) { const i = db.projects.findIndex((x) => x.id === p.id); db.projects[i] = { ...db.projects[i], ...row, updated_at: now() }; return { ...db.projects[i] }; }
+      const saved = { id: uuid(), facts: [], links: {}, checklist: [], status: "idle", position: db.projects.length, ...row, created_at: now(), updated_at: now() };
+      db.projects.push(saved);
+      return { ...saved };
+    },
+    async deleteProject(id) { db.projects = db.projects.filter((x) => x.id !== id); },
     async inviteMember(teamId, email) {
       const e = email.trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Enter a valid email address.");
