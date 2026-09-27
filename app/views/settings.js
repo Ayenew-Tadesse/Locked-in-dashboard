@@ -1,13 +1,12 @@
-// Settings: profile, the scoring formula (visible and editable), API access
+// Settings (from the ☰ menu): the scoring formula (visible and editable), API access
 // for Claude, data import/export.
-import { state, saveScoring, saveProfile, reload, toast } from "../state.js";
+import { state, saveScoring, reload, toast } from "../state.js";
 import { DEFAULT_SCORING, COMPONENT_LABELS, describeFormula, resolveScoring } from "../core/scoring.js";
 import { formatDay, dayOf } from "../core/dates.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { buildYearSetup, buildMissingHistory } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
 import { DEFAULT_REPOS } from "../report/daily-report.js";
-import { greetingOptions, canGreet } from "../core/people.js";
 
 // "Set up my year" has been done: afterwards only missing history is offered.
 const setUp = () => !!(state.settings.plan_loaded_at || state.settings.legacy_imported_at);
@@ -52,16 +51,6 @@ export function renderSettings(el) {
       </form>
     </section>
 
-    <section class="li-card">
-      <div class="li-card-head"><span class="card-label">Profile</span></div>
-      <form class="li-form li-form-grid" id="li-profile-form">
-        <label class="li-field">Name<input name="name" maxlength="120" required value="${esc(state.profile?.name || "")}"></label>
-        ${canGreet(state.profile) ? `<label class="li-field">Greet me as<select name="greeting"><option value="">Choose…</option>${greetingOptions(state.profile.greeting || "")}</select></label>` : ""}
-        <label class="li-field">Time zone<input name="timezone" maxlength="64" value="${esc(state.profile?.timezone || "")}" placeholder="e.g. America/New_York"></label>
-        <p class="li-sub full">Signed in as ${esc(state.profile?.email || "")}. The time zone decides when "today" starts for scores and the API.</p>
-        <div class="li-form-actions full"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save profile</button></div>
-      </form>
-    </section>
 
     <section class="li-card" id="api">
       <div class="li-card-head"><span class="card-label">API access for Claude</span><button type="button" class="li-btn small" id="li-new-token">+ New token</button></div>
@@ -110,16 +99,6 @@ export function renderSettings(el) {
   });
   el.querySelector("#li-scoring-reset").addEventListener("click", async () => {
     if (await confirmDialog("Restore the default scoring formula?", "Restore")) await saveScoring({}).then(() => toast("Defaults restored"), () => {});
-  });
-
-  // Profile
-  el.querySelector("#li-profile-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target.elements;
-    const tz = f.timezone.value.trim();
-    try { if (tz) new Intl.DateTimeFormat("en", { timeZone: tz }); } catch { toast("That time zone isn't recognised.", "error"); return; }
-    if (!f.name.value.trim()) { toast("Enter your name.", "error"); return; }
-    await saveProfile({ name: f.name.value.trim(), timezone: tz || "UTC", ...(f.greeting?.value ? { greeting: f.greeting.value } : {}) }).then(() => toast("Profile saved"), () => {});
   });
 
   // Tokens

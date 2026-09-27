@@ -114,10 +114,12 @@ export function sampleColleagues(today = todayKey(), ownerId = "demo") {
         status: done ? "completed" : back === 0 ? "in_progress" : "not_started", completion_percentage: done ? 100 : back === 0 ? 30 : 0,
         estimated_minutes: 120, actual_minutes: done ? 90 + (n % 4) * 20 : null,
         completed_at: done ? `${day}T13:00:00Z` : null, created_at: `${day}T08:00:00Z`,
-        ...(done && reliable && back === 1 ? { learning_changed: "Rebuilt the trips list with FlatList", learning_how: "keyExtractor + getItemLayout", learning_solved: "Scrolling was janky with 200 trips" } : {}),
       });
     }
   }
+  // A learning log on Ana's latest finished task (whatever weekday today is).
+  const latest = tasks.filter((t) => t.user_id === "sample-ana" && t.status === "completed").at(-1);
+  if (latest) Object.assign(latest, { learning_changed: "Rebuilt the trips list with FlatList", learning_how: "keyExtractor + getItemLayout", learning_solved: "Scrolling was janky with 200 trips" });
   // One task the owner assigned.
   tasks.push({ id: "sample-assigned", user_id: "sample-ben", assigned_by: ownerId, title: "Test the booking flow on Android", date: today,
     due_date: addDays(today, 2), priority: "high", status: "not_started", completion_percentage: 0, category: "Engineering",
