@@ -47,7 +47,9 @@ git-ignored).
    [`supabase/migrations/20260929000000_projects.sql`](../supabase/migrations/20260929000000_projects.sql)
    (projects), then
    [`supabase/migrations/20260930000000_project_description.sql`](../supabase/migrations/20260930000000_project_description.sql)
-   (project descriptions). Run the files in this order.
+   (project descriptions), then
+   [`supabase/migrations/20261001000000_task_files.sql`](../supabase/migrations/20261001000000_task_files.sql)
+   (files shared on finished tasks; it also creates the private `task-files` Storage bucket). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.

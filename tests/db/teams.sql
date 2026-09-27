@@ -90,6 +90,8 @@ reset role;
 
 select pg_temp.act_as(:ben);
 select pg_temp.check((select count(*) from tasks) = 1, 'the assignee sees the assigned task');
+-- Assigned work is handed in with a file (see section 10).
+insert into task_files (task_id, path, name) select id, auth.uid()::text || '/' || id::text || '/results.png', 'results.png' from tasks where title = 'Ben: build results';
 update tasks set status = 'completed' where title = 'Ben: build results';
 reset role;
 
@@ -231,3 +233,55 @@ select pg_temp.act_as(:owner);
 delete from projects where name = 'Gexi';
 reset role;
 select pg_temp.check((select count(*) from projects) = 1, 'the owner deletes projects');
+
+-- 10. Files for finished tasks ---------------------------------------------
+select pg_temp.act_as(:owner);
+insert into tasks (title, date, user_id) values ('Design the payment screen', '2026-10-01', :ana);
+insert into tasks (title, date) values ('Owner own task', '2026-10-01');
+reset role;
+select id as pay_task from tasks where title = 'Design the payment screen' \gset
+select id as own_task from tasks where title = 'Owner own task' \gset
+
+select pg_temp.act_as(:ana);
+do $$ begin
+  update tasks set status = 'completed' where title = 'Design the payment screen';
+  raise exception 'FAILED: finished without a file';
+exception when check_violation then raise notice 'ok - an assigned task needs a file before it can be finished';
+end $$;
+-- Upload into her own folder, list it, then finish.
+insert into storage.objects (bucket_id, name) values ('task-files', :ana || '/' || :'pay_task' || '/a1-screen.png');
+insert into task_files (task_id, path, name, size, mime) values (:'pay_task', :ana || '/' || :'pay_task' || '/a1-screen.png', 'screen.png', 1200, 'image/png');
+update tasks set status = 'completed' where title = 'Design the payment screen';
+select pg_temp.check((select status from tasks where title = 'Design the payment screen') = 'completed', 'with a file attached, the task can be finished');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('task-files', '11111111-0000-0000-0000-000000000001/x/evil.png');
+  raise exception 'FAILED: uploaded into the owner''s folder';
+exception when insufficient_privilege then raise notice 'ok - people can only upload into their own folder';
+end $$;
+reset role;
+select pg_temp.act_as(:ana);
+do $$ begin
+  insert into task_files (task_id, path, name) values ('00000000-0000-0000-0000-000000000000', '22222222-0000-0000-0000-000000000002/x/y.png', 'y.png');
+  raise exception 'FAILED: file row for someone else''s task';
+exception when insufficient_privilege or foreign_key_violation then raise notice 'ok - files can only be listed on your own tasks';
+end $$;
+reset role;
+
+select pg_temp.act_as(:owner);
+select pg_temp.check((select count(*) from task_files where task_id = :'pay_task') = 1, 'the owner sees the member''s files');
+select pg_temp.check((select count(*) from storage.objects where bucket_id = 'task-files') = 1, 'the owner can open the member''s file');
+-- The owner's own tasks don't need files.
+update tasks set status = 'completed' where id = :'own_task';
+select pg_temp.check((select status from tasks where id = :'own_task') = 'completed', 'your own tasks need no file');
+reset role;
+-- Ben (another member) sees none of it.
+insert into team_invites (team_id, email) select team_id, 'ben2@example.com' from team_members where user_id = :owner;
+insert into auth.users (id, email) values ('77777777-0000-0000-0000-000000000007', 'ben2@example.com');
+select pg_temp.act_as('77777777-0000-0000-0000-000000000007');
+select pg_temp.check((select count(*) from task_files) = 0 and (select count(*) from storage.objects) = 0, 'other members can''t see anyone''s files');
+reset role;
+select pg_temp.act_as(:owner);
+delete from storage.objects where name like :ana || '/%';
+delete from task_files where user_id = :ana;
+reset role;
+select pg_temp.check((select count(*) from storage.objects) = 0 and (select count(*) from task_files where user_id = :ana) = 0, 'the owner can delete a member''s files');

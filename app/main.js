@@ -9,7 +9,7 @@ import { buildYearSetup } from "./plan/setup.js";
 import { showAuth, hideAuth } from "./ui/auth.js";
 import { showToast, esc, $, openModal } from "./ui/dom.js";
 import { displayName, needsProfile, greetingOptions } from "./core/people.js";
-import { openTaskForm } from "./ui/task-ui.js";
+import { openTaskForm, completeTask } from "./ui/task-ui.js";
 import { buildWarnings } from "./core/insights.js";
 import { scoreDay, scorePeriod, scoreQuarter } from "./core/scoring.js";
 import { weekRange, monthRange, quarterOf, dayOf, formatRange } from "./core/dates.js";
@@ -277,7 +277,7 @@ function addReportPdfButton() {
     try {
       const github = await fetchCommits(state.settings.preferences?.githubRepos || DEFAULT_REPOS, day);
       const s = scoreDay(state.tasks, day, state.cfg, { today: state.today, timeZone: state.timeZone });
-      const report = buildDailyReport({ day, tasks: state.tasks, milestones: state.milestones, dailyNote: state.daily[day]?.notes,
+      const report = buildDailyReport({ day, tasks: state.tasks, milestones: state.milestones, files: state.files || [], dailyNote: state.daily[day]?.notes,
         score: s.score, github, timeZone: state.timeZone });
       const doc = await renderDailyReportPdf(report);
       doc.save(`locked-in-daily-report-${day}.pdf`);
@@ -295,6 +295,8 @@ function addReportPdfButton() {
 // Hooks the original "Today's checklist" card uses in app mode (installed at start).
 const legacyHooks = {
   toggleTask(id, done) {
+    const t = state.tasks.find((x) => x.id === id);
+    if (done && t) { completeTask(t); return; }
     updateTask(id, { status: done ? "completed" : "not_started" }).catch(() => {});
   },
   addTask(text) {

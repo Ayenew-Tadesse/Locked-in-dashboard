@@ -12,7 +12,8 @@ export const state = {
   settings: { scoring: {} },
   tasks: [],      // your own tasks (Today, scores, your reports)
   teamTasks: [],
-  projects: [],   // the team's projects (null: the projects table isn't set up yet)  // teammates' tasks the owner can see (Team page)
+  projects: [],   // the team's projects (null: the projects table isn't set up yet)
+  files: [],      // files shared on tasks (null: the task_files table isn't set up yet)  // teammates' tasks the owner can see (Team page)
   me: null,
   team: null,     // { id, name, role }
   members: [],    // [{ user_id, role, name, email }]
@@ -52,6 +53,7 @@ export async function loadAll(store) {
   state.members = d.members || [];
   state.invites = d.invites || [];
   state.projects = d.projects === undefined ? [] : d.projects;
+  state.files = d.files === undefined ? [] : d.files;
   const mine = (t) => !state.me || !t.user_id || t.user_id === state.me;
   state.tasks = d.tasks.filter(mine);
   state.teamTasks = d.tasks.filter((t) => !mine(t));
@@ -303,4 +305,32 @@ export async function toggleProjectItem(projectId, itemId) {
   if (!p) return;
   const checklist = (p.checklist || []).map((it) => it.id === itemId ? { ...it, done: !it.done } : it);
   return saveProject({ id: p.id, checklist });
+}
+
+// ---------------------------------------------------------------------------
+// Files shared on tasks
+// ---------------------------------------------------------------------------
+export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+export function filesFor(taskId) { return (state.files || []).filter((f) => f.task_id === taskId); }
+
+/** A colleague finishing a task the owner assigned them has to share a file. */
+export function needsFiles(t) {
+  return Array.isArray(state.files) && !!t && !!t.assigned_by && t.assigned_by !== state.me && (t.user_id || state.me) === state.me;
+}
+
+export async function uploadFiles(task, files) {
+  const out = [];
+  for (const file of files) {
+    if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" is over 10 MB.`);
+    const saved = await guard(() => state.store.uploadTaskFile(task, file), `Couldn't upload "${file.name}"`);
+    state.files.push(saved);
+    out.push(saved);
+  }
+  emit();
+  return out;
+}
+export async function deleteFile(f) {
+  await guard(() => state.store.deleteTaskFile(f), "Couldn't remove the file");
+  state.files = state.files.filter((x) => x.id !== f.id);
+  emit();
 }

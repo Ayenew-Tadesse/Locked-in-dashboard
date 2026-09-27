@@ -40,6 +40,8 @@ extended into a productivity and milestone tracker backed by a real database.
   daily reports, and lets the owner assign tasks and manage invitations.
 - **Names and greetings:** everyone signs up with their name and picks how they're greeted (Mr., Ms., Mrs., Dr. or
   just their name), so the dashboard says "Good morning, Mr. Ayenew Shiferaw" and the team sees names, not emails
+- **Hand-in files:** colleagues finishing a task you assigned attach at least one file (up to 10 MB each), which you
+  see on the task, their Team page and their Daily report PDF
 - **Projects:** a card for each app (Guxo Flights, Guxo, Gexi, ...) under the Activity card, with its status, stage,
   facts, links and checklist; the owner adds, edits, reorders and deletes them from **Projects** in the ☰ menu
 - **☰ menu (top left):** your Profile (name, "Greet me as", time zone), Settings, Light / Dark mode

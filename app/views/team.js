@@ -5,7 +5,7 @@ import { scoreDay, scorePeriod } from "../core/scoring.js";
 import { addDays, weekRange, formatDay, relativeDay, dayOf, formatMinutes } from "../core/dates.js";
 import { isOverdue, sortTasks } from "../core/tasks.js";
 import { esc, tile, scoreValue, scoreTone, pct, confirmDialog, openModal } from "../ui/dom.js";
-import { taskList, openTaskForm } from "../ui/task-ui.js";
+import { taskList, openTaskForm, fileList } from "../ui/task-ui.js";
 import { buildDailyReport, renderDailyReportPdf } from "../report/daily-report.js";
 
 const tasksOf = (userId) => (userId === state.me ? state.tasks : state.teamTasks.filter((t) => t.user_id === userId));
@@ -132,7 +132,7 @@ function renderMember(el, userId) {
     <section class="li-card">
       <div class="li-card-head"><span class="card-label">Done in the last 14 days, with learning logs</span></div>
       ${recent.length ? `<ul class="li-mini li-learned">${recent.map((t) => `<li><span><b>${esc(t.title)}</b> <small class="li-muted">${esc(formatDay(dayOf(t.completed_at, state.timeZone)))}</small>
-        ${t.learning_solved || t.learning_changed ? `<br><small>${esc([t.learning_changed, t.learning_how, t.learning_solved].filter(Boolean).join(" · "))}</small>` : `<br><small class="li-muted">No learning log</small>`}</span></li>`).join("")}</ul>`
+        ${t.learning_solved || t.learning_changed ? `<br><small>${esc([t.learning_changed, t.learning_how, t.learning_solved].filter(Boolean).join(" · "))}</small>` : `<br><small class="li-muted">No learning log</small>`}${fileList(t.id)}</span></li>`).join("")}</ul>`
         : `<p class="li-empty">Nothing completed in the last 14 days.</p>`}
     </section>`;
 
@@ -141,7 +141,7 @@ function renderMember(el, userId) {
     const btn = e.currentTarget;
     btn.disabled = true;
     try {
-      const report = buildDailyReport({ day: today, tasks: s.tasks, milestones: state.milestones, score: s.day.score, timeZone: state.timeZone });
+      const report = buildDailyReport({ day: today, tasks: s.tasks, milestones: state.milestones, files: state.files || [], score: s.day.score, timeZone: state.timeZone });
       report.title = `Daily report: ${m.name}`;
       const doc = await renderDailyReportPdf(report);
       doc.save(`locked-in-daily-report-${m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${today}.pdf`);

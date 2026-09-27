@@ -514,10 +514,16 @@ test("without a database the original dashboard runs unchanged", async () => {
 // A stand-in for supabase-js, served in place of the CDN module. `signedIn`
 // decides whether there's a session; the profile starts without a greeting.
 // `oldDb` imitates a database without the greeting migration.
-function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0 }) {
+function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0, assigned = false }) {
   return `
 const oldDb = ${oldDb};
 const slow = ${slow};
+const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+// A task the owner ("o1") assigned to this user.
+const tasks = ${assigned} ? [{ id: "t-assigned", user_id: "u1", assigned_by: "o1", title: "Design the payment screen", date: today,
+  status: "not_started", priority: "high", completion_percentage: 0, created_at: today + "T08:00:00Z" }] : [];
+const files = [];
+window.__uploads = [];
 const profile = { id: "u1", name: "aye", email: "aye@example.com", timezone: "UTC" };
 if (!oldDb) profile.greeting = null;
 window.__fakeSignUps = [];
@@ -525,6 +531,10 @@ function builder(table) {
   const q = { table, op: "select", cols: "", values: null, single: false };
   const run = () => {
     if (table === "profiles" && q.op === "update") Object.assign(profile, q.values);
+    if (table === "tasks" && q.op === "update") { const t = tasks[0]; Object.assign(t, q.values); return q.single ? { ...t } : [{ ...t }]; }
+    if (table === "tasks") return q.single ? null : tasks.map((t) => ({ ...t }));
+    if (table === "task_files" && q.op === "insert") { const f = { id: "f" + (files.length + 1), user_id: "u1", created_at: today, ...q.values }; files.push(f); return { ...f }; }
+    if (table === "task_files") return files.map((f) => ({ ...f }));
     if (table === "profiles") return q.single ? { ...profile } : [{ ...profile }];
     if (table === "team_members" && q.cols.includes("teams(")) return [{ team_id: "t1", role: "${role}", teams: { name: "My team" } }];
     if (table === "team_members" && q.cols.includes("profiles(")) return [{ user_id: "u1", role: "${role}", joined_at: "2026-09-26T00:00:00Z", profiles: { ...profile } }];
@@ -550,6 +560,11 @@ export function createClient() {
   return {
     from: builder,
     rpc: async () => ({ data: null, error: null }),
+    storage: { from: () => ({
+      upload: async (path, file) => { window.__uploads.push({ path, name: file.name, size: file.size }); return { data: { path }, error: null }; },
+      createSignedUrl: async () => ({ data: { signedUrl: "about:blank" }, error: null }),
+      remove: async () => ({ data: [], error: null }),
+    }) },
     auth: {
       getSession: async () => ({ data: { session: ${signedIn ? '{ user: { id: "u1" } }' : "null"} } }),
       onAuthStateChange() {},
@@ -559,7 +574,7 @@ export function createClient() {
 }`;
 }
 
-async function dbPage({ signedIn, oldDb, role, slow }) {
+async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -567,7 +582,7 @@ async function dbPage({ signedIn, oldDb, role, slow }) {
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: [] }));
   await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow }) }));
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned }) }));
   await page.goto(BASE);
   return page;
 }
@@ -858,6 +873,39 @@ test("☰ menu pages open full screen; Back returns to the same spot on the main
   await page.waitForSelector("#li-back");
   await page.click("#li-back");
   await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("files: a colleague must share a file to finish a task the owner assigned", async () => {
+  const page = await dbPage({ signedIn: true, role: "member", assigned: true });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  await page.click('#li-nav a[href="#/today"]');
+  const task = row(page, "Design the payment screen");
+  await task.waitFor();
+  await task.locator("[data-act=toggle]").click();
+  // "Hand in" asks for files; it can't be finished without one.
+  await page.waitForSelector("#li-modal .li-file-pick");
+  assert.match(await page.textContent("#li-modal"), /Hand in/i);
+  await page.click("#li-modal button[type=submit]");
+  assert.match(await page.textContent("#li-modal .li-form-error"), /at least one file/);
+  await page.setInputFiles("#li-modal .li-file-pick input", [
+    { name: "payment-screen.png", mimeType: "image/png", buffer: Buffer.from("png") },
+    { name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.from("pdf!") },
+  ]);
+  assert.deepEqual(await page.locator("#li-modal .li-files-new li span").allInnerTexts(), ["📎 payment-screen.png", "📎 notes.pdf"]);
+  await page.fill("#li-modal [name=learning_solved]", "The owner can review the screen");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const uploads = await page.evaluate(() => window.__uploads);
+  assert.deepEqual(uploads.map((u) => u.name), ["payment-screen.png", "notes.pdf"]);
+  assert.ok(uploads.every((u) => u.path.startsWith("u1/t-assigned/")), "into your own folder, under the task");
+  await page.waitForFunction(() => document.querySelector('.li-task[data-task-id="t-assigned"]')?.classList.contains("st-completed"));
+  assert.match(await row(page, "Design the payment screen").innerText(), /📎 2/);
+  // The task's details list the files.
+  await row(page, "Design the payment screen").locator(".li-task-title").click();
+  assert.deepEqual(await page.locator("#li-modal .li-files [data-open-file]").allInnerTexts(), ["📎 payment-screen.png", "📎 notes.pdf"]);
   assert.deepEqual(page.errors, []);
   await page.close();
 });
