@@ -27,7 +27,6 @@ html.app-mode #today-card, html.app-mode #week-card{display:none;}
 html.app-mode .li-tasks-card{margin-top:0;}
 html.app-mode .dash-col-a{position:static;}
 html:not(.app-mode) .li-tasks-card{display:none;}
-html.li-member .li-tasks-card{display:none;}
 /* Colleagues don't add tasks (hide the old checklist's add box too), and
    their assigned tasks count down instead of the year countdown. */
 html.li-colleague #today-add,html.li-colleague .cd-pin{display:none;}
@@ -372,6 +371,10 @@ i.sc.red{background:var(--red);}
 .li-task.compact{grid-template-columns:auto minmax(0,1fr) auto;padding:8px 9px;}
 .li-task.compact .li-task-title{font-size:13.5px;}
 .li-task.compact .li-task-notes{display:none;}
+.li-task.li-task-ro{grid-template-columns:auto minmax(0,1fr);}
+.li-task-ro .li-check,.li-task-ro .li-check:hover{display:inline-grid;place-items:center;cursor:default;border-color:var(--ink-3);color:transparent;}
+.li-task-ro.st-completed .li-check{background:var(--good);border-color:var(--good);color:var(--surface);}
+.li-task-ro .li-task-title{cursor:default;}
 button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:500;}
 .li-tc-more{display:block;margin-top:8px;}
 .li-tc-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;}

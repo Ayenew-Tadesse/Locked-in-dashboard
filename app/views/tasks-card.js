@@ -1,7 +1,9 @@
 // Tasks card on the Overview, under the score rings (replaces the original
-// "Today's checklist" card). Only the team owner sees it. Switches between
-// the day, week, month and quarter, shows the whole team's tasks grouped as
-// Available / Ongoing / Completed with who's in charge of each, how much of that period's work is done, and opens the daily report.
+// "Today's checklist" card). Switches between the day, week, month and
+// quarter. The owner sees the whole team's tasks grouped as Available /
+// Ongoing / Completed with who's in charge of each, how much of that
+// period's work is done, and opens the daily report. A colleague sees their
+// own tasks as Available / Completed, read-only.
 import { state } from "../state.js";
 import { weekRange, monthRange, quarterOf, quarterRange, formatDay, formatRange, MONTHS } from "../core/dates.js";
 import { isOverdue, sortTasks } from "../core/tasks.js";
@@ -36,12 +38,20 @@ const GROUPS = [
   ["completed", "Completed"],
 ];
 
+// A colleague's card: what's still to do, and what's done.
+const COLLEAGUE_GROUPS = [
+  ["open", "Available"],
+  ["completed", "Completed"],
+];
+const inGroup = (t, status) => status === "open" ? t.status === "not_started" || t.status === "in_progress" : t.status === status;
+
 export function renderTasksCard(el) {
   const today = state.today;
   const r = range(today);
-  // The owner sees the whole team's tasks (the card is only shown to the owner).
-  const people = state.members.length > 1 ? state.members : [];
-  const everyone = [...state.tasks, ...state.teamTasks];
+  const readOnly = state.isColleague;
+  // The owner sees the whole team's tasks; a colleague sees their own.
+  const people = !readOnly && state.members.length > 1 ? state.members : [];
+  const everyone = readOnly ? state.tasks : [...state.tasks, ...state.teamTasks];
   const all = everyone.filter((t) => t.date >= r.start && t.date <= r.end && t.status !== "cancelled");
   const done = all.filter((t) => t.status === "completed").length;
   const overdue = all.filter((t) => isOverdue(t, today)).length;
@@ -51,8 +61,8 @@ export function renderTasksCard(el) {
   // Available (not started), Ongoing (in progress) and Completed; longer
   // periods start with a few of each.
   let truncated = false;
-  const groups = GROUPS.map(([status, title]) => {
-    const list = order(all.filter((t) => t.status === status));
+  const groups = (readOnly ? COLLEAGUE_GROUPS : GROUPS).map(([status, title]) => {
+    const list = order(all.filter((t) => inGroup(t, status)));
     const shown = period === "day" || expanded ? list : list.slice(0, SHOW);
     if (shown.length < list.length) truncated = true;
     return { status, title, list, shown };
@@ -74,14 +84,14 @@ export function renderTasksCard(el) {
     <div class="li-progress-line li-tc-progress">${progressBar(p, "Completion")}<span>${all.length ? `${p}% complete` : "No tasks yet"}${overdue ? ` · <span class="li-danger">${overdue} overdue</span>` : ""}</span></div>
     ${all.length ? groups.map((g) => `<div class="li-tc-group" data-group="${g.status}">
         <h3 class="li-tc-group-title">${g.title} <span class="li-muted">(${g.list.length})</span></h3>
-        ${taskList(g.shown, { compact: true, showDate: period !== "day", showOwner: people.length > 0, empty: "None." })}
+        ${taskList(g.shown, { compact: true, showDate: period !== "day", showOwner: people.length > 0, readOnly, empty: "None." })}
       </div>`).join("")
       : `<p class="li-empty">${esc(period === "day" ? "Nothing planned for today yet." : "No tasks in this period.")}</p>`}
     ${truncated ? `<button type="button" class="li-link li-tc-more" data-more>Show all ${all.length} tasks</button>` : ""}
     ${quickAddForm("tasks-card-quick", today, "Add a task for today…")}
     <div class="li-tc-foot">
       ${period === "week" ? `<a class="li-link" href="#/week">Open week view</a>` : period === "quarter" ? `<a class="li-link" href="#/quarter">Open quarter view</a>` : period === "month" ? `<a class="li-link" href="#/analytics">Open analytics</a>` : `<a class="li-link" href="#/today">Open Today</a>`}
-      <button type="button" class="report-btn" data-report aria-expanded="${reportOpen}" aria-controls="report-card">Daily report</button>
+      ${readOnly ? "" : `<button type="button" class="report-btn" data-report aria-expanded="${reportOpen}" aria-controls="report-card">Daily report</button>`}
     </div>`;
   el.hidden = false;
 
@@ -94,7 +104,7 @@ export function renderTasksCard(el) {
   el.querySelector("[data-more]")?.addEventListener("click", () => { expanded = true; renderTasksCard(el); });
   // The daily report is the original dashboard's card; its button lives in the
   // (hidden) checklist card, so this one presses it.
-  el.querySelector("[data-report]").addEventListener("click", (e) => {
+  el.querySelector("[data-report]")?.addEventListener("click", (e) => {
     document.getElementById("report-btn")?.click();
     e.currentTarget.setAttribute("aria-expanded", document.getElementById("report-btn")?.getAttribute("aria-expanded") || "false");
   });

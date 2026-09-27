@@ -228,3 +228,6 @@ status, files, learning log).
 * Colleagues don't see the year countdown on the Activity card; instead each
   open task the owner assigned them with a deadline shows a live countdown to
   the end of that day (`countdownText`).
+* Colleagues get the Overview's Tasks card too, read-only: their own tasks as
+  Available (not started or in progress) and Completed, with the Day / Week /
+  Month / Quarter switch but no tick, status, delete, edit or Daily report.
