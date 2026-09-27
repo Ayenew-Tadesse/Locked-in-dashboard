@@ -133,7 +133,7 @@ document.addEventListener("click", (e) => {
   const tileLink = e.target.closest(".li-tile[data-href]");
   if (tileLink) location.hash = tileLink.dataset.href;
   const add = e.target.closest("[data-new-task]");
-  if (add) openTaskForm({ date: add.dataset.newTask || state.today, milestone_id: add.dataset.milestone || null });
+  if (add && state.canAddTasks) openTaskForm({ date: add.dataset.newTask || state.today, milestone_id: add.dataset.milestone || null });
 });
 
 // Pages from the ☰ menu open full screen (no greeting, quote or tabs) with
@@ -194,6 +194,8 @@ function render({ keepFocus } = {}) {
     // The Tasks card (Day/Week/Month/Quarter) is for the team owner; members
     // use the New task tile, Today and Calendar.
     document.documentElement.classList.toggle("li-member", !state.isOwner);
+    // Colleagues: no adding tasks and no year countdown (their tasks count down instead).
+    document.documentElement.classList.toggle("li-colleague", state.isColleague);
     if (state.isOwner) {
       try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
     }
@@ -300,6 +302,7 @@ const legacyHooks = {
     updateTask(id, { status: done ? "completed" : "not_started" }).catch(() => {});
   },
   addTask(text) {
+    if (!state.canAddTasks) return;
     saveTask({ title: text, date: state.today }).then(() => showToast("Task added"), () => {});
   },
   openToday() { location.hash = "#/today"; },

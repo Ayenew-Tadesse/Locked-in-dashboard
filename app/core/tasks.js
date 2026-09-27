@@ -21,6 +21,19 @@ export const PRIORITIES = {
 export function isClosed(t) { return t.status === "completed" || t.status === "cancelled"; }
 
 /** Overdue = has a deadline before `today` and isn't completed or cancelled. */
+/**
+ * Time left until the end of a task's deadline day (23:59:59 on this device),
+ * e.g. "2d 04:12:09 left", "04:12:09 left" or "Past deadline".
+ */
+export function countdownText(dueDate, now = new Date()) {
+  const [y, m, d] = String(dueDate).split("-").map(Number);
+  const ms = new Date(y, m - 1, d, 23, 59, 59).getTime() - now.getTime();
+  if (!(ms > 0)) return "Past deadline";
+  const s = Math.floor(ms / 1000), days = Math.floor(s / 86400);
+  const hms = [Math.floor(s / 3600) % 24, Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, "0")).join(":");
+  return `${days ? `${days}d ` : ""}${hms} left`;
+}
+
 export function isOverdue(t, today) {
   return !isClosed(t) && !!t.due_date && t.due_date < today;
 }

@@ -521,7 +521,7 @@ const slow = ${slow};
 const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 // A task the owner ("o1") assigned to this user.
 const tasks = ${assigned} ? [{ id: "t-assigned", user_id: "u1", assigned_by: "o1", title: "Design the payment screen", date: today,
-  status: "not_started", priority: "high", completion_percentage: 0, created_at: today + "T08:00:00Z" }] : [];
+  status: "not_started", priority: "high", completion_percentage: 0, due_date: today, created_at: today + "T08:00:00Z" }] : [];
 const files = [];
 window.__uploads = [];
 const profile = { id: "u1", name: "aye", email: "aye@example.com", timezone: "UTC" };
@@ -844,14 +844,46 @@ test("projects: members see the cards but can't change them", async () => {
   await page.close();
 });
 
+test("colleagues can't add tasks; their assigned tasks count down instead of the year", async () => {
+  const page = await dbPage({ signedIn: true, role: "member", assigned: true });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  assert.equal(await page.locator("[data-new-task]").count(), 0, "no New task tile");
+  assert.ok(await page.locator("#today-add").isHidden(), "no add box on the checklist card");
+  assert.ok(await page.locator(".cd-pin").isHidden(), "no year countdown on the Activity card");
+  for (const hash of ["#/today", "#/tasks", "#/calendar"]) {
+    await page.evaluate((h) => { location.hash = h; }, hash);
+    await page.waitForSelector('.li-task[data-task-id="t-assigned"]');
+    assert.equal(await page.locator("[data-new-task], form[data-quick-add]").count(), 0, `nothing to add tasks on ${hash}`);
+  }
+  const cd = page.locator('.li-task[data-task-id="t-assigned"] [data-countdown]');
+  assert.match(await cd.innerText(), /⏳ (\d+d )?\d\d:\d\d:\d\d left/);
+  const before = await cd.innerText();
+  await page.waitForFunction((b) => document.querySelector("[data-countdown]").textContent !== b, before);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("the owner still adds tasks and keeps the year countdown", async () => {
+  const page = await dbPage({ signedIn: true });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  assert.equal(await page.locator(".li-tile-add[data-new-task]").count(), 1);
+  assert.ok(await page.locator(".cd-pin").isVisible());
+  assert.equal(await page.locator("#obj-text").count(), 0, "no objective sentence above the Objective card");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("☰ menu pages open full screen; Back returns to the same spot on the main page", async () => {
   const page = await open("", { width: 390, height: 760 });
-  // "Manage projects" sits far down the Overview.
-  await page.waitForSelector(".li-project-manage a");
-  await page.locator(".li-project-manage a").scrollIntoViewIfNeeded();
+  // Scroll down to the project cards, then open Projects from there.
+  await page.waitForSelector(".li-project-tile");
+  await page.locator(".li-project-grid").scrollIntoViewIfNeeded();
   const y = await page.evaluate(() => window.scrollY);
   assert.ok(y > 300);
-  await page.click(".li-project-manage a");
+  assert.equal(await page.locator("text=Manage projects").count(), 0, "no Manage projects link on the Overview");
+  await page.evaluate(() => { location.hash = "#/projects"; });
   await page.waitForSelector(".li-project-list");
   const back = await page.locator("#li-back").boundingBox();
   assert.ok(back.x < 40 && back.y < 60, "Back sits at the top left");

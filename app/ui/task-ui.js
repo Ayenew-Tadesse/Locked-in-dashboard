@@ -1,8 +1,21 @@
 // Task rows (with quick actions) and the add/edit task form.
 import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES } from "../state.js";
-import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES } from "../core/tasks.js";
+import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES, countdownText } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
+
+// Colleagues see a live countdown to the deadline of each open task the owner assigned them.
+function countdownFor(t) {
+  return state.isColleague && t.due_date && t.status !== "completed" && t.status !== "cancelled"
+    && t.assigned_by && t.assigned_by !== state.me && t.user_id === state.me;
+}
+setInterval(() => {
+  for (const el of document.querySelectorAll("[data-countdown]")) {
+    const text = countdownText(el.dataset.countdown);
+    el.textContent = `⏳ ${text}`;
+    el.classList.toggle("danger", text === "Past deadline");
+  }
+}, 1000);
 
 export function taskRow(t, { showDate = false, compact = false, showOwner = false } = {}) {
   const today = state.today;
@@ -15,6 +28,7 @@ export function taskRow(t, { showDate = false, compact = false, showOwner = fals
     t.category ? `<span class="li-meta">${esc(t.category)}</span>` : "",
     showDate ? `<span class="li-meta">${esc(formatDay(t.date))}</span>` : "",
     t.due_date ? `<span class="li-meta ${eff === "overdue" ? "danger" : ""}">Due ${esc(t.due_date === today ? "today" : formatDay(t.due_date))}${eff === "overdue" ? ` (${relativeDay(t.due_date, today)})` : ""}</span>` : "",
+    countdownFor(t) ? `<span class="li-meta countdown${countdownText(t.due_date) === "Past deadline" ? " danger" : ""}" data-countdown="${esc(t.due_date)}" title="Time left to the deadline">⏳ ${countdownText(t.due_date)}</span>` : "",
     ms ? `<span class="li-meta ms">◆ ${esc(ms.title)}</span>` : "",
     // Team: who a task is for (on the owner's views), or who assigned it.
     // showOwner (the owner's team-wide Tasks card) names who's in charge of every task.
@@ -136,6 +150,7 @@ export function openTaskForm(task = {}) {
 
 /** One-line quick add: "Title" -> task for `date`. */
 export function quickAddForm(id, date, placeholder = "Add a task…") {
+  if (!state.canAddTasks) return "";
   return `<form class="today-add li-quick-add" data-quick-add="${esc(date)}" id="${esc(id)}" autocomplete="off">
     <input type="text" name="title" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}" maxlength="300">
     <button type="submit">Add</button>

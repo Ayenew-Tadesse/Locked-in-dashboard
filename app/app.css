@@ -28,6 +28,11 @@ html.app-mode .li-tasks-card{margin-top:0;}
 html.app-mode .dash-col-a{position:static;}
 html:not(.app-mode) .li-tasks-card{display:none;}
 html.li-member .li-tasks-card{display:none;}
+/* Colleagues don't add tasks (hide the old checklist's add box too), and
+   their assigned tasks count down instead of the year countdown. */
+html.li-colleague #today-add,html.li-colleague .cd-pin{display:none;}
+.li-meta.countdown{color:var(--accent);font-variant-numeric:tabular-nums;}
+.li-meta.countdown.danger{color:var(--red);}
 html.li-modal-open{overflow:hidden;}
 .li-auth{z-index:110;}
 .li-auth input[type="email"], .li-auth input[type="text"]{font:inherit;font-size:15px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;}
@@ -505,7 +510,6 @@ html.app-mode.li-has-projects #app-chips, html.app-mode.li-has-projects #app-pan
 .li-project-items input{margin-top:2px;width:15px;height:15px;accent-color:var(--good);flex:none;}
 .li-project-items input:disabled{cursor:default;opacity:1;}
 .li-project-items li.done span{color:var(--good);}
-.li-project-manage{margin:10px 0 0;font-size:13px;text-align:right;}
 .li-project-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
 .li-project-list > li{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
 .li-project-row-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;flex:1;}

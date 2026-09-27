@@ -33,7 +33,7 @@ export function renderToday(el) {
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Today</span><h2 class="li-h2">${esc(formatDay(today, { weekday: "long", month: "long", day: "numeric", year: "numeric" }))}</h2></div>
-      <button type="button" class="li-btn primary" data-new-task="${today}">+ New task</button>
+      ${state.canAddTasks ? `<button type="button" class="li-btn primary" data-new-task="${today}">+ New task</button>` : ""}
     </header>
     <div class="li-kpis">
       ${tile("Tasks", String(c.total), `${c.completed} completed · ${c.in_progress} in progress · ${c.not_started} not started`)}

@@ -22,7 +22,7 @@ export function renderTasks(el, params) {
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Tasks</span><h2 class="li-h2">${list.length} task${list.length === 1 ? "" : "s"}${active ? " match" : ""}</h2></div>
-      <button type="button" class="li-btn primary" data-new-task="${today}">+ New task</button>
+      ${state.canAddTasks ? `<button type="button" class="li-btn primary" data-new-task="${today}">+ New task</button>` : ""}
     </header>
     <form class="li-filters" id="li-filters" role="search" autocomplete="off">
       <input type="search" name="q" value="${esc(f.q)}" placeholder="Search title, notes, category…" aria-label="Search tasks" class="li-search">

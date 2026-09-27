@@ -213,3 +213,18 @@ task. Files live at `<user id>/<task id>/<file>`.
   them; other members can't. Links to open files are signed and expire.
 * Files show on the task, on the owner's Team page, and in both Daily report PDFs.
 * Removing a member deletes their files too.
+
+## Only the owner adds tasks (added later)
+
+Migration `20261002000000_owner_adds_tasks.sql` replaces the tasks insert
+policy: a colleague (a team `member`, `private.is_colleague()`) can't create
+tasks; the owner adds their own and assigns tasks to members; someone not on
+a team adds their own. Colleagues still update their tasks (progress,
+status, files, learning log).
+
+* The app hides every way to add a task for colleagues (`state.canAddTasks`):
+  the New task tile, + New task, quick-add boxes, + Task on milestones and the
+  old checklist's add box.
+* Colleagues don't see the year countdown on the Activity card; instead each
+  open task the owner assigned them with a deadline shows a live countdown to
+  the end of that day (`countdownText`).
