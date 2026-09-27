@@ -8,7 +8,7 @@ const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "st
   "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved"];
 const MILESTONE_FIELDS = ["title", "description", "category", "start_date", "deadline", "target", "current_progress",
   "progress_mode", "status", "priority", "notes", "goal_id", "team_id"];
-const PROJECT_FIELDS = ["name", "code", "category", "stage", "status", "facts", "links", "checklist", "position"];
+const PROJECT_FIELDS = ["name", "code", "description", "category", "stage", "status", "facts", "links", "checklist", "position"];
 const GOAL_FIELDS = ["title", "description", "quarter", "year", "deadline", "target", "current_progress", "progress_mode",
   "status", "notes", "team_id"];
 // A task's user_id is who does it: the team owner can set it to assign work.
@@ -101,9 +101,16 @@ export function supabaseStoreFromClient(sb) {
       return check({ data, error });
     },
     async saveProject(teamId, p) {
+      const write = (row) => p.id ? sb.from("projects").update(row).eq("id", p.id).select().single()
+        : sb.from("projects").insert({ ...row, team_id: teamId }).select().single();
       const row = pick(p, PROJECT_FIELDS);
-      return p.id ? check(await sb.from("projects").update(row).eq("id", p.id).select().single())
-        : check(await sb.from("projects").insert({ ...row, team_id: teamId }).select().single());
+      let res = await write(row);
+      // Before 20260930000000_project_description.sql, save without the description.
+      if (res.error && "description" in row && /description/.test(res.error.message)) {
+        const { description, ...rest } = row;
+        res = await write(rest);
+      }
+      return check(res);
     },
     async deleteProject(id) { check(await sb.from("projects").delete().eq("id", id)); },
     async inviteMember(teamId, email) {

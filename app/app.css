@@ -514,3 +514,24 @@ html.app-mode.li-has-projects #app-chips, html.app-mode.li-has-projects #app-pan
 .li-cl-row{display:grid;grid-template-columns:auto 1fr 110px auto;gap:6px;align-items:center;}
 .li-cl-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--good);}
 @media (max-width:520px){.li-cl-row{grid-template-columns:auto 1fr auto;}.li-cl-row .li-cl-deadline{grid-column:2;}}
+/* Small project cards: three in a row (name, description, progress). */
+.li-project-grid{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;margin-top:14px;}
+.li-project-tile{display:flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0;text-align:left;cursor:pointer;
+  font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px;}
+.li-project-tile:hover, .li-project-tile:focus-visible{border-color:var(--accent);outline:none;}
+.li-pt-name{font-size:14px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.li-pt-desc{font-size:11.5px;line-height:1.35;color:var(--ink-3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em;}
+.li-pt-pct{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:26px;line-height:1;margin-top:4px;font-variant-numeric:tabular-nums;}
+.li-pt-pct small{font-size:14px;margin-left:1px;}
+.li-pt-pct.red{color:var(--red);} .li-pt-pct.orange{color:var(--orange);} .li-pt-pct.green{color:var(--good);}
+.li-project-tile .li-bar{flex:none;width:100%;height:5px;min-width:0;}
+@media (max-width:520px){
+  .li-project-grid{gap:8px;}
+  .li-project-tile{padding:10px 9px;border-radius:10px;}
+  .li-pt-name{font-size:12.5px;}
+  .li-pt-desc{font-size:10.5px;}
+  .li-pt-pct{font-size:22px;}
+}
+/* The full card inside the details dialog. */
+.li-project-detail .li-card{border:none;background:none;padding:0;margin:0;}
+.li-project-detail .li-project-head .card-label, .li-project-detail .li-project-name{display:none;}

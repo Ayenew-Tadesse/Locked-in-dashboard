@@ -59,7 +59,7 @@ export function showToast(msg, kind = "info") {
 // Modal dialog with a form. onSubmit(values) may throw to show an error.
 // ---------------------------------------------------------------------------
 let lastFocus = null;
-export function openModal({ eyebrow = "", title, body, submitLabel = "Save", onSubmit, extraButtons = "", wide = false, onReady }) {
+export function openModal({ eyebrow = "", title, body, submitLabel = "Save", cancelLabel = "Cancel", onSubmit, extraButtons = "", wide = false, onReady }) {
   closeModal();
   lastFocus = document.activeElement;
   const wrap = document.createElement("div");
@@ -75,7 +75,7 @@ export function openModal({ eyebrow = "", title, body, submitLabel = "Save", onS
         ${body}
         <p class="li-form-error" role="alert" hidden></p>
         <div class="li-form-actions">${extraButtons}<span class="li-spacer"></span>
-          <button type="button" class="li-btn ghost" data-close>Cancel</button>
+          <button type="button" class="li-btn ghost" data-close>${esc(cancelLabel)}</button>
           ${onSubmit ? `<button type="submit" class="li-btn primary">${esc(submitLabel)}</button>` : ""}
         </div>
       </form>

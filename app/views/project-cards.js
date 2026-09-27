@@ -1,9 +1,10 @@
-// One card per project on the Overview, under the Activity card (replacing
-// the original app buttons). Everyone on the team sees them; the owner can
-// tick checklist items straight from the card.
+// Projects on the Overview, under the Activity card (replacing the original
+// app buttons): small cards, three in a row, with the name, a short
+// description and progress. Tapping one opens its full details (links,
+// stage, facts, checklist); the owner can tick checklist items there.
 import { state, toggleProjectItem, toast } from "../state.js";
-import { esc, progressBar } from "../ui/dom.js";
-import { PROJECT_STATUSES, LINK_LABELS, projectProgress, safeUrl } from "../core/projects.js";
+import { esc, progressBar, openModal, scoreTone } from "../ui/dom.js";
+import { PROJECT_STATUSES, LINK_LABELS, projectProgress, projectBlurb, safeUrl } from "../core/projects.js";
 
 export function projectCard(p, { canTick = false } = {}) {
   const prog = projectProgress(p);
@@ -13,7 +14,7 @@ export function projectCard(p, { canTick = false } = {}) {
       <div class="li-project-title">
         <span class="card-label">Project${p.code ? " · " + esc(p.code) : ""}</span>
         <h3 class="li-project-name">${esc(p.name)}</h3>
-        ${p.category ? `<span class="li-sub">${esc(p.category)}</span>` : ""}
+        ${projectBlurb(p) ? `<span class="li-sub">${esc(projectBlurb(p))}</span>` : ""}
       </div>
       <span class="li-pill pj-${esc(p.status || "idle")}">${esc(PROJECT_STATUSES[p.status] || PROJECT_STATUSES.idle)}</span>
     </div>
@@ -29,15 +30,40 @@ export function projectCard(p, { canTick = false } = {}) {
   </section>`;
 }
 
+/** The small Overview card: name, description, progress. */
+function projectTile(p) {
+  const prog = projectProgress(p);
+  return `<button type="button" class="li-project-tile" data-open="${esc(p.id)}" aria-label="${esc(p.name)}: ${prog.pct}% done. Show details">
+    <span class="li-pt-name">${esc(p.name)}</span>
+    <span class="li-pt-desc">${esc(projectBlurb(p)) || "&nbsp;"}</span>
+    <span class="li-pt-pct ${scoreTone(prog.pct)}">${prog.pct}<small>%</small></span>
+    ${progressBar(prog.pct, "Progress")}
+  </button>`;
+}
+
 export function renderProjectCards(el) {
   if (!el) return;
   const list = Array.isArray(state.projects) ? state.projects : [];
   document.documentElement.classList.toggle("li-has-projects", Array.isArray(state.projects));
   el.hidden = !list.length;
-  el.innerHTML = list.map((p) => projectCard(p, { canTick: state.isOwner })).join("")
+  el.innerHTML = `<div class="li-project-grid">${list.map(projectTile).join("")}</div>`
     + (state.isOwner && list.length ? `<p class="li-project-manage"><a class="li-link" href="#/projects">Manage projects</a></p>` : "");
-  el.querySelectorAll("[data-item]").forEach((box) => box.addEventListener("change", async () => {
-    const id = box.closest("[data-project]").dataset.project;
-    await toggleProjectItem(id, box.dataset.item).then(() => toast(box.checked ? "Checklist item done" : "Marked not done"), () => { box.checked = !box.checked; });
-  }));
+  el.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openProjectDetails(b.dataset.open)));
+}
+
+/** Full details in a dialog; the owner can tick checklist items. */
+export function openProjectDetails(id) {
+  const p = state.projects.find((x) => x.id === id);
+  if (!p) return;
+  const form = openModal({ eyebrow: p.code ? `Project · ${p.code}` : "Project", title: p.name, body: `<div class="li-project-detail full">${projectCard(p, { canTick: state.isOwner })}</div>`, cancelLabel: "Close", wide: true });
+  const box = form.querySelector(".li-project-detail");
+  box.addEventListener("change", async (e) => {
+    const cb = e.target.closest("[data-item]");
+    if (!cb) return;
+    await toggleProjectItem(id, cb.dataset.item).then(() => {
+      toast(cb.checked ? "Checklist item done" : "Marked not done");
+      const fresh = state.projects.find((x) => x.id === id);
+      if (fresh && document.contains(box)) box.innerHTML = projectCard(fresh, { canTick: state.isOwner });
+    }, () => { cb.checked = !cb.checked; });
+  });
 }
