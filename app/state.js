@@ -19,6 +19,10 @@ export const state = {
   members: [],    // [{ user_id, role, name, email }]
   invites: [],
   get isOwner() { return this.team?.role === "owner"; },
+  // Colleagues work on the tasks the owner gives them; only the owner (or
+  // someone without a team) adds new ones. The database enforces the same.
+  get isColleague() { return !!this.team && !this.isOwner; },
+  get canAddTasks() { return !this.isColleague; },
   milestones: [],
   goals: [],
   daily: {},   // date -> daily_scores row

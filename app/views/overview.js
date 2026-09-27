@@ -18,11 +18,11 @@ export function renderOverview(el) {
 
   el.innerHTML = `
     <div class="li-kpis">
-      <button type="button" class="li-tile li-tile-add" data-new-task="${esc(today)}">
+      ${state.canAddTasks ? `<button type="button" class="li-tile li-tile-add" data-new-task="${esc(today)}">
         <span class="li-tile-label">New task</span>
         <span class="li-tile-value" aria-hidden="true">+</span>
         <span class="li-tile-sub">Add a task for today</span>
-      </button>
+      </button>` : ""}
       ${tile("Today's progress", `${c.completed}<small>/${c.total}</small>`, c.total ? `${pct(c.completed, c.total)}% complete · ${c.in_progress} in progress` : "Nothing planned yet", "", 'data-href="#/today"')}
       ${tile("Daily score", scoreValue(day.score), day.score == null ? "Plan a task to get a score" : `Time worked ${formatMinutes(day.minutes)}`, scoreTone(day.score), 'data-href="#/today"')}
       ${tile("Weekly score", scoreValue(week.score), `${week.totals.completed}/${week.totals.total} tasks · ${week.active_days} active day${week.active_days === 1 ? "" : "s"}`, scoreTone(week.score), 'data-href="#/week"')}

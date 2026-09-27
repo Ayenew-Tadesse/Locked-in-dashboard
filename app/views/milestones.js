@@ -69,7 +69,7 @@ function renderDetail(el, id) {
       ${m.notes ? `<p class="li-prose li-muted">${esc(m.notes)}</p>` : ""}
     </section>
     <section class="li-card">
-      <div class="li-card-head"><span class="card-label">Related tasks</span><button type="button" class="li-btn small" data-new-task="${today}" data-milestone="${esc(id)}">+ Task</button></div>
+      <div class="li-card-head"><span class="card-label">Related tasks</span>${state.canAddTasks ? `<button type="button" class="li-btn small" data-new-task="${today}" data-milestone="${esc(id)}">+ Task</button>` : ""}</div>
       ${taskList(tasks, { showDate: true, empty: "No tasks linked yet. Add tasks to track this milestone automatically." })}
     </section>`;
   el.querySelector("#li-edit-ms").addEventListener("click", () => openMilestoneForm(m));

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as D from "../../app/core/dates.js";
-import { effectiveStatus, filterTasks, normalizeTask, wasOverdueOn, sortTasks } from "../../app/core/tasks.js";
+import { effectiveStatus, filterTasks, normalizeTask, wasOverdueOn, sortTasks, countdownText } from "../../app/core/tasks.js";
 import { resolveScoring, scoreDay, scorePeriod, scoreWeek, scoreQuarter, describeFormula } from "../../app/core/scoring.js";
 import { computeMilestone, computeGoal, milestoneInfo, buildWarnings, planForDay } from "../../app/core/insights.js";
 import { displayName, needsProfile, greetingOptions } from "../../app/core/people.js";
@@ -220,4 +220,10 @@ test("people: display names use the chosen title; missing choices are asked for"
 test("people: without the greeting column nobody is prompted", () => {
   assert.equal(needsProfile({ name: "Ana" }), false);
   assert.equal(needsProfile({ name: "Ana", greeting: null }), true);
+});
+
+test("tasks: countdown to the end of the deadline day", () => {
+  assert.equal(countdownText("2026-10-03", new Date(2026, 9, 1, 20, 0, 0)), "2d 03:59:59 left");
+  assert.equal(countdownText("2026-10-01", new Date(2026, 9, 1, 23, 0, 0)), "00:59:59 left");
+  assert.equal(countdownText("2026-09-30", new Date(2026, 9, 1, 9, 0, 0)), "Past deadline");
 });

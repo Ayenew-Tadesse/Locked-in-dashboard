@@ -217,8 +217,10 @@ select pg_temp.check((select count(*) from tasks) = 0 and (select count(*) from 
 insert into team_invites (team_id, email) select id, 'c@example.com' from teams limit 1;
 insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000003', 'c@example.com');
 select pg_temp.act_as('cccccccc-0000-0000-0000-000000000003');
+reset role; -- c is a colleague, so the task is made for them (colleagues don't add tasks)
 insert into tasks (title, status, learning_changed, learning_how, learning_solved)
   values ('Wire the store', 'completed', 'Added a booking store', 'Zustand slice per step', 'Screens no longer pass props five levels deep');
+select pg_temp.act_as('cccccccc-0000-0000-0000-000000000003');
 select pg_temp.check((select learning_solved from tasks where title = 'Wire the store') like 'Screens no longer%', 'tasks keep a learning log');
 update user_settings set preferences = '{"githubRepos":["Ayenew-Tadesse/Guxo-Flights"]}', plan_loaded_at = now();
 select pg_temp.check((select preferences -> 'githubRepos' ->> 0 from user_settings) = 'Ayenew-Tadesse/Guxo-Flights', 'preferences are saved');

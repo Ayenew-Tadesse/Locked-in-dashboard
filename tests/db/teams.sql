@@ -60,9 +60,19 @@ select pg_temp.check((select count(*) from milestones where title = 'Changed by 
 
 -- 4. Tasks: private by default; the owner sees and assigns ------------------
 select pg_temp.act_as(:ana);
+do $$ begin
+  insert into tasks (title) values ('Ana adds her own task');
+  raise exception 'FAILED: a colleague added a task';
+exception when insufficient_privilege then raise notice 'ok - colleagues cannot add tasks';
+end $$;
+reset role;
+-- Tasks Ana made herself before only the owner could add them.
 insert into tasks (title, milestone_id) select 'Ana: build search', id from milestones where title = 'Booking flow';
 insert into tasks (title) values ('Ana: personal errand');
+select pg_temp.act_as(:ana);
 select pg_temp.check((select assigned_by is null from tasks where title = 'Ana: build search'), 'own tasks are not marked assigned');
+update tasks set completion_percentage = 40 where title = 'Ana: build search';
+select pg_temp.check((select completion_percentage = 40 from tasks where title = 'Ana: build search'), 'colleagues still update their tasks');
 reset role;
 
 select pg_temp.act_as(:ben);
@@ -77,6 +87,9 @@ reset role;
 
 select pg_temp.act_as(:owner);
 select pg_temp.check((select count(*) from tasks where user_id = '22222222-0000-0000-0000-000000000002') = 2, 'the owner sees members'' tasks');
+insert into tasks (title) values ('Owner: own task');
+select pg_temp.check(exists (select 1 from tasks where title = 'Owner: own task'), 'the owner adds their own tasks');
+delete from tasks where title = 'Owner: own task';
 insert into tasks (user_id, title, milestone_id)
   select '33333333-0000-0000-0000-000000000003', 'Ben: build results', id from milestones where title = 'Booking flow';
 select pg_temp.check((select assigned_by = '11111111-0000-0000-0000-000000000001' from tasks where title = 'Ben: build results'), 'assigned tasks record who assigned them');
@@ -146,7 +159,9 @@ reset role;
 -- 8. Removing a member completely ----------------------------------------
 -- Cara (a member) has a task on the team milestone, a score and a token.
 select pg_temp.act_as('44444444-0000-0000-0000-000000000004');
+reset role; -- an older task of Cara's (colleagues can't add tasks now)
 insert into tasks (title, date, milestone_id, status) select 'Cara task', '2026-09-28', id, 'completed' from milestones where title = 'Booking flow';
+select pg_temp.act_as('44444444-0000-0000-0000-000000000004');
 insert into daily_scores (date, score, completed_tasks, total_tasks) values ('2026-09-28', 100, 1, 1);
 reset role;
 select pg_temp.act_as(:owner);

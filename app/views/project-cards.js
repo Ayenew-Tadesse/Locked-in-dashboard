@@ -46,8 +46,7 @@ export function renderProjectCards(el) {
   const list = Array.isArray(state.projects) ? state.projects : [];
   document.documentElement.classList.toggle("li-has-projects", Array.isArray(state.projects));
   el.hidden = !list.length;
-  el.innerHTML = `<div class="li-project-grid">${list.map(projectTile).join("")}</div>`
-    + (state.isOwner && list.length ? `<p class="li-project-manage"><a class="li-link" href="#/projects">Manage projects</a></p>` : "");
+  el.innerHTML = `<div class="li-project-grid">${list.map(projectTile).join("")}</div>`;
   el.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openProjectDetails(b.dataset.open)));
 }
 
