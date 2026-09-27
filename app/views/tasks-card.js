@@ -90,7 +90,7 @@ export function renderTasksCard(el) {
     ${truncated ? `<button type="button" class="li-link li-tc-more" data-more>Show all ${all.length} tasks</button>` : ""}
     ${quickAddForm("tasks-card-quick", today, "Add a task for today…")}
     <div class="li-tc-foot">
-      ${period === "week" ? `<a class="li-link" href="#/week">Open week view</a>` : period === "quarter" ? `<a class="li-link" href="#/quarter">Open quarter view</a>` : period === "month" ? `<a class="li-link" href="#/analytics">Open analytics</a>` : `<a class="li-link" href="#/today">Open Today</a>`}
+      ${period === "week" ? `<a class="li-link" href="#/week">Open week view</a>` : period === "quarter" ? `<a class="li-link" href="#/quarter">Open quarter view</a>` : period === "month" ? `<a class="li-link" href="#/analytics">Open analytics</a>` : "<span></span>"}
       ${readOnly ? "" : `<button type="button" class="report-btn" data-report aria-expanded="${reportOpen}" aria-controls="report-card">Daily report</button>`}
     </div>`;
   el.hidden = false;

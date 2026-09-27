@@ -299,18 +299,35 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
       assert.deepEqual(r.out, [], `${where}: cards off screen`);
       assert.equal(r.gaps, 0, `${where}: a row of top tiles doesn't reach the edge`);
     }
-    // Overview: from tablets up, Tasks sits beside Activity (with the project
-    // cards under it), both sides starting and ending on the same line.
+    // Overview: from tablets up, Tasks sits beside Activity; the Tasks card
+    // hugs its content, and no two cards overlap (also with the report open).
     await page.goto(BASE + "?demo=1");
     await page.waitForSelector("#li-projects .li-project-tile");
     const box = (sel) => page.locator(sel).boundingBox();
-    const [tasks, heat, projects] = [await box("#li-tasks-card"), await box("#heat-card"), await box("#li-projects")];
-    if (width >= 700) {
-      assert.ok(Math.abs(tasks.y - heat.y) < 1 && tasks.x + tasks.width <= heat.x, `side by side at ${width}px`);
-      assert.ok(Math.abs(tasks.y + tasks.height - (projects.y + projects.height)) < 1.5, `same bottom line at ${width}px`);
-    } else {
-      assert.ok(heat.y >= tasks.y + tasks.height, `stacked on a phone (${width}px)`);
+    const [tasks, heat] = [await box("#li-tasks-card"), await box("#heat-card")];
+    if (width >= 700) assert.ok(Math.abs(tasks.y - heat.y) < 1 && tasks.x + tasks.width <= heat.x, `side by side at ${width}px`);
+    else assert.ok(heat.y >= tasks.y + tasks.height, `stacked on a phone (${width}px)`);
+    const overlaps = () => page.evaluate(() => {
+      const els = [...document.querySelectorAll("#li-overview, #li-tasks-card, #report-card, #heat-card, #li-projects, .roadmap-card")].filter((e) => e.getClientRects().length);
+      const out = [];
+      for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+        const a = els[i].getBoundingClientRect(), b = els[j].getBoundingClientRect();
+        if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) out.push(`${els[i].id || els[i].className} / ${els[j].id || els[j].className}`);
+      }
+      return out;
+    });
+    for (const period of ["day", "month"]) {
+      await page.click(`#li-tasks-card [data-period=${period}]`);
+      const hugs = await page.locator("#li-tasks-card").evaluate((e) => e.scrollHeight <= e.clientHeight + 1 && getComputedStyle(e).overflowY === "visible");
+      assert.ok(hugs, `Tasks card hugs its content (${period}, ${width}px)`);
+      assert.deepEqual(await overlaps(), [], `no overlapping cards (${period}, ${width}px)`);
     }
+    await page.click("#li-tasks-card [data-report]");
+    await page.waitForSelector("#report-card:not([hidden])");
+    assert.deepEqual(await overlaps(), [], `no overlapping cards with the report open (${width}px)`);
+    await page.click("#li-tasks-card [data-period=day]");
+    await page.evaluate(() => localStorage.removeItem("li_tasks_period"));
+    assert.equal(await page.locator("#li-tasks-card a", { hasText: "Open Today" }).count(), 0, "no Open Today link");
     assert.deepEqual(page.errors, [], `no errors at ${width}px`);
     await page.close();
   }
