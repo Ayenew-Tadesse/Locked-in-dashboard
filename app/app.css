@@ -480,3 +480,37 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
 .li-seg .li-btn{border-color:transparent;background:none;color:var(--ink-2);}
 .li-seg .li-btn:hover{border-color:transparent;background:var(--surface-2);color:var(--ink);}
 .li-seg .li-btn.on{border-color:transparent;background:var(--accent);color:var(--surface);}
+
+/* ---- Projects: a card each under the Activity card; the owner's Projects page ---- */
+/* The project cards replace the original app buttons (kept until the projects table exists). */
+html.app-mode.li-has-projects #app-chips, html.app-mode.li-has-projects #app-panel{display:none !important;}
+.li-projects > .li-card{margin-top:14px;}
+.li-project-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.li-project-title{min-width:0;}
+.li-project-title .card-label{margin:-4px 0 6px;}
+.li-project-name{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:26px;line-height:1;margin:0 0 4px;color:var(--ink);}
+.li-pill.pj-good{background:var(--good-soft);color:var(--good);}
+.li-pill.pj-warn{background:var(--warn-soft);color:var(--warn);}
+.li-pill.pj-idle{background:var(--idle-soft);color:var(--idle);}
+.li-project-stage{font-size:13px;color:var(--ink);margin:10px 0 0;}
+.li-project-stage .li-muted{font-family:'IBM Plex Mono', monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;margin-right:6px;}
+.li-project-facts{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.li-project-facts li{font-size:13px;line-height:1.5;color:var(--ink);padding-left:14px;position:relative;}
+.li-project-facts li::before{content:"";position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:1px;background:var(--accent);}
+.li-project-links{margin-top:12px;}
+.li-project-check{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+.li-project-items{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.li-project-items li{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;font-size:13px;line-height:1.45;color:var(--ink);}
+.li-project-items label{display:flex;gap:9px;align-items:flex-start;cursor:pointer;min-width:0;}
+.li-project-items input{margin-top:2px;width:15px;height:15px;accent-color:var(--good);flex:none;}
+.li-project-items input:disabled{cursor:default;opacity:1;}
+.li-project-items li.done span{color:var(--good);}
+.li-project-manage{margin:10px 0 0;font-size:13px;text-align:right;}
+.li-project-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+.li-project-list > li{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+.li-project-row-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;flex:1;}
+.li-project-row-main .li-progress-line{flex-basis:100%;}
+.li-cl-rows{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px;}
+.li-cl-row{display:grid;grid-template-columns:auto 1fr 110px auto;gap:6px;align-items:center;}
+.li-cl-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--good);}
+@media (max-width:520px){.li-cl-row{grid-template-columns:auto 1fr auto;}.li-cl-row .li-cl-deadline{grid-column:2;}}

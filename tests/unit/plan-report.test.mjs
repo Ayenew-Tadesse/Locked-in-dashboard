@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { buildYearPlan, ticketSection, PLAN_STATS } from "../../app/plan/year-plan.js";
 import { buildYearSetup, buildMissingHistory } from "../../app/plan/setup.js";
 import { roadmapDone } from "../../app/legacy-import.js";
+import { projectsFromLegacy, projectProgress, safeUrl } from "../../app/core/projects.js";
 import { weekdayIndex, addDays } from "../../app/core/dates.js";
 import { computeMilestone, computeGoal } from "../../app/core/insights.js";
 import { buildDailyReport, fetchCommits, pdfText } from "../../app/report/daily-report.js";
@@ -127,4 +128,23 @@ test("setup: adding missing history only adds what isn't there yet", () => {
   const fresh = buildMissingHistory(legacy, newId, {});
   assert.equal(fresh.tasks.length, 16);
   assert.equal(fresh.dailyNotes.length, 3);
+});
+
+test("projects: the original apps become project rows with their checklists and links", () => {
+  const apps = [...html.matchAll(/name: "([^"]+)",\s*routeCode: "([A-Z]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(apps, ["Guxo Flights", "Guxo", "Gexi"]);
+  const legacyApps = [
+    { id: "hidgo", name: "Guxo Flights", routeCode: "FLT", category: "Flight booking", statusLevel: "good", stage: "Case study drafted", facts: ["a", ""], webAppLink: "https://x.io/", repoLink: "https://github.com/x", appRepoLink: null },
+    { id: "gexi", name: "Gexi", routeCode: "SHP", statusLevel: "weird", facts: [], webAppLink: null },
+  ];
+  const rows = projectsFromLegacy({ apps: legacyApps, checklists: legacy.checklists });
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows.map((r) => [r.name, r.code, r.status, r.position]), [["Guxo Flights", "FLT", "good", 0], ["Gexi", "SHP", "idle", 1]]);
+  assert.deepEqual(rows[0].links, { web: "https://x.io/", repo: "https://github.com/x" });
+  assert.deepEqual(rows[0].facts, ["a"]);
+  assert.equal(rows[0].checklist.length, 6, "Guxo Flights keeps its 6 checklist items");
+  assert.deepEqual(projectProgress(rows[0]), { done: rows[0].checklist.filter((i) => i.done).length, total: 6, pct: Math.round(rows[0].checklist.filter((i) => i.done).length / 6 * 100) });
+  assert.deepEqual(projectProgress(rows[1]), { done: 0, total: 0, pct: 0 });
+  assert.equal(safeUrl("javascript:alert(1)"), null);
+  assert.equal(safeUrl(" https://ok.io "), "https://ok.io");
 });

@@ -195,3 +195,39 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot remove anyone';
 end $$;
 reset role;
+
+-- 9. Projects: the team reads them, only the owner changes them -----------
+select pg_temp.act_as(:owner);
+insert into projects (team_id, name, code, status, facts, links, checklist, position)
+  select team_id, 'Guxo Flights', 'FLT', 'good', '["First case study drafted"]', '{"web":"https://example.com"}',
+         '[{"id":"t1","text":"Navigation","done":true}]', 0 from team_members where user_id = auth.uid();
+insert into projects (team_id, name, position) select team_id, 'Gexi', 1 from team_members where user_id = auth.uid();
+update projects set stage = 'Building' where name = 'Gexi';
+reset role;
+select pg_temp.check((select stage from projects where name = 'Gexi') = 'Building', 'the owner adds and edits projects');
+
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from projects) = 2, 'members see the team''s projects');
+update projects set name = 'Hacked' where name = 'Gexi';
+delete from projects;
+do $$ begin
+  insert into projects (team_id, name) select team_id, 'Member project' from team_members where user_id = auth.uid();
+  raise exception 'FAILED: member added a project';
+exception when insufficient_privilege then raise notice 'ok - members cannot add projects';
+end $$;
+reset role;
+select pg_temp.check((select count(*) from projects) = 2 and not exists (select 1 from projects where name = 'Hacked'), 'members cannot edit or delete projects');
+
+do $$ begin
+  insert into projects (team_id, name, status) select id, 'Bad', 'great' from teams limit 1;
+  raise exception 'FAILED: bad status accepted';
+exception when check_violation then raise notice 'ok - only good / warn / idle statuses';
+end $$;
+
+select pg_temp.act_as('');
+select pg_temp.check((select count(*) from projects) = 0, 'signed-out visitors see no projects');
+reset role;
+select pg_temp.act_as(:owner);
+delete from projects where name = 'Gexi';
+reset role;
+select pg_temp.check((select count(*) from projects) = 1, 'the owner deletes projects');
