@@ -249,7 +249,7 @@ test("settings: the scoring formula is visible and editable; API tokens are show
 });
 
 test("every view fits a phone screen without sideways scrolling", async () => {
-  for (const v of ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "settings"]) {
+  for (const v of ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "settings", "profile"]) {
     const page = await open(v, { width: 375, height: 800 });
     await page.waitForTimeout(150);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -294,7 +294,7 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.close();
 });
 
-test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings in the footer", async () => {
+test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings in the ☰ menu", async () => {
   const requests = [];
   const page = await unlockedPage({ viewport: { width: 1280, height: 900 } });
   page.on("request", (r) => requests.push(r.url()));
@@ -345,11 +345,13 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   // Daily report opens from the card.
   await card.locator("[data-report]").click();
   assert.ok(await page.locator("#report-card").isVisible());
-  // Settings lives in the footer, on other pages too.
-  await page.click('#li-footer-links a[href="#/settings"]');
+  // Settings lives in the ☰ menu (no longer in the footer).
+  assert.equal(await page.locator('#li-footer-links a[href="#/settings"]').count(), 0);
+  await page.click("#li-menu-btn");
+  await page.click('#li-menu a[href="#/settings"]');
   await page.waitForSelector(".li-formula");
+  assert.ok(await page.locator("#li-menu").isHidden(), "the menu closes after choosing");
   assert.ok(await page.locator("#daily-quote").isVisible(), "quote stays on other pages");
-  assert.ok(await page.locator('#li-footer-links a[href="#/settings"]').isVisible());
   await page.close();
 });
 
@@ -604,8 +606,8 @@ test("signed in without a greeting: asked once, then greeted by title and name",
   await page.evaluate(() => { location.hash = "#/team"; });
   await page.waitForSelector(".li-person");
   assert.equal(await page.textContent(".li-person"), "Mr. Ayenew Shiferaw");
-  // Settings: change the greeting.
-  await page.evaluate(() => { location.hash = "#/settings"; });
+  // Profile: change the greeting.
+  await page.evaluate(() => { location.hash = "#/profile"; });
   await page.selectOption('#li-profile-form select[name="greeting"]', "none");
   await page.click('#li-profile-form button[type="submit"]');
   await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
@@ -621,7 +623,7 @@ test("before the greeting migration is run, the site still loads (greetings just
   await page.evaluate(() => { location.hash = "#/team"; });
   await page.waitForSelector(".li-person");
   assert.equal(await page.textContent(".li-person"), "aye");
-  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.evaluate(() => { location.hash = "#/profile"; });
   await page.waitForSelector("#li-profile-form");
   assert.equal(await page.locator('#li-profile-form select[name="greeting"]').count(), 0, "no greeting choice yet");
   await page.fill('#li-profile-form input[name="name"]', "Ayenew Shiferaw");
@@ -645,4 +647,41 @@ test("members don't get the Tasks card on their Overview; the owner does", async
     assert.deepEqual(page.errors, []);
     await page.close();
   }
+});
+
+test("☰ menu: Profile, Settings and a Dark / Light background that's remembered", async () => {
+  const page = await open("", { width: 390, height: 800 });
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const dark = await bg();
+  const btn = page.locator("#li-menu-btn");
+  const box = await btn.boundingBox();
+  assert.ok(box.x < 60, "the menu button is on the left");
+  await btn.click();
+  assert.ok(await page.locator("#li-menu").isVisible());
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Settings"]);
+  // Light background.
+  await page.click('#li-menu [data-theme="light"]');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
+  assert.notEqual(await bg(), dark, "the background changes");
+  assert.equal(await page.locator('#li-menu [data-theme="light"]').getAttribute("aria-pressed"), "true");
+  // Escape closes it; the choice is remembered on reload.
+  await page.keyboard.press("Escape");
+  assert.ok(await page.locator("#li-menu").isHidden());
+  await page.reload();
+  await page.waitForSelector("#li-nav .li-nav-link");
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
+  // Profile page.
+  await btn.click();
+  await page.click('#li-menu a[href="#/profile"]');
+  await page.waitForSelector("#li-profile-form");
+  assert.ok(await page.locator(".li-avatar.lg").isVisible());
+  await page.fill('#li-profile-form input[name="name"]', "Ayenew Shiferaw");
+  await page.click('#li-profile-form button[type="submit"]');
+  await page.waitForFunction(() => /Profile saved/.test(document.querySelector("#li-toasts")?.textContent || ""));
+  // Back to dark.
+  await btn.click();
+  await page.click('#li-menu [data-theme="dark"]');
+  assert.equal(await bg(), dark);
+  assert.deepEqual(page.errors, []);
+  await page.close();
 });

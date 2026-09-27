@@ -434,3 +434,32 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
 .li-tc-group{margin-top:10px;}
 .li-tc-group-title{font-family:'IBM Plex Mono', monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:0 0 4px;}
 .li-tc-group .li-empty{margin:2px 0 6px;font-size:12.5px;}
+
+/* ---- ☰ menu (top left): Profile, Settings, Dark / Light ----------------- */
+.li-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.li-topbar .logout-btn{margin-bottom:0;margin-left:auto;}
+.li-menu-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:8px;cursor:pointer;}
+.li-menu-btn:hover, .li-menu-btn:focus-visible, .li-menu-btn[aria-expanded="true"]{color:var(--ink);border-color:var(--accent);outline:none;}
+.li-menu-backdrop{position:fixed;inset:0;z-index:90;background:rgba(6,12,24,.5);}
+.li-menu{position:absolute;top:0;left:0;bottom:0;width:min(300px, 86vw);overflow-y:auto;background:var(--surface);border-right:1px solid var(--line);
+  padding:calc(18px + env(safe-area-inset-top, 0px)) 16px 20px;display:flex;flex-direction:column;gap:4px;animation:liMenuIn .2s ease-out;}
+@keyframes liMenuIn{from{transform:translateX(-100%);}to{transform:none;}}
+@media (prefers-reduced-motion: reduce){.li-menu{animation:none;}}
+.li-menu-head{display:flex;align-items:center;gap:10px;padding:0 4px 14px;margin-bottom:6px;border-bottom:1px solid var(--line);}
+.li-menu-who{display:flex;flex-direction:column;min-width:0;flex:1;}
+.li-menu-who b{font-size:14.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.li-menu-who small{font-size:12px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.li-menu-link{display:flex;align-items:center;gap:12px;width:100%;padding:11px 10px;border-radius:9px;border:none;background:none;
+  font:inherit;font-size:14.5px;font-weight:500;color:var(--ink);text-decoration:none;cursor:pointer;text-align:left;}
+.li-menu-link svg{color:var(--ink-3);flex:none;}
+.li-menu-link:hover, .li-menu-link:focus-visible{background:var(--surface-2);outline:none;}
+.li-menu-link.active{background:var(--accent-soft);color:var(--accent);}
+.li-menu-link.active svg{color:var(--accent);}
+.li-menu-section{padding:14px 10px 10px;margin-top:6px;border-top:1px solid var(--line);}
+.li-menu-section .card-label{margin:0 0 8px;}
+.li-theme .li-btn{flex:1;}
+.li-menu-logout{margin-top:auto;color:var(--ink-2);}
+.li-avatar{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);font-family:'IBM Plex Mono', monospace;font-size:13px;font-weight:600;letter-spacing:.02em;}
+.li-avatar.lg{width:54px;height:54px;font-size:18px;}
+.li-profile-id{display:flex;align-items:center;gap:14px;}

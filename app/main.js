@@ -22,6 +22,8 @@ import { renderQuarter } from "./views/quarter.js";
 import { renderMilestones } from "./views/milestones.js";
 import { renderAnalytics } from "./views/analytics.js";
 import { renderSettings } from "./views/settings.js";
+import { renderProfile } from "./views/profile.js";
+import { setupMenu } from "./ui/menu.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { DEFAULT_REPOS, fetchCommits, buildDailyReport, renderDailyReportPdf } from "./report/daily-report.js";
@@ -36,12 +38,13 @@ const VIEWS = {
   milestones: { label: "Milestones", render: renderMilestones },
   analytics: { label: "Analytics", render: renderAnalytics },
   settings: { label: "Settings", render: renderSettings },
+  profile: { label: "Profile", render: renderProfile },
   team: { label: "Team", render: renderTeam },
 };
 
 // Tabs in the top row. The other pages stay reachable by link: Tasks and Week
-// from the Overview, Quarter from its score tile and the Tasks card, Settings
-// from the footer.
+// from the Overview, Quarter from its score tile and the Tasks card, Profile
+// and Settings from the ☰ menu (top left).
 const NAV = ["overview", "today", "calendar", "milestones", "analytics"];
 
 const config = window.LOCKEDIN_CONFIG || {};
@@ -130,7 +133,6 @@ function render({ keepFocus } = {}) {
       try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
     }
   }
-  $("#li-footer-links").innerHTML = `<a href="#/settings" class="li-link${r.name === "settings" ? " active" : ""}"${r.name === "settings" ? ' aria-current="page"' : ""}>Settings</a>`;
   feedLegacy();
 }
 
@@ -276,6 +278,7 @@ async function start(store) {
   }
   started = true;
   window.LockedInHooks = legacyHooks;
+  setupMenu({ onLogout: () => document.getElementById("logout-btn").click() });
   addReportPdfButton();
   document.documentElement.classList.remove("app-booting");
   $("#footnote").textContent = store.mode === "demo"
