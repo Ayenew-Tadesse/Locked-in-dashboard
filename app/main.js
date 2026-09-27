@@ -187,14 +187,10 @@ function render() {
   window.scrollTo(0, scrollY);
   navReady = true;
   if (overview) {
-    // The Tasks card (Day/Week/Month/Quarter) is for the team owner; members
-    // use the New task tile, Today and Calendar.
-    document.documentElement.classList.toggle("li-member", !state.isOwner);
-    // Colleagues: no adding tasks and no year countdown (their tasks count down instead).
+    // Colleagues: no adding tasks and no year countdown (their tasks count down
+    // instead); their Tasks card is read-only.
     document.documentElement.classList.toggle("li-colleague", state.isColleague);
-    if (state.isOwner) {
-      try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
-    }
+    try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
     try { renderProjectCards($("#li-projects")); } catch (e) { console.error(e); }
   }
   feedLegacy();

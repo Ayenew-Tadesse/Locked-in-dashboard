@@ -658,20 +658,25 @@ test("before the greeting migration is run, the site still loads (greetings just
   await page.close();
 });
 
-test("members don't get the Tasks card on their Overview; the owner does", async () => {
-  for (const role of ["member", "owner"]) {
-    const page = await dbPage({ signedIn: true, role });
-    await page.waitForSelector("#li-nav .li-nav-link");
-    await page.keyboard.press("Escape").catch(() => {});
-    await page.evaluate(() => document.querySelector("#li-modal")?.remove());
-    await page.waitForSelector(".li-kpis");
-    assert.equal(await page.locator("#li-tasks-card").isVisible(), role === "owner", `${role}: Tasks card`);
-    assert.ok(await page.locator(".li-kpis").isVisible(), `${role}: score tiles still shown`);
-    const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
-    assert.ok(tabs.includes("Today") && tabs.includes("Calendar"), `${role}: Today and Calendar remain`);
-    assert.deepEqual(page.errors, []);
-    await page.close();
-  }
+test("colleagues get a read-only Tasks card (Available / Completed) on their Overview", async () => {
+  const page = await dbPage({ signedIn: true, role: "member", assigned: true });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  const card = page.locator("#li-tasks-card");
+  await card.locator('.li-task[data-task-id="t-assigned"]').waitFor();
+  assert.ok(await page.locator(".li-kpis").isVisible(), "score tiles still shown");
+  assert.deepEqual((await card.locator(".li-tc-group-title").allInnerTexts()).map((t) => t.replace(/\s*\(\d+\)/, "").toLowerCase()), ["available", "completed"]);
+  assert.match(await card.locator('[data-group="open"]').innerText(), /Design the payment screen/);
+  // Nothing to tick, change, delete, add or open for editing.
+  assert.equal(await card.locator("button.li-check, [data-act], select, form, [data-report]").count(), 0, "read-only");
+  await card.locator(".li-task-title").first().click();
+  assert.equal(await page.locator("#li-modal").count(), 0, "tapping a task doesn't open the edit form");
+  // The periods still switch.
+  await card.locator("[data-period=week]").click();
+  await page.waitForFunction(() => document.querySelector("#li-tasks-card [data-period=week]").getAttribute("aria-pressed") === "true");
+  await page.evaluate(() => localStorage.removeItem("li_tasks_period"));
+  assert.deepEqual(page.errors, []);
+  await page.close();
 });
 
 test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", async () => {
@@ -860,7 +865,7 @@ test("colleagues can't add tasks; their assigned tasks count down instead of the
     await page.waitForSelector('.li-task[data-task-id="t-assigned"]');
     assert.equal(await page.locator("[data-new-task], form[data-quick-add]").count(), 0, `nothing to add tasks on ${hash}`);
   }
-  const cd = page.locator('.li-task[data-task-id="t-assigned"] [data-countdown]');
+  const cd = page.locator('#li-view .li-task[data-task-id="t-assigned"] [data-countdown]');
   assert.match(await cd.innerText(), /⏳ (\d+d )?\d\d:\d\d:\d\d left/);
   const before = await cd.innerText();
   await page.waitForFunction((b) => document.querySelector("[data-countdown]").textContent !== b, before);

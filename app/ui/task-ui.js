@@ -17,7 +17,7 @@ setInterval(() => {
   }
 }, 1000);
 
-export function taskRow(t, { showDate = false, compact = false, showOwner = false } = {}) {
+export function taskRow(t, { showDate = false, compact = false, showOwner = false, readOnly = false } = {}) {
   const today = state.today;
   const eff = effectiveStatus(t, today);
   const ms = t.milestone_id && state.milestones.find((m) => m.id === t.milestone_id);
@@ -39,6 +39,14 @@ export function taskRow(t, { showDate = false, compact = false, showOwner = fals
     !done && t.completion_percentage ? `<span class="li-meta">${t.completion_percentage}%</span>` : "",
     filesFor(t.id).length ? `<span class="li-meta" title="Files shared">📎 ${filesFor(t.id).length}</span>` : "",
   ].join("");
+  // Read-only rows (a colleague's Tasks card): no tick, status, delete or editing.
+  if (readOnly) return `<li class="li-task st-${eff} compact li-task-ro" data-task-id="${esc(t.id)}">
+    <span class="li-check" aria-hidden="true">${done ? "✓" : ""}</span>
+    <div class="li-task-main">
+      <span class="li-task-title">${esc(t.title)}</span>
+      <div class="li-task-meta">${meta}</div>
+    </div>
+  </li>`;
   return `<li class="li-task st-${eff}${compact ? " compact" : ""}" data-task-id="${esc(t.id)}">
     <button type="button" class="li-check" data-act="toggle" aria-pressed="${done}" aria-label="${done ? "Mark not done" : "Mark complete"}: ${esc(t.title)}">✓</button>
     <div class="li-task-main">
