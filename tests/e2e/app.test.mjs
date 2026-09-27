@@ -299,6 +299,18 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
       assert.deepEqual(r.out, [], `${where}: cards off screen`);
       assert.equal(r.gaps, 0, `${where}: a row of top tiles doesn't reach the edge`);
     }
+    // Overview: from tablets up, Tasks sits beside Activity (with the project
+    // cards under it), both sides starting and ending on the same line.
+    await page.goto(BASE + "?demo=1");
+    await page.waitForSelector("#li-projects .li-project-tile");
+    const box = (sel) => page.locator(sel).boundingBox();
+    const [tasks, heat, projects] = [await box("#li-tasks-card"), await box("#heat-card"), await box("#li-projects")];
+    if (width >= 700) {
+      assert.ok(Math.abs(tasks.y - heat.y) < 1 && tasks.x + tasks.width <= heat.x, `side by side at ${width}px`);
+      assert.ok(Math.abs(tasks.y + tasks.height - (projects.y + projects.height)) < 1.5, `same bottom line at ${width}px`);
+    } else {
+      assert.ok(heat.y >= tasks.y + tasks.height, `stacked on a phone (${width}px)`);
+    }
     assert.deepEqual(page.errors, [], `no errors at ${width}px`);
     await page.close();
   }
@@ -377,8 +389,8 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   await page.waitForSelector("#li-modal [name=title]");
   await page.locator("#li-modal [data-close]").first().click();
   const card = page.locator("#li-tasks-card");
-  const colTop = (await page.locator(".dash-col-a").boundingBox()).y;
-  assert.ok(Math.abs((await card.boundingBox()).y - colTop) < 2, "Tasks card leads the left column");
+  const gridTop = (await page.locator(".dash-grid").boundingBox()).y;
+  assert.ok(Math.abs((await card.boundingBox()).y - gridTop) < 2, "Tasks card leads the left column");
   // Day view: the whole team's tasks for today, grouped, with who's in charge.
   assert.match(await card.locator(".today-progress").innerText(), /^2\/5$/);
   assert.deepEqual(await card.locator(".li-tc-group-title").allInnerTexts(), ["AVAILABLE (2)", "ONGOING (1)", "COMPLETED (2)"], "Available / Ongoing / Completed");
