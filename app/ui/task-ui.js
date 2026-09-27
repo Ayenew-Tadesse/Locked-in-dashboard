@@ -1,5 +1,5 @@
 // Task rows (with quick actions) and the add/edit task form.
-import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName } from "../state.js";
+import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES } from "../state.js";
 import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
@@ -23,6 +23,7 @@ export function taskRow(t, { showDate = false, compact = false, showOwner = fals
     state.me && t.assigned_by && t.assigned_by !== state.me && t.user_id === state.me ? `<span class="li-meta who">Assigned by ${esc(memberName(t.assigned_by))}</span>` : "",
     t.estimated_minutes || t.actual_minutes ? `<span class="li-meta">${t.actual_minutes != null ? formatMinutes(t.actual_minutes) : "0m"}${t.estimated_minutes ? " / " + formatMinutes(t.estimated_minutes) : ""}</span>` : "",
     !done && t.completion_percentage ? `<span class="li-meta">${t.completion_percentage}%</span>` : "",
+    filesFor(t.id).length ? `<span class="li-meta" title="Files shared">📎 ${filesFor(t.id).length}</span>` : "",
   ].join("");
   return `<li class="li-task st-${eff}${compact ? " compact" : ""}" data-task-id="${esc(t.id)}">
     <button type="button" class="li-check" data-act="toggle" aria-pressed="${done}" aria-label="${done ? "Mark not done" : "Mark complete"}: ${esc(t.title)}">✓</button>
@@ -52,8 +53,9 @@ document.addEventListener("click", async (e) => {
   if (!t) return;
   if (btn.dataset.act === "toggle") {
     const done = t.status === "completed";
-    await updateTask(id, done ? { status: t.completion_percentage && t.completion_percentage < 100 ? "in_progress" : "not_started" } : { status: "completed" })
-      .then((saved) => { toast(done ? "Marked not done" : "Task completed"); if (!done) askForLearningLog(saved); }, () => {});
+    if (!done) { completeTask(t); return; }
+    await updateTask(id, { status: t.completion_percentage && t.completion_percentage < 100 ? "in_progress" : "not_started" })
+      .then(() => toast("Marked not done"), () => {});
   } else if (btn.dataset.act === "edit") {
     openTaskDetail(t);
   } else if (btn.dataset.act === "delete") {
@@ -64,6 +66,8 @@ document.addEventListener("change", async (e) => {
   const sel = e.target.closest(".li-task select[data-act=status]");
   if (!sel) return;
   const id = sel.closest(".li-task").dataset.taskId;
+  const task = findTask(id);
+  if (sel.value === "completed" && needsFiles(task)) { sel.value = task.status; openHandIn(task); return; }
   const patch = { status: sel.value };
   if (sel.value === "not_started") patch.completion_percentage = 0;
   await updateTask(id, patch).then((saved) => {
@@ -221,6 +225,9 @@ export function openTaskDetail(t) {
         ${t.estimated_minutes ? `<span class="li-meta">Estimate ${esc(formatMinutes(t.estimated_minutes))}</span>` : ""}</div>
       ${ticketHtml(t.description) || `<p class="li-empty">No description.</p>`}
       ${t.notes ? `<section class="li-ticket-sec"><h3 class="li-group-h">Notes</h3><p class="li-prose">${esc(t.notes)}</p></section>` : ""}
+      ${Array.isArray(state.files) && (filesFor(t.id).length || isMine(t)) ? `<section class="li-ticket-sec"><h3 class="li-group-h">Files${t.assigned_by && t.assigned_by !== state.me && isMine(t) ? ` shared with ${esc(memberName(t.assigned_by))}` : ""}</h3>
+        ${fileList(t.id) || `<p class="li-empty">No files yet.</p>`}
+        ${isMine(t) ? `<label class="li-btn small li-file-add">+ Add files<input type="file" multiple data-add-files hidden></label>` : ""}</section>` : ""}
       ${hasLearning(t) ? `<section class="li-ticket-sec learned"><h3 class="li-group-h">Your learning log</h3>
         ${LEARNING.filter(([k]) => t[k]).map(([k, label]) => `<p class="li-prose"><b>${esc(label)}</b><br>${esc(t[k])}</p>`).join("")}</section>` : ""}
     </div>`,
@@ -231,13 +238,105 @@ export function openTaskDetail(t) {
       form.querySelector("[data-close]:not(.modal-close)")?.replaceChildren("Close");
       form.querySelector('[data-detail="edit"]').addEventListener("click", () => openTaskForm(t));
       form.querySelector('[data-detail="learn"]').addEventListener("click", () => openLearningLog(t));
+      form.querySelector("[data-add-files]")?.addEventListener("change", async (e) => {
+        const picked = [...e.target.files];
+        if (!picked.length) return;
+        await uploadFiles(t, picked).then(() => { toast(picked.length === 1 ? "File shared" : `${picked.length} files shared`); openTaskDetail(findTask(t.id) || t); }, (err) => toast(err.message, "error"));
+      });
       form.querySelector('[data-detail="toggle"]').addEventListener("click", async () => {
+        if (!done && needsFiles(t)) { openHandIn(t); return; }
         const saved = await updateTask(t.id, done ? { status: "not_started" } : { status: "completed" }).catch(() => null);
         if (!saved) return;
         toast(done ? "Marked not done" : "Task completed");
         if (!done && !hasLearning(saved)) openLearningLog(saved, { justCompleted: true });
         else closeModal();
       });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Files: handing in assigned work
+// ---------------------------------------------------------------------------
+const isMine = (t) => (t.user_id || state.me) === state.me;
+
+export function formatBytes(n) {
+  if (n == null) return "";
+  return n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** The files shared on a task, as links that open them. */
+export function fileList(taskId) {
+  const files = filesFor(taskId);
+  if (!files.length) return "";
+  return `<ul class="li-files">${files.map((f) => `<li>
+    <button type="button" class="li-link" data-open-file="${esc(f.id)}">📎 ${esc(f.name)}</button>
+    <small class="li-muted">${esc(formatBytes(f.size))}</small>
+    ${f.user_id === state.me ? `<button type="button" class="li-icon-btn" data-delete-file="${esc(f.id)}" aria-label="Remove ${esc(f.name)}">&#10005;</button>` : ""}
+  </li>`).join("")}</ul>`;
+}
+
+// Opening a file: the window opens right away (so phones don't block it),
+// then goes to a short-lived link.
+document.addEventListener("click", async (e) => {
+  const open = e.target.closest("[data-open-file]");
+  const del = e.target.closest("[data-delete-file]");
+  if (!open && !del) return;
+  const f = (state.files || []).find((x) => x.id === (open || del).dataset[open ? "openFile" : "deleteFile"]);
+  if (!f) return;
+  if (del) {
+    if (!(await confirmDialog(`Remove "${f.name}"?`, "Remove"))) return;
+    await deleteFile(f).then(() => toast("File removed"), () => {});
+    return;
+  }
+  const w = window.open("", "_blank");
+  try {
+    const url = await state.store.fileUrl(f);
+    if (w) w.location.href = url; else location.href = url;
+  } catch (err) { w?.close(); toast("Couldn't open the file: " + err.message, "error"); }
+});
+
+/** Completes a task: assigned work goes through "Hand in" (files required). */
+export function completeTask(t) {
+  if (needsFiles(t)) { openHandIn(t); return; }
+  updateTask(t.id, { status: "completed" }).then((saved) => { toast("Task completed"); askForLearningLog(saved); }, () => {});
+}
+
+export function openHandIn(t) {
+  const owner = memberName(t.assigned_by) || "the team owner";
+  const picked = [];
+  openModal({
+    eyebrow: `Hand in · assigned by ${owner}`,
+    title: t.title,
+    submitLabel: "Finish and share",
+    wide: true,
+    body: `<p class="li-sub full">Share your work with ${esc(owner)}: attach at least one file (screenshots, documents, designs, a zip…), up to 10 MB each.</p>
+      <div class="li-field full"><span>Files</span>
+        ${fileList(t.id)}
+        <ul class="li-files li-files-new"></ul>
+        <label class="li-btn li-file-pick">📎 Choose files<input type="file" multiple hidden></label>
+      </div>
+      ${learningFields(t)}`,
+    onReady(form) {
+      const list = form.querySelector(".li-files-new");
+      const draw = () => { list.innerHTML = picked.map((f, i) => `<li><span>📎 ${esc(f.name)}</span> <small class="li-muted">${esc(formatBytes(f.size))}</small>
+        <button type="button" class="li-icon-btn" data-unpick="${i}" aria-label="Remove ${esc(f.name)}">&#10005;</button></li>`).join(""); };
+      form.querySelector(".li-file-pick input").addEventListener("change", (e) => {
+        for (const f of e.target.files) {
+          if (f.size > MAX_FILE_BYTES) { toast(`"${f.name}" is over 10 MB`, "error"); continue; }
+          picked.push(f);
+        }
+        e.target.value = "";
+        draw();
+      });
+      list.addEventListener("click", (e) => { const b = e.target.closest("[data-unpick]"); if (b) { picked.splice(Number(b.dataset.unpick), 1); draw(); } });
+    },
+    async onSubmit(v) {
+      if (!picked.length && !filesFor(t.id).length) throw new Error("Attach at least one file to finish this task.");
+      if (picked.length) await uploadFiles(t, picked);
+      picked.length = 0;
+      await updateTask(t.id, { status: "completed", ...Object.fromEntries(LEARNING.map(([k]) => [k, (v[k] || "").trim() || null])) });
+      toast(`Task finished and shared with ${owner}`);
     },
   });
 }

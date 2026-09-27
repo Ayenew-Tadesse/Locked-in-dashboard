@@ -57,7 +57,7 @@ export async function fetchCommits(repos, day, fetchImpl = fetch, { maxCommits =
  * Builds the report as plain data:
  *   { title, day, summary, completed: [...], open: [...], note, code, lessons }
  */
-export function buildDailyReport({ day, tasks, milestones = [], dailyNote = "", score = null, github = null, timeZone }) {
+export function buildDailyReport({ day, tasks, milestones = [], files = [], dailyNote = "", score = null, github = null, timeZone }) {
   const msName = (id) => milestones.find((m) => m.id === id)?.title || null;
   const completedOnDay = tasks.filter((t) => t.status === "completed" && (dayOf(t.completed_at, timeZone) || t.date) === day);
   const plannedOpen = tasks.filter((t) => t.date === day && !["completed", "cancelled"].includes(t.status));
@@ -69,6 +69,7 @@ export function buildDailyReport({ day, tasks, milestones = [], dailyNote = "", 
     changed: t.learning_changed || null,
     how: t.learning_how || null,
     solved: t.learning_solved || null,
+    files: (files || []).filter((f) => f.task_id === t.id).map((f) => f.name),
     seniorNotes: ticketSection(t.description, "How it works"),
     goal: ticketSection(t.description, "Goal"),
   }));
@@ -164,6 +165,10 @@ export async function renderDailyReportPdf(report) {
     text(c.how || "(not recorded)", { indent: 12, color: c.how ? ink : muted });
     text("What problem was solved", { size: 9.5, bold: true, indent: 12, gap: 1 });
     text(c.solved || "(not recorded)", { indent: 12, color: c.solved ? ink : muted });
+    if (c.files?.length) {
+      text("Files shared", { size: 9.5, bold: true, indent: 12, gap: 1 });
+      text(c.files.join(", "), { indent: 12 });
+    }
     if (c.seniorNotes) {
       text("Senior developer notes: how it works", { size: 9.5, bold: true, indent: 12, gap: 1, color: accent });
       text(c.seniorNotes, { indent: 12, size: 10 });

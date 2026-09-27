@@ -197,3 +197,19 @@ and deletes (RLS with `private.is_member` / `private.is_owner`).
   doesn't bring them back.
 * Before the migration is run, the original app buttons stay and the
   Projects page explains the update that's needed.
+
+## Files on finished tasks (added later)
+
+Migration `20261001000000_task_files.sql` adds a private Storage bucket,
+`task-files` (10 MB per file), and `task_files` listing each file against its
+task. Files live at `<user id>/<task id>/<file>`.
+
+* A colleague finishing a task the owner assigned gets **Hand in**: at least
+  one file plus the learning log. The database refuses to complete such a
+  task without a file (`private.require_task_file`); the owner completing it
+  isn't held to this, and people's own tasks need no files.
+* Storage and `task_files` policies: people upload only into their own
+  folder and only for their own tasks; they and their team owner can read
+  them; other members can't. Links to open files are signed and expire.
+* Files show on the task, on the owner's Team page, and in both Daily report PDFs.
+* Removing a member deletes their files too.

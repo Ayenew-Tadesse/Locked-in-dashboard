@@ -548,3 +548,10 @@ html.li-page .li-footer{display:none !important;}
   font-size:13.5px;font-weight:600;color:var(--ink);background:var(--surface-2);text-decoration:none;}
 .li-back:hover, .li-back:focus-visible{background:var(--accent);color:var(--surface);outline:none;}
 .li-page-title{font-family:'IBM Plex Sans', sans-serif;font-size:17px;font-weight:600;line-height:1.2;margin:0;color:var(--ink);}
+
+/* ---- Files shared on tasks ------------------------------------------------ */
+.li-files{list-style:none;margin:6px 0 8px;padding:0;display:flex;flex-direction:column;gap:4px;}
+.li-files li{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;}
+.li-files li > .li-link, .li-files li > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.li-files .li-icon-btn{width:24px;height:24px;margin-left:auto;}
+.li-file-pick, .li-file-add{cursor:pointer;align-self:flex-start;}

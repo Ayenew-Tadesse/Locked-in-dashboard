@@ -74,6 +74,7 @@ export function supabaseStoreFromClient(sb) {
       ]);
       const team = await this.loadTeam();
       team.projects = team.team ? await this.loadProjects(team.team.id) : null;
+      team.files = await this.loadFiles();
       return { profile, settings, tasks, milestones, goals, daily, weekly, me: userId, ...team };
     },
 
@@ -113,12 +114,40 @@ export function supabaseStoreFromClient(sb) {
       return check(res);
     },
     async deleteProject(id) { check(await sb.from("projects").delete().eq("id", id)); },
+
+    /** Files shared on tasks, or null before 20261001000000_task_files.sql is run. */
+    async loadFiles() {
+      const { data, error } = await sb.from("task_files").select("*").order("created_at");
+      if (error && /task_files/.test(error.message)) return null;
+      return check({ data, error });
+    },
+    /** Uploads into your own folder (<you>/<task>/...) and lists it on the task. */
+    async uploadTaskFile(task, file) {
+      const safe = (file.name || "file").replace(/[^\w.\-]+/g, "_").slice(-120);
+      const path = `${userId}/${task.id}/${uuid().slice(0, 8)}-${safe}`;
+      const up = await sb.storage.from("task-files").upload(path, file, { contentType: file.type || undefined, upsert: false });
+      if (up.error) throw new Error(up.error.message);
+      return check(await sb.from("task_files").insert({ task_id: task.id, path, name: (file.name || safe).slice(0, 255), size: file.size, mime: (file.type || "").slice(0, 150) || null }).select().single());
+    },
+    /** A short-lived link to open or download a file. */
+    async fileUrl(f) {
+      const { data, error } = await sb.storage.from("task-files").createSignedUrl(f.path, 600);
+      if (error) throw new Error(error.message);
+      return data.signedUrl;
+    },
+    async deleteTaskFile(f) {
+      await sb.storage.from("task-files").remove([f.path]);
+      check(await sb.from("task_files").delete().eq("id", f.id));
+    },
     async inviteMember(teamId, email) {
       return check(await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId }).select().single());
     },
     async revokeInvite(id) { check(await sb.from("team_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
     /** Deletes the member's account and all their data (owner only; see 20260928000000_remove_member.sql). */
     async removeMember(teamId, memberId) {
+      // Their shared files go too (the owner may delete members' files).
+      const files = await sb.from("task_files").select("path").eq("user_id", memberId);
+      if (!files.error && files.data?.length) await sb.storage.from("task-files").remove(files.data.map((f) => f.path));
       const { error } = await sb.rpc("remove_member_completely", { member: memberId });
       if (error && /remove_member_completely|schema cache/.test(error.message)) throw new Error("run the latest SQL update in Supabase first (20260928000000_remove_member.sql)");
       if (error) throw new Error(error.message);
@@ -218,6 +247,7 @@ export function createMemoryStore(seed) {
   db.members = db.members || [{ user_id: db.me, role: "owner", name: db.profile?.name || "You", email: db.profile?.email || "" }];
   db.invites = db.invites || [];
   db.projects = db.projects || [];
+  db.files = db.files || [];
   db.tasks.forEach((t) => { t.user_id = t.user_id || db.me; });
   const now = () => new Date().toISOString();
   const recalc = () => {
@@ -273,6 +303,15 @@ export function createMemoryStore(seed) {
       return { ...saved };
     },
     async deleteProject(id) { db.projects = db.projects.filter((x) => x.id !== id); },
+    async loadFiles() { return db.files.map((f) => ({ ...f })); },
+    async uploadTaskFile(task, file) {
+      const f = { id: uuid(), task_id: task.id, user_id: db.me, path: `${db.me}/${task.id}/${file.name}`, name: file.name, size: file.size, mime: file.type || null,
+        url: URL.createObjectURL(file), created_at: now() };
+      db.files.push(f);
+      return { ...f };
+    },
+    async fileUrl(f) { return f.url || "about:blank"; },
+    async deleteTaskFile(f) { db.files = db.files.filter((x) => x.id !== f.id); },
     async inviteMember(teamId, email) {
       const e = email.trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Enter a valid email address.");
