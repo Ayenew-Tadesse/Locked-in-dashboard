@@ -587,3 +587,8 @@ html.app-mode .roadmap-card{container-type:inline-size;}
   .obj-months, .obj-badge{display:none;}
   .obj-mini{width:80%;}
 }
+/* Phones: the four tracking cards only (2 x 2); tasks are added from the
+   Tasks card and the Today and Tasks pages. */
+@media (max-width:699px){
+  html.app-mode .li-tile-add{display:none;}
+}

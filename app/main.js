@@ -348,8 +348,16 @@ async function start(store) {
   window.LockedInHooks = legacyHooks;
   setupMenu({ onLogout: () => document.getElementById("logout-btn").click() });
   addReportPdfButton();
-  // The Objective card sits right under the Tasks card (and the daily report).
-  document.getElementById("report-card")?.after(document.querySelector(".obj-section"));
+  // The Objective card: right under the Tasks card (and the daily report) on
+  // tablets and up; last on phones (Tasks, Activity, apps, Objective).
+  const phone = matchMedia("(max-width: 699px)");
+  const placeObjective = () => {
+    const obj = document.querySelector(".obj-section");
+    if (phone.matches) document.querySelector(".dash-col-b")?.append(obj);
+    else document.getElementById("report-card")?.after(obj);
+  };
+  placeObjective();
+  phone.addEventListener("change", placeObjective);
   $("#footnote").textContent = store.mode === "demo"
     ? (demoMode === "history"
       ? "Preview with your tracking history from the original dashboard. Changes you make here aren't saved."
