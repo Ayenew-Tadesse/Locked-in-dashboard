@@ -950,11 +950,12 @@
     margin:0;
   }
 
-  /* layout: one column on phones and tablets, two columns on wide screens */
+  /* layout: one column on phones and portrait tablets, two columns from
+     landscape tablets and small laptops up */
   .dash-grid{margin-top:32px;}
   .dash-col > :first-child{margin-top:0;}
   .dash-col-b{margin-top:14px;}
-  @media (min-width:1200px){
+  @media (min-width:1000px){
     .wrap{max-width:1240px;}
     .dash-grid{
       display:grid;
@@ -1018,8 +1019,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="app/app.css?v=23cc0047d3">
-<script type="importmap" id="li-versions">{"imports":{"./app/core/dates.js":"./app/core/dates.js?v=ae6f14c4c2","./app/core/insights.js":"./app/core/insights.js?v=e72da91746","./app/core/people.js":"./app/core/people.js?v=7c04639ff4","./app/core/projects.js":"./app/core/projects.js?v=2ce6e6c5b7","./app/core/scoring.js":"./app/core/scoring.js?v=c08775ce9d","./app/core/tasks.js":"./app/core/tasks.js?v=bfd5eafa41","./app/demo.js":"./app/demo.js?v=426a355cf7","./app/legacy-import.js":"./app/legacy-import.js?v=d2fdca0d7a","./app/main.js":"./app/main.js?v=43fca82e46","./app/plan/setup.js":"./app/plan/setup.js?v=277dcb19e7","./app/plan/year-plan.js":"./app/plan/year-plan.js?v=5e6cb2a316","./app/report/daily-report.js":"./app/report/daily-report.js?v=6bab65fbf8","./app/state.js":"./app/state.js?v=684836e93b","./app/store.js":"./app/store.js?v=2843457e46","./app/ui/auth.js":"./app/ui/auth.js?v=b942b8c8c3","./app/ui/charts.js":"./app/ui/charts.js?v=b7af1eed91","./app/ui/dom.js":"./app/ui/dom.js?v=0886e2824f","./app/ui/menu.js":"./app/ui/menu.js?v=71b07c9112","./app/ui/task-ui.js":"./app/ui/task-ui.js?v=8eaf15f619","./app/vendor/jspdf.umd.min.js":"./app/vendor/jspdf.umd.min.js?v=e6551fcdc3","./app/views/analytics.js":"./app/views/analytics.js?v=fe2be17c11","./app/views/calendar.js":"./app/views/calendar.js?v=3fe9306cae","./app/views/milestones.js":"./app/views/milestones.js?v=d247b2e542","./app/views/overview.js":"./app/views/overview.js?v=8e11559872","./app/views/profile.js":"./app/views/profile.js?v=844c5560c8","./app/views/project-cards.js":"./app/views/project-cards.js?v=37c131f8c5","./app/views/projects.js":"./app/views/projects.js?v=7f7852d4c3","./app/views/quarter.js":"./app/views/quarter.js?v=fbdb130ea4","./app/views/settings.js":"./app/views/settings.js?v=980550d48c","./app/views/tasks-card.js":"./app/views/tasks-card.js?v=2624ffb6ce","./app/views/tasks.js":"./app/views/tasks.js?v=3e03a4a995","./app/views/team.js":"./app/views/team.js?v=c4193ccc4f","./app/views/today.js":"./app/views/today.js?v=2d5dbe0b9f","./app/views/week.js":"./app/views/week.js?v=e69e36ed77"}}</script>
+<link rel="stylesheet" href="app/app.css?v=1774fbb52c">
+<script type="importmap" id="li-versions">{"imports":{"./app/core/dates.js":"./app/core/dates.js?v=ae6f14c4c2","./app/core/insights.js":"./app/core/insights.js?v=e72da91746","./app/core/people.js":"./app/core/people.js?v=7c04639ff4","./app/core/projects.js":"./app/core/projects.js?v=2ce6e6c5b7","./app/core/scoring.js":"./app/core/scoring.js?v=c08775ce9d","./app/core/tasks.js":"./app/core/tasks.js?v=bfd5eafa41","./app/demo.js":"./app/demo.js?v=426a355cf7","./app/legacy-import.js":"./app/legacy-import.js?v=d2fdca0d7a","./app/main.js":"./app/main.js?v=43fca82e46","./app/plan/setup.js":"./app/plan/setup.js?v=277dcb19e7","./app/plan/year-plan.js":"./app/plan/year-plan.js?v=5e6cb2a316","./app/report/daily-report.js":"./app/report/daily-report.js?v=6bab65fbf8","./app/state.js":"./app/state.js?v=684836e93b","./app/store.js":"./app/store.js?v=2843457e46","./app/ui/auth.js":"./app/ui/auth.js?v=b942b8c8c3","./app/ui/charts.js":"./app/ui/charts.js?v=b7af1eed91","./app/ui/dom.js":"./app/ui/dom.js?v=0886e2824f","./app/ui/menu.js":"./app/ui/menu.js?v=71b07c9112","./app/ui/task-ui.js":"./app/ui/task-ui.js?v=8eaf15f619","./app/vendor/jspdf.umd.min.js":"./app/vendor/jspdf.umd.min.js?v=e6551fcdc3","./app/views/analytics.js":"./app/views/analytics.js?v=fe2be17c11","./app/views/calendar.js":"./app/views/calendar.js?v=3fe9306cae","./app/views/milestones.js":"./app/views/milestones.js?v=d247b2e542","./app/views/overview.js":"./app/views/overview.js?v=47556ad705","./app/views/profile.js":"./app/views/profile.js?v=844c5560c8","./app/views/project-cards.js":"./app/views/project-cards.js?v=37c131f8c5","./app/views/projects.js":"./app/views/projects.js?v=7f7852d4c3","./app/views/quarter.js":"./app/views/quarter.js?v=fbdb130ea4","./app/views/settings.js":"./app/views/settings.js?v=980550d48c","./app/views/tasks-card.js":"./app/views/tasks-card.js?v=2624ffb6ce","./app/views/tasks.js":"./app/views/tasks.js?v=ccf77d999d","./app/views/team.js":"./app/views/team.js?v=c4193ccc4f","./app/views/today.js":"./app/views/today.js?v=2d5dbe0b9f","./app/views/week.js":"./app/views/week.js?v=e69e36ed77"}}</script>
 <!-- config.js is generated at deploy time (public Supabase URL + anon key).
      Without it the page runs as the original dashboard. -->
 <script src="config.js?v=b7168425ee"></script>
@@ -1918,9 +1919,11 @@
 
     var line;
     if (!tasks.length){
-      line = "A new day on the journey. Set today's checklist and lock in — every finished day moves Guxo Flights, Guxo and Gexi forward.";
+      line = document.documentElement.classList.contains("li-colleague")
+        ? "A fresh day. Your tasks will show here as soon as they're assigned."
+        : "A fresh day. Plan your tasks and lock in — every finished day moves your projects forward.";
     } else if (remaining === 0){
-      line = "Today's checklist is done. <strong>" + (streak > 1 ? streak + " days in a row" : "One more day") + "</strong> closer to shipping the network — rest up and go again tomorrow.";
+      line = "Everything's done for today — <strong>" + (streak > 1 ? streak + " days in a row" : "one more day in the books") + "</strong>. Rest up and go again tomorrow.";
     } else if (done === 0){
       line = "<strong>" + remaining + " task" + (remaining === 1 ? "" : "s") + "</strong> on today's list. Start with the first one — momentum does the rest.";
     } else {

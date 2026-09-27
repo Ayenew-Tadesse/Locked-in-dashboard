@@ -133,13 +133,14 @@ test("a task with a past deadline becomes overdue automatically, and can be move
   assert.match(await r.getAttribute("class"), /st-overdue/);
   assert.match(await r.innerText(), /OVERDUE/i);
   assert.match(await r.innerText(), /yesterday/);
-  await page.goto(BASE + "?demo=1#/tasks?deadline=overdue");
-  await page.waitForSelector(".li-tasks-showing");
-  assert.equal(await row(page, "E2E: late thing").count(), 1, "shows in the overdue list");
-  assert.ok((await page.locator(".li-task:not(.st-overdue)").count()) === 0, "shows only overdue tasks");
-  await page.click(".li-tasks-showing a");
-  await page.waitForFunction(() => location.hash === "#/tasks" && !document.querySelector(".li-tasks-showing"));
-  assert.ok((await page.locator(".li-task:not(.st-overdue)").count()) > 0, "Show all lists every task");
+  await page.click('#li-nav .li-nav-link:text-is("Tasks")');
+  await page.click('.li-status-tabs a:has-text("Overdue")');
+  await page.waitForFunction(() => location.hash === "#/tasks?status=overdue");
+  assert.equal(await row(page, "E2E: late thing").count(), 1, "shows under Overdue");
+  assert.ok((await page.locator("#li-view .li-task:not(.st-overdue)").count()) === 0, "shows only overdue tasks");
+  await page.click('.li-status-tabs a[href="#/tasks"]');
+  await page.waitForSelector('.li-status-tabs a[href="#/tasks"].on');
+  assert.ok((await page.locator("#li-view .li-task:not(.st-overdue)").count()) > 0, "All lists every task");
   await page.close();
 });
 
@@ -229,6 +230,23 @@ test("Tasks: a tab on the main page; every task, no filters", async () => {
   await page.waitForSelector("#li-task-results .li-task");
   assert.equal(await page.locator("#li-filters, .li-search, #li-view select[name=priority]").count(), 0, "no filters");
   assert.match(await page.textContent("#li-view .li-h2"), /^\d+ tasks?$/);
+  // One button per status, each with its count; each shows only that status.
+  const statusTabs = page.locator(".li-status-tabs a");
+  assert.deepEqual((await statusTabs.allInnerTexts()).map((t) => t.replace(/\s*\d+$/, "").trim()), ["All", "Available", "Ongoing", "Completed", "Overdue"]);
+  const statusOf = { Available: "st-not_started", Ongoing: "st-in_progress", Completed: "st-completed", Overdue: "st-overdue" };
+  for (const [label, cls] of Object.entries(statusOf)) {
+    const btn = statusTabs.filter({ hasText: label });
+    const count = Number((await btn.innerText()).match(/(\d+)$/)[1]);
+    await btn.click();
+    await page.waitForFunction((l) => document.querySelector(".li-status-tabs .on")?.textContent.startsWith(l), label);
+    const rows = page.locator("#li-task-results .li-task");
+    assert.equal(await rows.count(), count, `${label}: count matches`);
+    for (const c of await rows.evaluateAll((els) => els.map((e) => e.className))) assert.ok(c.includes(cls), `${label}: only ${cls}`);
+  }
+  // The Overview's Overdue tile opens the Overdue button.
+  await page.goto(BASE + "?demo=1");
+  await page.click('.li-tile[data-href="#/tasks?status=overdue"]');
+  await page.waitForSelector('.li-status-tabs .on:has-text("Overdue")');
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -248,6 +266,42 @@ test("settings: the scoring formula is visible and editable; API tokens are show
   const list = await page.locator(".li-tokens").innerText();
   assert.ok(list.includes(token.slice(0, 10)) && !list.includes(token), "only the prefix is listed");
   await page.close();
+});
+
+test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
+  const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
+  const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects"];
+  for (const [width, height] of sizes) {
+    const page = await open("", { width, height });
+    for (const v of views) {
+      await page.goto(BASE + "?demo=1#/" + v);
+      await page.waitForSelector(/^(profile|projects|settings)$/.test(v) ? "#li-back" : "#li-nav .li-nav-link");
+      await page.waitForTimeout(100);
+      const where = `${v || "overview"} at ${width}px`;
+      const r = await page.evaluate(() => {
+        const W = document.documentElement.clientWidth;
+        // Cards and tiles stay inside the screen.
+        const out = [...document.querySelectorAll(".li-card, .li-tile, .today-card, .heat-card, .roadmap-card, .li-project-tile, .li-task")]
+          .filter((e) => e.getClientRects().length && getComputedStyle(e).visibility !== "hidden")
+          .filter((e) => { const b = e.getBoundingClientRect(); return b.width && (b.left < -1 || b.right > W + 1); })
+          .map((e) => e.className);
+        // The top tiles fill every row: none is left alone with empty space beside it.
+        const kpis = document.querySelector("#li-overview .li-kpis");
+        let gaps = [];
+        if (kpis && kpis.getClientRects().length) {
+          const box = kpis.getBoundingClientRect(), rows = new Map();
+          for (const t of kpis.children) { const b = t.getBoundingClientRect(); rows.set(Math.round(b.top), Math.max(rows.get(Math.round(b.top)) || 0, b.right)); }
+          gaps = [...rows.values()].filter((right) => box.right - right > 2);
+        }
+        return { overflow: document.documentElement.scrollWidth - W, out, gaps: gaps.length };
+      });
+      assert.ok(r.overflow <= 0, `${where}: page overflows by ${r.overflow}px`);
+      assert.deepEqual(r.out, [], `${where}: cards off screen`);
+      assert.equal(r.gaps, 0, `${where}: a row of top tiles doesn't reach the edge`);
+    }
+    assert.deepEqual(page.errors, [], `no errors at ${width}px`);
+    await page.close();
+  }
 });
 
 test("every view fits a phone screen without sideways scrolling", async () => {

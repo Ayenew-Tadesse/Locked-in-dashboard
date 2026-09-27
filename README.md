@@ -27,7 +27,7 @@ extended into a productivity and milestone tracker backed by a real database.
   related tasks (or manual), on-track / behind-schedule pace
 - **Calendar:** month view; click a day to see, add and edit its tasks, deadlines and milestones
 - **Analytics:** daily and weekly trends, completion rate, time by category, goal progress
-- **Tasks tab:** every task grouped by day (the Overview's Overdue tile opens just the overdue ones)
+- **Tasks tab:** every task grouped by day, with buttons for All · Available · Ongoing · Completed · Overdue (each with its count)
 - **Warnings:** overdue, deadlines and milestones approaching, quarter ending,
   low completion. At most three, each dismissible for the day.
 - **Year plan to launch (Sep 23, 2027):** quarterly goals, all 23 roadmap milestones, and a ticket for every
