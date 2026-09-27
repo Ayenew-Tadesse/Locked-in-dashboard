@@ -48,7 +48,7 @@ const VIEWS = {
 // Tabs in the top row. The other pages stay reachable by link: Tasks and Week
 // from the Overview, Quarter from its score tile and the Tasks card, Profile
 // and Settings from the ☰ menu (top left).
-const NAV = ["overview", "today", "calendar", "milestones", "analytics"];
+const NAV = ["overview", "today", "tasks", "calendar", "milestones", "analytics"];
 
 const config = window.LOCKEDIN_CONFIG || {};
 // Preview modes come from the URL or, for a preview deployment, config.js.
@@ -164,7 +164,7 @@ document.addEventListener("click", (e) => {
   if (fromMain) history.back(); else location.hash = mainHash;
 });
 
-function render({ keepFocus } = {}) {
+function render() {
   if (!started) return;
   showMyName();
   const r = route();
@@ -183,10 +183,6 @@ function render({ keepFocus } = {}) {
   } catch (e) {
     console.error(e);
     target.innerHTML = `<p class="li-empty">Something went wrong showing this page: ${esc(e.message)}</p>`;
-  }
-  if (keepFocus) {
-    const q = document.querySelector('#li-filters input[name="q"]');
-    if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
   }
   window.scrollTo(0, scrollY);
   navReady = true;
@@ -213,7 +209,7 @@ window.addEventListener("hashchange", () => {
   const key = r.name + "/" + (r.id || "");
   if (key !== lastRoute) { lastRoute = key; if (r.name !== "overview") $("#li-nav").scrollIntoView({ block: "start" }); }
 });
-window.addEventListener("li:rerender", (e) => render(e.detail || {}));
+window.addEventListener("li:rerender", () => render());
 
 // ---------------------------------------------------------------------------
 // Feed the original dashboard cards (checklist, heatmap, rings, daily report)

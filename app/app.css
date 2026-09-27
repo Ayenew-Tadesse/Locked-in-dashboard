@@ -31,6 +31,7 @@ html.li-member .li-tasks-card{display:none;}
 /* Colleagues don't add tasks (hide the old checklist's add box too), and
    their assigned tasks count down instead of the year countdown. */
 html.li-colleague #today-add,html.li-colleague .cd-pin{display:none;}
+.li-tasks-showing{margin:0 0 12px;font-size:13px;color:var(--ink-3);}
 .li-meta.countdown{color:var(--accent);font-variant-numeric:tabular-nums;}
 .li-meta.countdown.danger{color:var(--red);}
 html.li-modal-open{overflow:hidden;}
@@ -264,10 +265,6 @@ button.li-tile{font:inherit;text-align:left;cursor:pointer;}
 .li-dl dd{margin:3px 0 0;font-size:13.5px;color:var(--ink);}
 
 /* ---- Filters --------------------------------------------------------------------- */
-.li-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;}
-.li-filters .li-search{flex:1 1 220px;}
-.li-filters select{flex:0 1 auto;}
-.li-inline{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3);}
 
 /* ---- Milestones -------------------------------------------------------------------- */
 .li-ms-grid{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:12px;}
@@ -440,8 +437,6 @@ button.li-link{background:none;border:none;padding:0;cursor:pointer;font:inherit
   .li-cal-count{position:static;font-size:9.5px;}
   .li-cal-num{font-size:11px;min-width:20px;height:20px;}
   .li-breakdown th:nth-child(4), .li-breakdown td:nth-child(4){display:none;}
-  .li-filters select, .li-filters .li-inline{flex:1 1 40%;}
-  .li-filters .li-inline input{flex:1;}
   .li-bc-sub{display:none;}
   .li-goals li{grid-template-columns:auto minmax(0,1fr);}
   .li-textbar{display:none;}

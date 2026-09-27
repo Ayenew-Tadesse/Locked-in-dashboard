@@ -133,10 +133,13 @@ test("a task with a past deadline becomes overdue automatically, and can be move
   assert.match(await r.getAttribute("class"), /st-overdue/);
   assert.match(await r.innerText(), /OVERDUE/i);
   assert.match(await r.innerText(), /yesterday/);
-  await page.goto(BASE + "?demo=1#/tasks?status=overdue");
-  await page.waitForSelector(".li-filters");
-  assert.equal(await row(page, "E2E: late thing").count(), 1, "shows in the overdue filter");
-  assert.ok((await page.locator(".li-task:not(.st-overdue)").count()) === 0, "filter shows only overdue tasks");
+  await page.goto(BASE + "?demo=1#/tasks?deadline=overdue");
+  await page.waitForSelector(".li-tasks-showing");
+  assert.equal(await row(page, "E2E: late thing").count(), 1, "shows in the overdue list");
+  assert.ok((await page.locator(".li-task:not(.st-overdue)").count()) === 0, "shows only overdue tasks");
+  await page.click(".li-tasks-showing a");
+  await page.waitForFunction(() => location.hash === "#/tasks" && !document.querySelector(".li-tasks-showing"));
+  assert.ok((await page.locator(".li-task:not(.st-overdue)").count()) > 0, "Show all lists every task");
   await page.close();
 });
 
@@ -217,18 +220,16 @@ test("quarter view: switch quarters, add a goal with progress", async () => {
   await page.close();
 });
 
-test("search and filters combine", async () => {
-  const page = await open("tasks");
-  await page.fill(".li-search", "portfolio");
-  await page.waitForFunction(() => location.hash.includes("q=portfolio"));
-  const titles = await page.locator(".li-task-title").allInnerTexts();
-  assert.ok(titles.length > 0);
-  await page.selectOption("#li-filters [name=priority]", "high");
-  await page.waitForFunction(() => location.hash.includes("priority=high"));
-  const metas = await page.locator(".li-task-meta").allInnerTexts();
-  assert.ok(metas.every((m) => /HIGH/i.test(m)), "only high priority");
-  await page.click("text=Clear filters");
+test("Tasks: a tab on the main page; every task, no filters", async () => {
+  const page = await open("");
+  const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+  assert.deepEqual(tabs.slice(0, 4).map((t) => t.trim()), ["Overview", "Today", "Tasks", "Calendar"]);
+  await page.click('#li-nav .li-nav-link:text-is("Tasks")');
   await page.waitForFunction(() => location.hash === "#/tasks");
+  await page.waitForSelector("#li-task-results .li-task");
+  assert.equal(await page.locator("#li-filters, .li-search, #li-view select[name=priority]").count(), 0, "no filters");
+  assert.match(await page.textContent("#li-view .li-h2"), /^\d+ tasks?$/);
+  assert.deepEqual(page.errors, []);
   await page.close();
 });
 
@@ -307,7 +308,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.ok(appFiles.length > 20, "app files requested");
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
   const nav = await page.locator("#li-nav .li-nav-link").allInnerTexts();
-  assert.deepEqual(nav, ["Overview", "Today", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
+  assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
   const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
   assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
@@ -425,7 +426,7 @@ test("team: the owner sees everyone's progress, assigns tasks and invites collea
   // Colleagues' tasks never mix into your own Today.
   assert.equal(await page.locator("#li-view .li-task:visible").filter({ hasText: "(sample)" }).count(), 0);
   const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
-  assert.deepEqual(tabs, ["Overview", "Today", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
+  assert.deepEqual(tabs, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
   await page.click('#li-nav a[href="#/team"]');
   await page.waitForSelector(".li-team-table");
   const rows = await page.locator(".li-team-table tbody tr").allInnerTexts();
@@ -736,9 +737,12 @@ test("phone: tapping a tab near the edge opens it and slides it to the middle", 
   const sc = page.locator("#li-nav .li-nav-scroll");
   assert.equal(await sc.evaluate((e) => e.scrollLeft), 0, "starts at the beginning");
   assert.ok(await sc.evaluate((e) => e.classList.contains("fade-r")), "a fade shows more tabs to the right");
-  // Tap Analytics where it sits, half off the edge.
+  // Swipe the row a little so Analytics sits half off the edge, then tap it there.
   const tab = page.locator('#li-nav a[href="#/analytics"]');
+  await sc.evaluate((e) => { e.scrollLeft += e.querySelector('a[href="#/analytics"]').getBoundingClientRect().left - 335; });
+  await page.waitForTimeout(100);
   const box = await tab.boundingBox();
+  assert.ok(box.x < 370 && box.x + box.width > 375, "Analytics is half off the edge");
   await page.mouse.click(Math.min(box.x + 10, 370), box.y + box.height / 2);
   await page.waitForFunction(() => location.hash === "#/analytics");
   await page.waitForFunction(() => {
