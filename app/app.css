@@ -566,23 +566,16 @@ html.li-page .li-footer{display:none !important;}
 .li-file-pick, .li-file-add{cursor:pointer;align-self:flex-start;}
 
 /* ---- Overview: Tasks and Activity side by side ----------------------------------------- */
-/* From tablets up, the Tasks card sits beside Activity (with the project
-   cards under it): both sides start and end on the same line. A long task
-   list scrolls inside its card. The daily report and the Objective run full
-   width below. Phones keep everything stacked. */
+/* From tablets up, two plain columns: the Tasks card (and the daily report)
+   on the left; Activity, the project cards and the Objective on the right.
+   Every card hugs its content and nothing sticks while scrolling. Phones keep
+   everything stacked. */
 @media (min-width:700px){
   html.app-mode .dash-grid{
-    display:grid;grid-template-columns:minmax(300px, 5fr) minmax(0, 7fr);grid-template-rows:auto auto;
-    gap:14px 20px;align-items:stretch;
+    display:grid;grid-template-columns:minmax(300px, 5fr) minmax(0, 7fr);gap:20px;align-items:start;
   }
-  html.app-mode .dash-col{display:contents;}
-  html.app-mode #li-tasks-card{grid-column:1;grid-row:1 / span 2;margin:0;
-    height:0;min-height:max(100%, 400px);overflow-y:auto;scrollbar-width:thin;}
-  html.app-mode #heat-card{grid-column:2;grid-row:1;margin:0;display:flex;flex-direction:column;}
-  html.app-mode #heat-card .heat-foot{margin-top:auto;}
-  html.app-mode #li-projects{grid-column:2;grid-row:2;}
-  html.app-mode #li-projects .li-project-grid{margin-top:0;}
-  html.app-mode #report-card{grid-column:1 / -1;grid-row:3;margin:0;}
-  html.app-mode .obj-section{grid-column:1 / -1;grid-row:4;}
-  html.app-mode .obj-section > .roadmap-card{margin-top:0;}
+  html.app-mode .dash-col-a, html.app-mode .dash-col-a.report-open{position:static;}
+  html.app-mode .dash-col-b{margin-top:0;}
+  html.app-mode #heat-card{margin-top:0;}
 }
+.li-tc-foot:not(:has(a, button)){display:none;}
