@@ -290,7 +290,7 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
         let gaps = [];
         if (kpis && kpis.getClientRects().length) {
           const box = kpis.getBoundingClientRect(), rows = new Map();
-          for (const t of kpis.children) { const b = t.getBoundingClientRect(); rows.set(Math.round(b.top), Math.max(rows.get(Math.round(b.top)) || 0, b.right)); }
+          for (const t of [...kpis.children].filter((c) => c.getClientRects().length)) { const b = t.getBoundingClientRect(); rows.set(Math.round(b.top), Math.max(rows.get(Math.round(b.top)) || 0, b.right)); }
           gaps = [...rows.values()].filter((right) => box.right - right > 2);
         }
         return { overflow: document.documentElement.scrollWidth - W, out, gaps: gaps.length };
@@ -307,10 +307,22 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
     const [tasks, heat] = [await box("#li-tasks-card"), await box("#heat-card")];
     if (width >= 700) assert.ok(Math.abs(tasks.y - heat.y) < 1 && tasks.x + tasks.width <= heat.x, `side by side at ${width}px`);
     else assert.ok(heat.y >= tasks.y + tasks.height, `stacked on a phone (${width}px)`);
-    // The Objective card sits right under the Tasks card (before Activity on phones).
+    // Tablets and up: the Objective card sits right under the Tasks card.
+    // Phones, top to bottom: ☰, greeting, quote, tabs, the 4 tracking cards,
+    // Tasks, Activity, apps, Objective.
     const obj = await box(".obj-section");
-    assert.ok(Math.abs(obj.x - tasks.x) < 1 && obj.y >= tasks.y + tasks.height && obj.y - (tasks.y + tasks.height) < 40, `Objective under Tasks at ${width}px`);
-    if (width < 700) assert.ok(obj.y < heat.y, `Objective before Activity on a phone (${width}px)`);
+    if (width >= 700) {
+      assert.ok(Math.abs(obj.x - tasks.x) < 1 && obj.y >= tasks.y + tasks.height && obj.y - (tasks.y + tasks.height) < 40, `Objective under Tasks at ${width}px`);
+    } else {
+      const order = ["#li-menu-btn", ".wrap > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#heat-card", "#li-projects", ".obj-section"];
+      const tops = [];
+      for (const sel of order) tops.push((await box(sel)).y);
+      assert.deepEqual(tops, [...tops].sort((a, b) => a - b), `phone order at ${width}px: ${order.join(" > ")}`);
+      const tiles = await page.locator("#li-overview .li-kpis > *:visible .li-tile-label").allInnerTexts();
+      assert.deepEqual(tiles.map((t) => t.toLowerCase()), ["today's progress", "daily score", "weekly score", "overdue"], "4 tracking cards on a phone");
+      const t = await page.locator("#li-overview .li-kpis > *:visible").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+      assert.ok(t[0] === t[1] && t[2] === t[3] && t[2] > t[0], "2 x 2");
+    }
     const overlaps = () => page.evaluate(() => {
       const els = [...document.querySelectorAll("#li-overview, #li-tasks-card, #report-card, #heat-card, #li-projects, .roadmap-card")].filter((e) => e.getClientRects().length);
       const out = [];
@@ -346,8 +358,8 @@ test("every view fits a phone screen without sideways scrolling", async () => {
     assert.deepEqual(page.errors, [], `${v || "overview"} has no errors`);
     await page.close();
   }
-  const page = await open("", { width: 375, height: 800 });
-  await page.click(".li-tile-add");
+  const page = await open("today", { width: 375, height: 800 });
+  await page.click(".li-view-head [data-new-task]");
   const modal = await page.locator("#li-modal .modal").boundingBox();
   assert.ok(modal.width <= 375, "task form fits the phone");
   await page.close();
