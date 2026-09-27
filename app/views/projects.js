@@ -69,6 +69,7 @@ export function openProjectForm(p = {}) {
     body: `
         <label class="li-field">Name<input name="name" maxlength="80" required value="${esc(p.name || "")}"></label>
         <label class="li-field">Code<input name="code" maxlength="8" placeholder="e.g. FLT" value="${esc(p.code || "")}"></label>
+        <label class="li-field full">Description <small class="li-muted">(shown on the Overview card)</small><input name="description" maxlength="300" placeholder="e.g. Book flights across Ethiopia" value="${esc(p.description || "")}"></label>
         <label class="li-field">Category<input name="category" maxlength="120" placeholder="e.g. Flight booking" value="${esc(p.category || "")}"></label>
         <label class="li-field">Stage<input name="stage" maxlength="120" placeholder="e.g. Case study drafted" value="${esc(p.stage || "")}"></label>
         <label class="li-field">Status<select name="status">${Object.entries(PROJECT_STATUSES).map(([k, v]) => `<option value="${k}"${(p.status || "idle") === k ? " selected" : ""}>${v}</option>`).join("")}</select></label>
@@ -98,7 +99,7 @@ export function openProjectForm(p = {}) {
       })).filter((it) => it.text);
       await saveProject({
         ...(editing ? { id: p.id } : {}),
-        name: v.name.trim(), code: v.code.trim() || null, category: v.category.trim() || null, stage: v.stage.trim() || null,
+        name: v.name.trim(), code: v.code.trim() || null, description: v.description.trim() || null, category: v.category.trim() || null, stage: v.stage.trim() || null,
         status: v.status, facts: v.facts.split("\n").map((s) => s.trim()).filter(Boolean), links, checklist,
       });
       toast(editing ? "Project saved" : "Project added");

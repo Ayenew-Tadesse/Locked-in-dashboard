@@ -22,6 +22,7 @@ export function projectsFromLegacy(legacy) {
     name: String(a.name || "Project").slice(0, 80),
     code: a.routeCode ? String(a.routeCode).slice(0, 8) : null,
     category: a.category || null,
+    description: a.category || null,
     stage: a.stage || null,
     status: ["good", "warn", "idle"].includes(a.statusLevel) ? a.statusLevel : "idle",
     facts: (a.facts || []).filter(Boolean),
@@ -35,4 +36,9 @@ export function projectsFromLegacy(legacy) {
 /** Only http(s) links are shown as links. */
 export function safeUrl(u) {
   return typeof u === "string" && /^https?:\/\//i.test(u.trim()) ? u.trim() : null;
+}
+
+/** The card's one-line description (falls back to the category). */
+export function projectBlurb(p) {
+  return (p?.description || p?.category || "").trim();
 }

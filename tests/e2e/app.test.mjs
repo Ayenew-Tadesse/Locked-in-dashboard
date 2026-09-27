@@ -744,21 +744,29 @@ test("phone: tapping a tab near the edge opens it and slides it to the middle", 
   await page.close();
 });
 
-test("projects: a card each under Activity; the owner adds, edits, reorders and deletes them", async () => {
+test("projects: small cards (3 a row) under Activity; details on tap; the owner adds, edits, reorders and deletes", async () => {
   const page = await open("", { width: 390, height: 900 });
-  // The original apps were copied in and show as cards, not as buttons in the Activity card.
-  await page.waitForSelector("#li-projects .li-project");
-  assert.deepEqual(await page.locator("#li-projects .li-project-name").allInnerTexts(), ["Guxo Flights", "Guxo", "Gexi"]);
+  // The original apps were copied in and show as small cards, not as buttons in the Activity card.
+  await page.waitForSelector("#li-projects .li-project-tile");
+  assert.deepEqual(await page.locator("#li-projects .li-pt-name").allInnerTexts(), ["Guxo Flights", "Guxo", "Gexi"]);
   assert.ok(await page.locator("#app-chips").isHidden(), "no project buttons in the Activity card");
-  const heat = await page.locator("#heat-card").boundingBox(), first = await page.locator("#li-projects .li-project").first().boundingBox();
-  assert.ok(first.y > heat.y + heat.height - 1, "cards sit under the Activity card");
-  const flights = page.locator('#li-projects .li-project[aria-label="Guxo Flights"]');
-  assert.match(await flights.innerText(), /FLT[\s\S]*ON TRACK[\s\S]*Web app[\s\S]*of 6 done/i);
-  // Tick a checklist item on the card.
-  const before = await flights.locator(".li-progress-line > span:last-child").innerText();
-  const item = await flights.locator("input[type=checkbox]:not(:checked)").first().getAttribute("data-item");
-  await flights.locator(`input[data-item="${item}"]`).click();
-  await page.waitForFunction((b) => document.querySelector('#li-projects .li-project[aria-label="Guxo Flights"] .li-progress-line > span:last-child').textContent !== b, before);
+  const tiles = page.locator("#li-projects .li-project-tile");
+  const heat = await page.locator("#heat-card").boundingBox(), boxes = await Promise.all([0, 1, 2].map((i) => tiles.nth(i).boundingBox()));
+  assert.ok(boxes[0].y > heat.y + heat.height - 1, "cards sit under the Activity card");
+  assert.ok(boxes.every((b) => Math.abs(b.y - boxes[0].y) < 1), "three in a row, even on a phone");
+  assert.ok(boxes[2].x + boxes[2].width <= 390, "all fit on screen");
+  // Only the name, a description and progress.
+  const flightsTile = page.locator('#li-projects .li-project-tile[aria-label^="Guxo Flights"]');
+  assert.deepEqual((await flightsTile.innerText()).split("\n").map((t) => t.trim()).filter(Boolean), ["Guxo Flights", "Flight booking", "33%"]);
+  // Tap for the details; tick a checklist item there.
+  await flightsTile.click();
+  const detail = page.locator("#li-modal .li-project-detail");
+  assert.match(await page.locator("#li-modal").innerText(), /FLT[\s\S]*ON TRACK[\s\S]*Web app[\s\S]*2 of 6 done/i);
+  const item = await detail.locator("input[type=checkbox]:not(:checked)").first().getAttribute("data-item");
+  await detail.locator(`input[data-item="${item}"]`).click();
+  await page.waitForFunction(() => /3 of 6 done/.test(document.querySelector("#li-modal .li-project-detail")?.textContent || ""));
+  await page.click("#li-modal [data-close]:has-text('Close')");
+  await page.waitForFunction(() => /50%/.test(document.querySelector('#li-projects .li-project-tile[aria-label^="Guxo Flights"]').textContent));
   // Projects page from the ☰ menu.
   await page.click("#li-menu-btn");
   await page.click('#li-menu a[href="#/projects"]');
@@ -767,6 +775,7 @@ test("projects: a card each under Activity; the owner adds, edits, reorders and 
   await page.click("#li-project-add");
   await page.fill("#li-modal [name=name]", "Gexi Pay");
   await page.fill("#li-modal [name=code]", "PAY");
+  await page.fill("#li-modal [name=description]", "Payments inside Gexi");
   await page.selectOption("#li-modal [name=status]", "warn");
   await page.fill("#li-modal [name=facts]", "Payments for Gexi\nTelebirr first");
   await page.fill("#li-modal [name=link_web]", "not a link");
@@ -791,10 +800,13 @@ test("projects: a card each under Activity; the owner adds, edits, reorders and 
   await page.waitForFunction(() => [...document.querySelectorAll(".li-project-list .li-project-row-name")].map((b) => b.textContent).join() === "Guxo Flights,Gexi Pay,Gexi");
   // The Overview cards follow.
   await page.click('#li-nav a[href="#/"]');
-  await page.waitForSelector("#li-projects .li-project");
-  assert.deepEqual(await page.locator("#li-projects .li-project-name").allInnerTexts(), ["Guxo Flights", "Gexi Pay", "Gexi"]);
-  const pay = page.locator('#li-projects .li-project[aria-label="Gexi Pay"]');
-  assert.match(await pay.innerText(), /PAY[\s\S]*NEEDS ATTENTION[\s\S]*Designing[\s\S]*Telebirr first[\s\S]*Web app[\s\S]*0 of 1 done/i);
+  await page.waitForSelector("#li-projects .li-project-tile");
+  assert.deepEqual(await page.locator("#li-projects .li-pt-name").allInnerTexts(), ["Guxo Flights", "Gexi Pay", "Gexi"]);
+  const payTile = page.locator('#li-projects .li-project-tile[aria-label^="Gexi Pay"]');
+  assert.match(await payTile.innerText(), /Gexi Pay[\s\S]*Payments inside Gexi[\s\S]*0%/);
+  await payTile.click();
+  const pay = page.locator("#li-modal .li-project-detail");
+  assert.match(await page.locator("#li-modal").innerText(), /PAY[\s\S]*NEEDS ATTENTION[\s\S]*Designing[\s\S]*Telebirr first[\s\S]*Web app[\s\S]*0 of 1 done/i);
   assert.equal(await pay.locator('a[href="https://gexi.example/pay"]').getAttribute("target"), "_blank");
   assert.deepEqual(page.errors, []);
   await page.close();
