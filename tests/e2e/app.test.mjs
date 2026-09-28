@@ -48,6 +48,8 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   return page;
 }
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+// On weekdays the demo's two sample colleagues each have a task in progress today.
+const colleaguesToday = () => ([0, 6].includes(new Date().getDay()) ? 0 : 2);
 function shift(key, n) { const d = new Date(key + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // Completing a task asks for a Learning log; tests that don't need it skip it.
 async function skipLearningLog(page) {
@@ -106,11 +108,12 @@ test("complete, reopen and change status; scores and the original checklist upda
   assert.match(await row(page, "Test keyboard handling on iOS").getAttribute("class"), /st-completed/);
   const scoreAfter = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
   assert.ok(parseInt(scoreAfter) > parseInt(scoreBefore), `score rose (${scoreBefore} -> ${scoreAfter})`);
-  // The Overview's Tasks card reflects it too: 3 of the team's 5 today.
+  // The Overview's Tasks card reflects it too: 3 of the team's 5 today
+  // (7 on weekdays, when the sample colleagues are working too).
   // (Switch tabs in-page: reloading would reset the demo data.)
   await page.click('#li-nav a[href="#/"]');
   await page.waitForSelector("#li-tasks-card:not([hidden]) .today-progress");
-  assert.equal(await page.locator("#li-tasks-card .today-progress").innerText(), "3/5");
+  assert.equal(await page.locator("#li-tasks-card .today-progress").innerText(), `3/${5 + colleaguesToday()}`);
   await page.click('#li-nav a[href="#/today"]');
   await row(page, "Test keyboard handling on iOS").waitFor();
 
@@ -307,14 +310,16 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
     const [tasks, heat] = [await box("#li-tasks-card"), await box("#heat-card")];
     if (width >= 700) assert.ok(Math.abs(tasks.y - heat.y) < 1 && tasks.x + tasks.width <= heat.x, `side by side at ${width}px`);
     else assert.ok(heat.y >= tasks.y + tasks.height, `stacked on a phone (${width}px)`);
-    // Tablets and up: the Objective card sits right under the Tasks card.
+    // Tablets and up: Tasks, then the Team card, then the Objective card.
     // Phones, top to bottom: ☰, greeting, quote, tabs, the 4 tracking cards,
-    // Tasks, Activity, apps, Objective.
-    const obj = await box(".obj-section");
+    // Tasks, Team, Activity, apps, Objective.
+    const obj = await box(".obj-section"), team = await box("#li-team-card");
+    const under = (a, b) => Math.abs(a.x - b.x) < 1 && a.y >= b.y + b.height && a.y - (b.y + b.height) < 40;
     if (width >= 700) {
-      assert.ok(Math.abs(obj.x - tasks.x) < 1 && obj.y >= tasks.y + tasks.height && obj.y - (tasks.y + tasks.height) < 40, `Objective under Tasks at ${width}px`);
+      assert.ok(under(team, tasks), `Team under Tasks at ${width}px`);
+      assert.ok(under(obj, team), `Objective under Team at ${width}px`);
     } else {
-      const order = ["#li-menu-btn", ".wrap > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#heat-card", "#li-projects", ".obj-section"];
+      const order = ["#li-menu-btn", ".wrap > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#li-team-card", "#heat-card", "#li-projects", ".obj-section"];
       const tops = [];
       for (const sel of order) tops.push((await box(sel)).y);
       assert.deepEqual(tops, [...tops].sort((a, b) => a - b), `phone order at ${width}px: ${order.join(" > ")}`);
@@ -425,8 +430,9 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   const gridTop = (await page.locator(".dash-grid").boundingBox()).y;
   assert.ok(Math.abs((await card.boundingBox()).y - gridTop) < 2, "Tasks card leads the left column");
   // Day view: the whole team's tasks for today, grouped, with who's in charge.
-  assert.match(await card.locator(".today-progress").innerText(), /^2\/5$/);
-  assert.deepEqual(await card.locator(".li-tc-group-title").allInnerTexts(), ["AVAILABLE (2)", "ONGOING (1)", "COMPLETED (2)"], "Available / Ongoing / Completed");
+  const extra = colleaguesToday();
+  assert.equal(await card.locator(".today-progress").innerText(), `2/${5 + extra}`);
+  assert.deepEqual(await card.locator(".li-tc-group-title").allInnerTexts(), ["AVAILABLE (2)", `ONGOING (${1 + extra})`, "COMPLETED (2)"], "Available / Ongoing / Completed");
   const bens = card.locator(".li-task", { hasText: "Test the booking flow on Android" });
   assert.match(await bens.innerText(), /👤 Ben \(sample\)/, "a colleague's task names who's in charge");
   assert.match(await card.locator(".li-task").first().innerText(), /👤 (You|Ben \(sample\))/);
@@ -434,7 +440,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   // Add one from the card (it's yours).
   await card.locator("input[name=title]").fill("E2E card task");
   await card.locator("button[type=submit]").click();
-  await page.waitForFunction(() => document.querySelector("#li-tasks-card .today-progress").textContent === "2/6");
+  await page.waitForFunction((n) => document.querySelector("#li-tasks-card .today-progress").textContent === `2/${n}`, 6 + extra);
   assert.match(await card.locator(".li-task", { hasText: "E2E card task" }).innerText(), /👤 You/);
   // Week / Month / Quarter switch the period and the completion level.
   for (const p of ["week", "month", "quarter"]) {
@@ -768,6 +774,7 @@ test("colleagues get a read-only Tasks card (Available / Completed) on their Ove
   assert.match(await card.locator('[data-group="open"]').innerText(), /Design the payment screen/);
   // Nothing to tick, change, delete, add or open for editing.
   assert.equal(await card.locator("button.li-check, [data-act], select, form, [data-report]").count(), 0, "read-only");
+  assert.ok(await page.locator("#li-team-card").isHidden(), "colleagues don't see the Team card");
   await card.locator(".li-task-title").first().click();
   assert.equal(await page.locator("#li-modal").count(), 0, "tapping a task doesn't open the edit form");
   // The periods still switch.
@@ -979,6 +986,12 @@ test("the owner still adds tasks and keeps the year countdown", async () => {
   assert.equal(await page.locator(".li-tile-add[data-new-task]").count(), 1);
   assert.ok(await page.locator(".cd-pin").isVisible());
   assert.equal(await page.locator("#obj-text").count(), 0, "no objective sentence above the Objective card");
+  // The Team card lists everyone with their role; a person opens their Team page.
+  const team = page.locator("#li-team-card");
+  assert.ok(await team.isVisible(), "the owner sees the Team card");
+  assert.match(await team.locator(".li-tm-row").first().innerText(), /aye[\s\S]*\(you\)[\s\S]*Owner/i);
+  await team.locator(".li-tm-row").first().click();
+  await page.waitForFunction(() => location.hash === "#/team/u1");
   assert.deepEqual(page.errors, []);
   await page.close();
 });

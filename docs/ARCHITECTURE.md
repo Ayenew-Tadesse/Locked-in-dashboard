@@ -231,3 +231,10 @@ status, files, learning log).
 * Colleagues get the Overview's Tasks card too, read-only: their own tasks as
   Available (not started or in progress) and Completed, with the Day / Week /
   Month / Quarter switch but no tick, status, delete, edit or Daily report.
+
+## Team card on the Overview (added later)
+
+Under the Tasks card, the owner sees a Team card (`app/views/team-card.js`):
+everyone on the team with their initials, display name and role (Owner /
+Colleague), owner first. Tapping a person opens their Team page. Colleagues
+don't see it. On phones it sits between Tasks and Activity.

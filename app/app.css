@@ -592,3 +592,16 @@ html.app-mode .roadmap-card{container-type:inline-size;}
 @media (max-width:699px){
   html.app-mode .li-tile-add{display:none;}
 }
+
+/* Team card (owner only), under the Tasks card: everyone and their role. */
+html:not(.app-mode) .li-team-card{display:none;}
+.li-tm-count{font-size:12px;}
+.li-tm-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.li-tm-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
+  color:inherit;text-decoration:none;min-width:0;}
+.li-tm-row:hover, .li-tm-row:focus-visible{border-color:var(--accent);outline:none;}
+.li-tm-row .li-avatar{width:30px;height:30px;font-size:11px;}
+.li-tm-name{flex:1;min-width:0;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.li-tm-role{flex:none;font-size:10.5px;}
+.li-tm-role.owner{background:var(--accent-soft);color:var(--accent);}
+.li-tm-empty{margin:10px 0 0;}

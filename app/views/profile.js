@@ -5,7 +5,8 @@ import { esc } from "../ui/dom.js";
 import { displayName, greetingOptions, canGreet } from "../core/people.js";
 
 export function initials(name) {
-  const parts = (name || "").replace(/^(mr|ms|mrs|dr)\.\s+/i, "").trim().split(/\s+/).filter(Boolean);
+  // Words only: "Ana (sample)" -> "A", "Mr. Ayenew Shiferaw" -> "AS".
+  const parts = (name || "").replace(/^(mr|ms|mrs|dr)\.\s+/i, "").trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
   return ((parts[0]?.[0] || "") + (parts.length > 1 ? parts.at(-1)[0] : "")).toUpperCase() || "?";
 }
 
