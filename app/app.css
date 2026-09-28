@@ -669,3 +669,7 @@ html.li-modal-open .li-chat:not([data-open="true"]){display:none;}
 .li-chat-form textarea{flex:1;resize:none;min-height:38px;max-height:120px;font:inherit;font-size:14px;padding:8px 10px;border-radius:10px;
   border:1px solid var(--line);background:var(--surface-2);color:var(--ink);}
 @media print{ .li-chat{display:none;} }
+/* Outside the open tray: tapping it closes the chat. Dimmed on phones only. */
+.li-chat-scrim{position:fixed;inset:0;z-index:44;background:rgba(5,10,20,.45);}
+.li-chat-scrim[hidden]{display:none;}
+@media (min-width:700px){ .li-chat-scrim{background:transparent;} }

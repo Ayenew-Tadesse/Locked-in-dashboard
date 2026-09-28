@@ -6,7 +6,7 @@ import { state, sendMessage, deleteMessage, receiveMessage, forgetMessage, membe
 import { esc, confirmDialog, showToast } from "./dom.js";
 import { formatDay } from "../core/dates.js";
 
-let root, convo = "group", stopLive = null;
+let root, scrim, convo = "group", stopLive = null;
 const READ_KEY = "li_chat_read";
 
 const available = () => Array.isArray(state.messages) && !!state.team && state.members.length > 1;
@@ -54,7 +54,12 @@ export function setupChat() {
         <button type="submit" class="li-btn primary small">Send</button>
       </form>
     </section>`;
-  document.body.appendChild(root);
+  // Behind the open tray: a tap anywhere outside it closes the chat (dimmed on phones).
+  scrim = document.createElement("div");
+  scrim.className = "li-chat-scrim";
+  scrim.hidden = true;
+  scrim.addEventListener("click", () => closeChat());
+  document.body.append(scrim, root);
   document.documentElement.classList.add("li-has-chat");
   wire();
   paint();
@@ -68,6 +73,7 @@ export function openChat(key) {
   root.dataset.open = "true";
   root.querySelector(".li-chat-handle").setAttribute("aria-expanded", "true");
   root.querySelector(".li-chat-panel").hidden = false;
+  scrim.hidden = false;
   markRead(convo);
   paint();
   root.querySelector("textarea").focus({ preventScroll: true });
@@ -77,6 +83,7 @@ export function closeChat() {
   root.dataset.open = "false";
   root.querySelector(".li-chat-handle").setAttribute("aria-expanded", "false");
   root.querySelector(".li-chat-panel").hidden = true;
+  scrim.hidden = true;
   paint();
 }
 
@@ -165,4 +172,4 @@ function paint() {
 }
 
 /** For tests and sign-out: stop live updates and remove the chat. */
-export function teardownChat() { stopLive?.(); stopLive = null; root?.remove(); root = null; document.documentElement.classList.remove("li-has-chat"); }
+export function teardownChat() { stopLive?.(); stopLive = null; root?.remove(); root = null; scrim?.remove(); scrim = null; document.documentElement.classList.remove("li-has-chat"); }
