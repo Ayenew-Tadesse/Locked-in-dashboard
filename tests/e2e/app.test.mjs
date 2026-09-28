@@ -48,6 +48,11 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   return page;
 }
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+// A ☰ item: from the ☰ drawer on phones and tablets, from the tab row on laptops and desktops.
+async function menuItem(page, sel) {
+  if (await page.locator("#li-menu-btn").isVisible()) { await page.click("#li-menu-btn"); return page.locator(`#li-menu ${sel}`); }
+  return page.locator(`#li-nav-extra ${sel}`);
+}
 // On weekdays the demo's two sample colleagues each have a task in progress today.
 const colleaguesToday = () => ([0, 6].includes(new Date().getDay()) ? 0 : 2);
 function shift(key, n) { const d = new Date(key + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
@@ -226,7 +231,7 @@ test("quarter view: switch quarters, add a goal with progress", async () => {
 
 test("Tasks: a tab on the main page; every task, no filters", async () => {
   const page = await open("");
-  const tabs = (await page.locator("#li-nav .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
+  const tabs = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(tabs.slice(0, 4).map((t) => t.trim()), ["Overview", "Today", "Tasks", "Calendar"]);
   await page.click('#li-nav [data-view=tasks]');
   await page.waitForFunction(() => location.hash === "#/tasks");
@@ -331,6 +336,28 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   await page.click('#li-nav a[href="#/"]');
   const ben = page.locator("#li-team-card .li-tm-row", { hasText: "Ben" });
   assert.ok(Number(await ben.locator(".li-nav-dot").innerText()) >= 1);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("laptops and desktops: the ☰ items sit in the tab row; phones keep the ☰", async () => {
+  const page = await open("", { width: 1280, height: 800 });
+  assert.ok(await page.locator("#li-menu-btn").isHidden(), "no ☰ on a wide screen");
+  const extra = page.locator("#li-nav-extra");
+  assert.deepEqual((await extra.locator(".li-nav-link").allInnerTexts()).map((t) => t.trim()), ["Profile", "Projects", "Settings", "☀", "Log out"]);
+  const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), ext = await extra.boundingBox();
+  assert.ok(Math.abs(tabs.y - ext.y) < 12 && ext.x >= tabs.x + tabs.width - 1, "same line, on the right");
+  // Light / Dark from the bar.
+  await extra.locator(".li-nav-theme").click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
+  assert.equal(await extra.locator(".li-nav-theme").innerText(), "☾");
+  await extra.locator(".li-nav-theme").click();
+  await extra.locator('a[href="#/settings"]').click();
+  await page.waitForSelector(".li-formula");
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.click("#li-back");
+  await page.waitForSelector("#li-menu-btn", { state: "visible" });
+  assert.ok(await extra.isHidden(), "phones use the ☰ instead");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -475,7 +502,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   const appFiles = requests.filter((u) => /\/app\/.+\.(js|css)/.test(u));
   assert.ok(appFiles.length > 20, "app files requested");
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
-  const nav = (await page.locator("#li-nav .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
+  const nav = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
   const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
   assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
@@ -486,7 +513,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   // New task is the first tile, before Today's progress, and opens the form.
   const tiles = await page.locator("#li-overview .li-kpis .li-tile-label").allInnerTexts();
   assert.deepEqual(tiles.slice(0, 2).map((t) => t.toLowerCase()), ["new task", "today's progress"]);
-  assert.equal(await page.locator("#li-nav button").count(), 0, "no New task button in the tab row");
+  assert.equal(await page.locator("#li-nav [data-new-task]").count(), 0, "no New task button in the tab row");
   await page.click(".li-tile-add");
   await page.waitForSelector("#li-modal [name=title]");
   await page.locator("#li-modal [data-close]").first().click();
@@ -518,8 +545,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.ok(await page.locator("#report-card").isVisible());
   // Settings lives in the ☰ menu (no longer in the footer).
   assert.equal(await page.locator('#li-footer-links a[href="#/settings"]').count(), 0);
-  await page.click("#li-menu-btn");
-  await page.click('#li-menu a[href="#/settings"]');
+  await (await menuItem(page, 'a[href="#/settings"]')).click();
   await page.waitForSelector(".li-formula");
   assert.ok(await page.locator("#li-menu").isHidden(), "the menu closes after choosing");
   // It opens as its own page: no greeting, quote or tabs; Back returns to the main page.
@@ -594,7 +620,7 @@ test("team: the owner sees everyone's progress, assigns tasks and invites collea
   const page = await open("today");
   // Colleagues' tasks never mix into your own Today.
   assert.equal(await page.locator("#li-view .li-task:visible").filter({ hasText: "(sample)" }).count(), 0);
-  const tabs = (await page.locator("#li-nav .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
+  const tabs = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(tabs, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
   await page.click('#li-nav a[href="#/team"]');
   await page.waitForSelector(".li-team-table");
@@ -662,8 +688,7 @@ test("previews stay behind the password screen until unlocked", async () => {
   await page.reload();
   await page.waitForSelector("#li-nav .li-nav-link");
   assert.ok(await page.locator("#logout-btn").isHidden(), "no Log out button on the front page");
-  await page.click("#li-menu-btn");
-  await page.click("#li-menu [data-logout]");
+  await (await menuItem(page, "[data-logout]")).click();
   assert.ok(await page.locator("#gate").isVisible(), "Log out (from the ☰ menu) locks the preview");
   await page.close();
 });
@@ -901,8 +926,7 @@ test("refreshing never flashes the original page: a spinner shows until the app 
   assert.ok(await page.locator("#today-card").isHidden());
   assert.ok(await page.locator("#logout-btn").isHidden(), "no Log out on the front page");
   await page.evaluate(() => document.querySelector("#li-modal")?.remove());
-  await page.click("#li-menu-btn");
-  assert.ok(await page.locator("#li-menu [data-logout]").isVisible(), "Log out is in the menu");
+  assert.ok(await (await menuItem(page, "[data-logout]")).isVisible(), "Log out is in the menu");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -969,8 +993,7 @@ test("projects: small cards (3 a row) under Activity; details on tap; the owner 
   await page.click("#li-modal [data-close]:has-text('Close')");
   await page.waitForFunction(() => /50%/.test(document.querySelector('#li-projects .li-project-tile[aria-label^="Guxo Flights"]').textContent));
   // Projects page from the ☰ menu.
-  await page.click("#li-menu-btn");
-  await page.click('#li-menu a[href="#/projects"]');
+  await (await menuItem(page, 'a[href="#/projects"]')).click();
   await page.waitForSelector(".li-project-list");
   // Add one with a checklist item.
   await page.click("#li-project-add");
@@ -1017,8 +1040,7 @@ test("projects: members see the cards but can't change them", async () => {
   const page = await dbPage({ signedIn: true, role: "member" });
   await page.waitForSelector("#li-nav .li-nav-link");
   await page.evaluate(() => document.querySelector("#li-modal")?.remove());
-  await page.click("#li-menu-btn");
-  assert.equal(await page.locator('#li-menu a[href="#/projects"]').count(), 0, "no Projects page in a member's menu");
+  assert.equal(await (await menuItem(page, 'a[href="#/projects"]')).count(), 0, "no Projects page in a member's menu");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -1080,8 +1102,7 @@ test("☰ menu pages open full screen; Back returns to the same spot on the main
   assert.equal(await page.evaluate(() => location.hash), "", "back on the main page");
   assert.ok(Math.abs((await page.evaluate(() => window.scrollY)) - y) < 5, "scrolled back to where you were");
   // The phone's back does the same.
-  await page.click("#li-menu-btn");
-  await page.click('#li-menu a[href="#/settings"]');
+  await (await menuItem(page, 'a[href="#/settings"]')).click();
   await page.waitForSelector("#li-back");
   await page.goBack();
   await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });

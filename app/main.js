@@ -26,7 +26,7 @@ import { renderSettings } from "./views/settings.js";
 import { renderProfile } from "./views/profile.js";
 import { renderProjects } from "./views/projects.js";
 import { renderProjectCards } from "./views/project-cards.js";
-import { setupMenu } from "./ui/menu.js";
+import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { renderTeamCard } from "./views/team-card.js";
@@ -80,6 +80,7 @@ function renderNav(active) {
     $("#li-nav").innerHTML = `<div class="li-nav-scroll" data-tabs="${tabs.join()}">${tabs.map((k) =>
       `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link" data-view="${k}">${VIEWS[k].label}</a>`).join("")}</div>`;
     sc = $("#li-nav .li-nav-scroll");
+    $("#li-nav").insertAdjacentHTML("beforeend", `<div class="li-nav-extra" id="li-nav-extra" aria-label="Menu"></div>`);
     sc.addEventListener("scroll", () => navFades(sc), { passive: true });
     window.addEventListener("resize", () => navFades(sc));
   }
@@ -101,6 +102,7 @@ function renderNav(active) {
     a.classList.toggle("active", on);
     if (on) { a.setAttribute("aria-current", "page"); current = a; } else a.removeAttribute("aria-current");
   });
+  renderMenuBar($("#li-nav-extra"));
   if (current && (fresh || active !== navActive)) centerTab(sc, current, !fresh);
   navActive = active;
   navFades(sc);
