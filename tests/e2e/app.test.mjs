@@ -395,10 +395,27 @@ test("team chat: pull up the tray, group and one-to-one chats, unread counts, se
   await mine.locator(".li-chat-del").click();
   await page.locator("#li-modal button[type=submit]").click();
   await mine.waitFor({ state: "detached" });
-  // Esc closes; everything is read now.
+  // Clicks inside the tray keep it open; a tap on the page outside closes it
+  // (without pressing what's underneath).
+  await chat.locator(".li-chat-log").click();
+  assert.ok(await chat.locator(".li-chat-panel").isVisible(), "a click inside keeps it open");
+  const hash = await page.evaluate(() => location.hash);
+  await page.mouse.click(195, 60);
+  await chat.locator(".li-chat-panel").waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => location.hash), hash, "the tap only closed the chat");
+  // Esc closes too; everything is read now.
+  await handle.click();
+  await chat.locator(".li-chat-panel").waitFor();
   await page.keyboard.press("Escape");
   await chat.locator(".li-chat-panel").waitFor({ state: "hidden" });
   assert.ok(await chat.locator(".li-chat-unread").isHidden(), "nothing unread");
+  // Laptop: no dim, but a click outside still closes it.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await handle.click();
+  await chat.locator(".li-chat-panel").waitFor();
+  assert.equal(await page.locator(".li-chat-scrim").evaluate((e) => getComputedStyle(e).backgroundColor), "rgba(0, 0, 0, 0)");
+  await page.mouse.click(200, 400);
+  await chat.locator(".li-chat-panel").waitFor({ state: "hidden" });
   assert.deepEqual(page.errors, []);
   await page.close();
 });
