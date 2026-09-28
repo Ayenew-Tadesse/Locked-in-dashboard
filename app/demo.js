@@ -125,11 +125,11 @@ export function sampleColleagues(today = todayKey(), ownerId = "demo") {
     due_date: addDays(today, 2), priority: "high", status: "not_started", completion_percentage: 0, category: "Engineering",
     estimated_minutes: 90, created_at: today + "T08:30:00Z" });
   // A few sample chat messages (group and one direct message to the owner).
-  const at = (h, m) => `${today}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00Z`;
+  const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
   const messages = [
-    { id: "msg-1", team_id: "team-preview", sender_id: "sample-ana", recipient_id: null, body: "Morning! Picking up the trips list today.", created_at: at(7, 5) },
-    { id: "msg-2", team_id: "team-preview", sender_id: "sample-ben", recipient_id: null, body: "I'll test the booking flow on Android after lunch.", created_at: at(7, 12) },
-    { id: "msg-3", team_id: "team-preview", sender_id: "sample-ben", recipient_id: ownerId, body: "Quick question about the payment screen when you have a minute.", created_at: at(7, 20) },
+    { id: "msg-1", team_id: "team-preview", sender_id: "sample-ana", recipient_id: null, body: "Morning! Picking up the trips list today.", created_at: ago(40) },
+    { id: "msg-2", team_id: "team-preview", sender_id: "sample-ben", recipient_id: null, body: "I'll test the booking flow on Android after lunch.", created_at: ago(32) },
+    { id: "msg-3", team_id: "team-preview", sender_id: "sample-ben", recipient_id: ownerId, body: "Quick question about the payment screen when you have a minute.", created_at: ago(15) },
   ];
   return { members, tasks, messages };
 }

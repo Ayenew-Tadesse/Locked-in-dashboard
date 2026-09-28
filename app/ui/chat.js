@@ -18,7 +18,7 @@ function markRead(key) {
   const list = messagesIn(key);
   if (!list.length) return;
   const read = lastRead();
-  read[key] = list.at(-1).created_at;
+  read[key] = list.reduce((max, m) => (m.created_at > max ? m.created_at : max), read[key] || "");
   try { localStorage.setItem(READ_KEY, JSON.stringify(read)); } catch { /* per-device convenience only */ }
 }
 
