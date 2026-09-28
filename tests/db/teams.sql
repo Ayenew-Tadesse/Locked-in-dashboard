@@ -314,3 +314,32 @@ reset role;
 select pg_temp.act_as(:ana);
 select pg_temp.check((select count(*) from tasks where group_id = '99999999-0000-0000-0000-000000000009') = 0, 'a colleague sees only their own copies');
 reset role;
+
+-- 12. Team chat -------------------------------------------------------------
+select pg_temp.act_as(:owner);
+insert into messages (team_id, body) select team_id, 'Morning, team' from team_members where user_id = :owner;
+insert into messages (team_id, recipient_id, body) select team_id, :ana, 'Ana: can you take the search screen?' from team_members where user_id = :owner;
+reset role;
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from messages) = 2, 'a colleague reads the group chat and their direct messages');
+insert into messages (team_id, recipient_id, body) select team_id, :owner, 'Yes, on it' from team_members where user_id = :ana;
+do $$ begin
+  insert into messages (team_id, sender_id, body) select team_id, '11111111-0000-0000-0000-000000000001', 'pretending' from team_members where user_id = '22222222-0000-0000-0000-000000000002';
+  raise exception 'FAILED: wrote as someone else';
+exception when insufficient_privilege then raise notice 'ok - nobody writes as someone else';
+end $$;
+delete from messages where body = 'Morning, team';
+select pg_temp.check((select count(*) from messages where body = 'Morning, team') = 1, 'you can''t delete other people''s messages');
+reset role;
+select pg_temp.act_as(:ben);
+select pg_temp.check((select count(*) from messages) = 0, 'someone removed from the team reads nothing');
+reset role;
+insert into team_members (team_id, user_id) select team_id, :ben from team_members where user_id = :owner;
+select pg_temp.act_as(:ben);
+select pg_temp.check((select count(*) from messages) = 1 and (select count(*) from messages where recipient_id is null) = 1, 'direct messages stay between the two people');
+do $$ begin
+  insert into messages (team_id, body) values ('00000000-0000-0000-0000-000000000000', 'hi');
+  raise exception 'FAILED: wrote to another team';
+exception when insufficient_privilege or foreign_key_violation then raise notice 'ok - nobody writes to another team';
+end $$;
+reset role;

@@ -362,6 +362,55 @@ test("laptops and desktops: the â˜° items sit in the tab row; phones keep the â˜
   await page.close();
 });
 
+test("team chat: pull up the tray, group and one-to-one chats, unread counts, send and delete", async () => {
+  const page = await open("", { width: 390, height: 844 });
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  const chat = page.locator("#li-chat"), handle = chat.locator(".li-chat-handle");
+  assert.ok(await handle.isVisible(), "the chat bar sits at the bottom");
+  const bar = await handle.boundingBox();
+  assert.ok(bar.y + bar.height >= 844 - 60, "pinned to the bottom of the screen");
+  assert.equal(await chat.locator(".li-chat-unread").innerText(), "3", "2 group messages + 1 direct message unread");
+  // Drag the bar up to open it.
+  await page.mouse.move(bar.x + bar.width / 2, bar.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(bar.x + bar.width / 2, bar.y - 80, { steps: 5 });
+  await page.mouse.up();
+  await chat.locator(".li-chat-panel").waitFor();
+  assert.deepEqual((await chat.locator(".li-chat-convo").allInnerTexts()).map((t) => t.replace(/\s*\d+$/, "").trim()), ["Group", "Ana (sample)", "Ben (sample)"]);
+  assert.match(await chat.locator(".li-chat-log").innerText(), /Ana \(sample\)[\s\S]*Picking up the trips list[\s\S]*Ben \(sample\)[\s\S]*booking flow on Android/);
+  assert.equal(await chat.locator('.li-chat-convo[data-convo="sample-ben"] .li-nav-dot').innerText(), "1", "Ben's direct message is unread");
+  // Send to the group (Enter sends).
+  await chat.locator("textarea").fill("On it, thanks both");
+  await chat.locator("textarea").press("Enter");
+  await chat.locator(".li-chat-msg.mine", { hasText: "On it, thanks both" }).waitFor();
+  // One-to-one with Ben.
+  await chat.locator('.li-chat-convo[data-convo="sample-ben"]').click();
+  assert.match(await chat.locator(".li-chat-log").innerText(), /payment screen/);
+  assert.equal(await chat.locator(".li-chat-log").innerText().then((t) => t.includes("On it, thanks both")), false, "group messages stay in Group");
+  await chat.locator("textarea").fill("Sure, 2pm?");
+  await chat.locator("button[type=submit]").click();
+  const mine = chat.locator(".li-chat-msg.mine", { hasText: "Sure, 2pm?" });
+  await mine.waitFor();
+  // Delete your own message.
+  await mine.locator(".li-chat-del").click();
+  await page.locator("#li-modal button[type=submit]").click();
+  await mine.waitFor({ state: "detached" });
+  // Esc closes; everything is read now.
+  await page.keyboard.press("Escape");
+  await chat.locator(".li-chat-panel").waitFor({ state: "hidden" });
+  assert.ok(await chat.locator(".li-chat-unread").isHidden(), "nothing unread");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("team chat: hidden until there's a colleague (and before the chat SQL is run)", async () => {
+  const page = await dbPage({ signedIn: true });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  assert.equal(await page.locator("#li-chat").count(), 0);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
   const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects"];
