@@ -1,5 +1,5 @@
 // Task rows (with quick actions) and the add/edit task form.
-import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES } from "../state.js";
+import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES, assignTask } from "../state.js";
 import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES, countdownText } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
@@ -121,7 +121,10 @@ export function openTaskForm(task = {}) {
       <label class="li-field">Status<select name="status">${options(STORED_STATUSES.map((s) => [s, STATUSES[s]]), t.status)}</select></label>
       <label class="li-field">Category<input name="category" list="li-cats" maxlength="60" value="${esc(t.category || "")}" placeholder="e.g. Work"><datalist id="li-cats">${cats.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></label>
       <label class="li-field">Milestone<select name="milestone_id">${options(ms.map((m) => [m.id, m.title]), t.milestone_id, { empty: "None" })}</select></label>
-      ${assignable ? `<label class="li-field full">Assign to<select name="user_id">${options(people, t.user_id || state.me)}</select></label>` : ""}
+      ${!assignable ? "" : editing ? `<label class="li-field full">Assign to<select name="user_id">${options(people, t.user_id || state.me)}</select></label>`
+        : `<fieldset class="full li-assignees"><legend>Assign to <small class="li-muted">(one or more; each person gets their own copy)</small></legend>
+          ${people.map(([id, label]) => `<label class="li-check-row"><input type="checkbox" name="assignees[]" value="${esc(id)}"${id === (t.user_id || state.me) ? " checked" : ""}> ${esc(label)}</label>`).join("")}
+        </fieldset>`}
       <label class="li-field">Estimated minutes<input type="number" name="estimated_minutes" min="0" max="100000" step="5" inputmode="numeric" value="${esc(t.estimated_minutes ?? "")}"></label>
       <label class="li-field">Actual minutes<input type="number" name="actual_minutes" min="0" max="100000" step="5" inputmode="numeric" value="${esc(t.actual_minutes ?? "")}"></label>
       <label class="li-field full">Completion <output name="pct_out">${esc(t.completion_percentage)}%</output>
@@ -144,6 +147,15 @@ export function openTaskForm(task = {}) {
     },
     async onSubmit(v) {
       if (!v.title.trim()) throw new Error("Give the task a title.");
+      if (v.assignees) {
+        const { assignees, ...fields } = v;
+        if (!assignees.length) throw new Error("Choose at least one person to assign it to.");
+        await assignTask(fields, assignees);
+        const names = assignees.map((id) => id === state.me ? "you" : memberName(id));
+        const list = names.length > 1 ? names.slice(0, -1).join(", ") + " and " + names.at(-1) : names[0];
+        toast(assignees.length === 1 && assignees[0] === state.me ? "Task added" : `Assigned to ${list}`);
+        return;
+      }
       await saveTask({ ...(editing ? { id: t.id } : {}), ...v });
       toast(v.user_id && v.user_id !== state.me ? `${editing ? "Saved" : "Assigned"} to ${memberName(v.user_id)}` : editing ? "Task saved" : "Task added");
     },

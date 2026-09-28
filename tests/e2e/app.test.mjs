@@ -235,7 +235,7 @@ test("Tasks: a tab on the main page; every task, no filters", async () => {
   assert.match(await page.textContent("#li-view .li-h2"), /^\d+ tasks?$/);
   // One button per status, each with its count; each shows only that status.
   const statusTabs = page.locator(".li-status-tabs a");
-  assert.deepEqual((await statusTabs.allInnerTexts()).map((t) => t.replace(/\s*\d+$/, "").trim()), ["All", "Available", "Ongoing", "Completed", "Overdue"]);
+  assert.deepEqual((await statusTabs.allInnerTexts()).map((t) => t.replace(/\s*\d+$/, "").trim()), ["All", "Available", "Ongoing", "Completed", "Overdue", "Assigned by me"]);
   const statusOf = { Available: "st-not_started", Ongoing: "st-in_progress", Completed: "st-completed", Overdue: "st-overdue" };
   for (const [label, cls] of Object.entries(statusOf)) {
     const btn = statusTabs.filter({ hasText: label });
@@ -268,6 +268,51 @@ test("settings: the scoring formula is visible and editable; API tokens are show
   await page.waitForSelector(".li-tokens");
   const list = await page.locator(".li-tokens").innerText();
   assert.ok(list.includes(token.slice(0, 10)) && !list.includes(token), "only the prefix is listed");
+  await page.close();
+});
+
+test("assign one task to several people; the owner keeps, edits, extends, revokes and deletes it", async () => {
+  const page = await open("tasks");
+  await page.click(".li-view-head [data-new-task]");
+  await page.locator("#li-modal [name=title]").fill("E2E: shared release notes");
+  // Tick Ana and Ben, untick yourself.
+  const box = (name) => page.locator("#li-modal .li-assignees label", { hasText: name }).locator("input");
+  await box("Me").uncheck();
+  await box("Ana").check();
+  await box("Ben").check();
+  await page.locator("#li-modal button[type=submit]").click();
+  await page.waitForSelector(".li-toast, #li-toast", { state: "attached" }).catch(() => {});
+  // Assigned by me keeps it, one line per person.
+  await page.click('.li-status-tabs a:has-text("Assigned by me")');
+  const card = page.locator(".li-assignment", { hasText: "E2E: shared release notes" });
+  await card.waitFor();
+  assert.deepEqual(await card.locator(".li-asg-name").allInnerTexts(), ["Ana (sample)", "Ben (sample)"]);
+  assert.match(await card.innerText(), /0\/2 done/);
+  // Edit once: every copy changes.
+  await card.locator("[data-edit-assignment]").click();
+  await page.locator("#li-modal [name=due_date]").fill(shift(today(), 3));
+  await page.locator("#li-modal [name=title]").fill("E2E: release notes v2");
+  await page.locator("#li-modal button[type=submit]").click();
+  const card2 = page.locator(".li-assignment", { hasText: "E2E: release notes v2" });
+  await card2.waitFor();
+  assert.equal(await page.locator(".li-assignment", { hasText: "E2E: shared release notes" }).count(), 0);
+  // Add a person (you).
+  await card2.locator("[data-add-person]").click();
+  await page.locator("#li-modal .li-assignees label", { hasText: "Me" }).locator("input").check();
+  await page.locator("#li-modal button[type=submit]").click();
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-assignment")].some((c) => c.textContent.includes("v2") && c.querySelectorAll(".li-asg-name").length === 3));
+  assert.equal(await card2.locator("[data-add-person]").count(), 0, "everyone has it: no one left to add");
+  // Revoke it from Ben.
+  await card2.locator(".li-asg-people li", { hasText: "Ben" }).locator("[data-revoke]").click();
+  await page.locator("#li-modal button[type=submit]").click();
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-assignment")].some((c) => c.textContent.includes("v2") && c.querySelectorAll(".li-asg-name").length === 2));
+  assert.deepEqual(await card2.locator(".li-asg-name").allInnerTexts(), ["Ana (sample)", "You"]);
+  // Your copy is on your own list too.
+  // Delete it for everyone.
+  await card2.locator("[data-delete-assignment]").click();
+  await page.locator("#li-modal button[type=submit]").click();
+  await page.waitForFunction(() => ![...document.querySelectorAll(".li-assignment")].some((c) => c.textContent.includes("v2")));
+  assert.deepEqual(page.errors, []);
   await page.close();
 });
 
@@ -539,7 +584,7 @@ test("team: the owner sees everyone's progress, assigns tasks and invites collea
   assert.ok(rows.some((r) => r.includes("Ana (sample)")) && rows.some((r) => r.includes("Ben (sample)")));
   // Assign a task to Ana from her row.
   await page.locator(".li-team-table tr", { hasText: "Ana (sample)" }).locator("[data-assign]").click();
-  assert.equal(await page.locator("#li-modal [name=user_id]").inputValue(), "sample-ana", "Assign to is preselected");
+  assert.deepEqual(await page.locator('#li-modal [name="assignees[]"]:checked').evaluateAll((els) => els.map((e) => e.value)), ["sample-ana"], "Assign to is preselected");
   await page.fill("#li-modal [name=title]", "E2E: review the payment screen");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });

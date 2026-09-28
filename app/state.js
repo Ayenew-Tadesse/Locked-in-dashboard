@@ -162,6 +162,75 @@ export async function updateTask(id, patch) {
   return saveTask(next);
 }
 
+// ---------------------------------------------------------------------------
+// Assignments: the owner gives one task to several people. Each person gets
+// their own copy (own progress, files and learning log); the copies share a
+// group_id so the owner can edit, extend, revoke or delete them together.
+// ---------------------------------------------------------------------------
+
+// The fields every copy of an assignment shares.
+export const SHARED_TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "category", "milestone_id", "estimated_minutes", "notes"];
+const pickShared = (t) => Object.fromEntries(SHARED_TASK_FIELDS.filter((k) => k in t).map((k) => [k, t[k]]));
+// group_id is only kept once the database has the column (any loaded task shows it).
+const groupsSupported = () => [...state.tasks, ...state.teamTasks].some((t) => "group_id" in t) || state.store?.mode !== "supabase";
+
+/** Every copy of the assignment `t` belongs to (just `t` when it isn't shared). */
+export function assignmentOf(t) {
+  if (!t?.group_id) return t ? [t] : [];
+  return [...state.tasks, ...state.teamTasks].filter((x) => x.group_id === t.group_id);
+}
+
+/** The owner's pushed tasks, one entry per assignment: [{ key, copies }], newest first. */
+export function myAssignments() {
+  const all = [...state.tasks, ...state.teamTasks];
+  const groups = new Map();
+  for (const t of all) {
+    const pushed = t.assigned_by === state.me && t.user_id !== state.me;
+    if (!pushed && !t.group_id) continue;
+    const key = t.group_id || t.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(t);
+  }
+  return [...groups].map(([key, copies]) => ({ key, copies }))
+    .filter((g) => g.copies.some((t) => t.assigned_by === state.me && t.user_id !== state.me))
+    .sort((a, b) => String(b.copies[0].created_at || "~").localeCompare(String(a.copies[0].created_at || "~")));
+}
+
+/** Creates the task for each person in `userIds` (one copy each). */
+export async function assignTask(fields, userIds) {
+  const ids = [...new Set(userIds)].filter(Boolean);
+  if (!ids.length) throw new Error("Choose at least one person.");
+  const group_id = ids.length > 1 && groupsSupported() ? state.store.newId() : undefined;
+  const saved = [];
+  for (const user_id of ids) saved.push(await saveTask({ ...fields, user_id, ...(group_id ? { group_id } : {}) }));
+  return saved;
+}
+
+/** Gives an existing assignment to one more person. */
+export async function addPersonToAssignment(t, userId) {
+  const copies = assignmentOf(t);
+  if (copies.some((c) => c.user_id === userId)) throw new Error(`${memberName(userId)} already has this task.`);
+  let group_id = t.group_id;
+  if (!group_id && groupsSupported()) {
+    group_id = state.store.newId();
+    await saveTask({ ...t, group_id });
+  }
+  return saveTask({ ...pickShared(t), user_id: userId, status: "not_started", completion_percentage: 0, ...(group_id ? { group_id } : {}) });
+}
+
+/** Changes the shared details on every copy; each person's progress stays. */
+export async function editAssignment(t, fields) {
+  for (const c of assignmentOf(t)) await saveTask({ ...c, ...pickShared(fields) });
+}
+
+/** Takes the task away from one person. */
+export async function revokeAssignment(copy) { return deleteTask(copy.id); }
+
+/** Removes the task from everyone. */
+export async function deleteAssignment(t) {
+  for (const c of assignmentOf(t)) await deleteTask(c.id);
+}
+
 export async function deleteTask(id) {
   const t = findTask(id);
   await guard(() => state.store.deleteTask(id), "Couldn't delete the task");

@@ -5,7 +5,7 @@ import { computeMilestone, computeGoal } from "./core/insights.js";
 import { displayName } from "./core/people.js";
 
 const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "status", "category", "estimated_minutes",
-  "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved"];
+  "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved", "group_id"];
 const MILESTONE_FIELDS = ["title", "description", "category", "start_date", "deadline", "target", "current_progress",
   "progress_mode", "status", "priority", "notes", "goal_id", "team_id"];
 const PROJECT_FIELDS = ["name", "code", "description", "category", "stage", "status", "facts", "links", "checklist", "position"];
@@ -155,9 +155,16 @@ export function supabaseStoreFromClient(sb) {
     async renameTeam(teamId, name) { return check(await sb.from("teams").update({ name }).eq("id", teamId).select().single()); },
 
     async saveTask(t) {
+      const write = (row) => t.id ? sb.from("tasks").update(row).eq("id", t.id).select().single()
+        : sb.from("tasks").insert(row).select().single();
       const row = taskRow(t);
-      return t.id ? check(await sb.from("tasks").update(row).eq("id", t.id).select().single())
-        : check(await sb.from("tasks").insert(row).select().single());
+      let res = await write(row);
+      // Before 20261003000000_task_groups.sql, save without linking copies of an assignment.
+      if (res.error && "group_id" in row && /group_id/.test(res.error.message)) {
+        const { group_id, ...rest } = row;
+        res = await write(rest);
+      }
+      return check(res);
     },
     async deleteTask(id) { check(await sb.from("tasks").delete().eq("id", id)); },
 
