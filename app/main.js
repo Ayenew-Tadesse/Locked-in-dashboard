@@ -27,6 +27,7 @@ import { renderProfile } from "./views/profile.js";
 import { renderProjects } from "./views/projects.js";
 import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu, renderMenuBar } from "./ui/menu.js";
+import { setupChat } from "./ui/chat.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { renderTeamCard } from "./views/team-card.js";
@@ -381,6 +382,7 @@ async function start(store) {
   let day = state.today;
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);
   render();
+  try { setupChat(); } catch (e) { console.error(e); }
   // Reveal only now that the new design is drawn (no flash of the original page).
   document.documentElement.classList.remove("app-booting");
 }

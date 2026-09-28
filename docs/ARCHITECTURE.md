@@ -250,3 +250,21 @@ card per assignment with each person's status: **+ Add person**, **Edit**
 copy) and **Delete task** (every copy). Before the migration, copies are
 saved without the link and each is managed on its own.
 
+## Team chat (added later)
+
+Migration `20261004000000_team_chat.sql` adds `messages` (team, sender,
+optional recipient, body). A message without a recipient is the team's
+group chat; with one, it's a one-to-one chat. RLS: team members read the
+group chat and their own direct messages, write only as themselves to their
+own team (and only to someone on it), and delete only their own messages.
+The table is added to the `supabase_realtime` publication so new messages
+arrive live (Realtime applies the same policies).
+
+`app/ui/chat.js` pins a **Team chat** bar to the bottom of the screen (on
+wider screens, docked bottom right). Tap it or drag it up for the tray;
+drag down or Esc closes it. Group first, then a chip per person, each with
+its unread count; the bar shows the total. What you've read is remembered
+per device (localStorage). Messages don't redraw the page: state emits
+`li:messages` and only the chat repaints. Hidden until there's a colleague,
+and before the migration is run.
+

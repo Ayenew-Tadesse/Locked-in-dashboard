@@ -64,7 +64,7 @@ export function demoSeed(today = todayKey()) {
     team: { id: "team-preview", name: "Demo team", role: "owner" },
     members: [{ user_id: "demo", role: "owner", name: "Demo user", email: "demo@example.com" }, ...team.members],
     invites: [],
-    tasks: [...tasks, ...team.tasks], milestones, goals,
+    tasks: [...tasks, ...team.tasks], milestones, goals, messages: team.messages,
     daily: [{ date: addDays(today, -1), notes: "Lost the afternoon to a build issue." }],
     weekly: [],
   };
@@ -80,7 +80,7 @@ export function emptySeed(today = todayKey()) {
     team: { id: "team-preview", name: "Guxo team", role: "owner" },
     members: [{ user_id: "preview", role: "owner", name: "Ayenew Shiferaw", email: "" }, ...team.members],
     invites: [],
-    tasks: team.tasks, milestones: [], goals: [], daily: [], weekly: [],
+    tasks: team.tasks, milestones: [], goals: [], daily: [], weekly: [], messages: team.messages,
   };
 }
 
@@ -124,5 +124,12 @@ export function sampleColleagues(today = todayKey(), ownerId = "demo") {
   tasks.push({ id: "sample-assigned", user_id: "sample-ben", assigned_by: ownerId, title: "Test the booking flow on Android", date: today,
     due_date: addDays(today, 2), priority: "high", status: "not_started", completion_percentage: 0, category: "Engineering",
     estimated_minutes: 90, created_at: today + "T08:30:00Z" });
-  return { members, tasks };
+  // A few sample chat messages (group and one direct message to the owner).
+  const at = (h, m) => `${today}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00Z`;
+  const messages = [
+    { id: "msg-1", team_id: "team-preview", sender_id: "sample-ana", recipient_id: null, body: "Morning! Picking up the trips list today.", created_at: at(7, 5) },
+    { id: "msg-2", team_id: "team-preview", sender_id: "sample-ben", recipient_id: null, body: "I'll test the booking flow on Android after lunch.", created_at: at(7, 12) },
+    { id: "msg-3", team_id: "team-preview", sender_id: "sample-ben", recipient_id: ownerId, body: "Quick question about the payment screen when you have a minute.", created_at: at(7, 20) },
+  ];
+  return { members, tasks, messages };
 }

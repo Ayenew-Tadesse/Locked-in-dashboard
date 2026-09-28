@@ -53,7 +53,9 @@ git-ignored).
    [`supabase/migrations/20261002000000_owner_adds_tasks.sql`](../supabase/migrations/20261002000000_owner_adds_tasks.sql)
    (only the team owner adds tasks), then
    [`supabase/migrations/20261003000000_task_groups.sql`](../supabase/migrations/20261003000000_task_groups.sql)
-   (one task for several people). Run the files in this order.
+   (one task for several people), then
+   [`supabase/migrations/20261004000000_team_chat.sql`](../supabase/migrations/20261004000000_team_chat.sql)
+   (team chat; it also turns on live updates for the `messages` table). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.

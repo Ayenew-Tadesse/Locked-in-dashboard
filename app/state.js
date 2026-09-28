@@ -13,6 +13,7 @@ export const state = {
   tasks: [],      // your own tasks (Today, scores, your reports)
   teamTasks: [],
   projects: [],   // the team's projects (null: the projects table isn't set up yet)
+  messages: [],   // team chat (null: the messages table isn't set up yet)
   files: [],      // files shared on tasks (null: the task_files table isn't set up yet)  // teammates' tasks the owner can see (Team page)
   me: null,
   team: null,     // { id, name, role }
@@ -58,6 +59,7 @@ export async function loadAll(store) {
   state.invites = d.invites || [];
   state.projects = d.projects === undefined ? [] : d.projects;
   state.files = d.files === undefined ? [] : d.files;
+  state.messages = d.messages === undefined ? [] : d.messages; // null: the chat table isn't set up yet
   const mine = (t) => !state.me || !t.user_id || t.user_id === state.me;
   state.tasks = d.tasks.filter(mine);
   state.teamTasks = d.tasks.filter((t) => !mine(t));
@@ -406,4 +408,33 @@ export async function deleteFile(f) {
   await guard(() => state.store.deleteTaskFile(f), "Couldn't remove the file");
   state.files = state.files.filter((x) => x.id !== f.id);
   emit();
+}
+
+// ---------------------------------------------------------------------------
+// Team chat. Messages change often, so they don't redraw the page: the chat
+// listens for "li:messages" instead.
+// ---------------------------------------------------------------------------
+const chatChanged = () => window.dispatchEvent(new CustomEvent("li:messages"));
+
+export function receiveMessage(m) {
+  if (!Array.isArray(state.messages) || !m || state.messages.some((x) => x.id === m.id)) return;
+  state.messages.push(m);
+  chatChanged();
+}
+export function forgetMessage(id) {
+  if (!Array.isArray(state.messages)) return;
+  state.messages = state.messages.filter((x) => x.id !== id);
+  chatChanged();
+}
+export async function sendMessage(body, recipientId = null) {
+  const text = String(body || "").trim();
+  if (!text) return null;
+  if (text.length > 2000) throw new Error("Keep messages under 2,000 characters.");
+  const saved = await guard(() => state.store.sendMessage({ team_id: state.team.id, recipient_id: recipientId, body: text }), "Couldn't send the message");
+  receiveMessage(saved);
+  return saved;
+}
+export async function deleteMessage(id) {
+  await guard(() => state.store.deleteMessage(id), "Couldn't delete the message");
+  forgetMessage(id);
 }

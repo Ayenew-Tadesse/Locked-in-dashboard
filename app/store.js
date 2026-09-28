@@ -75,6 +75,7 @@ export function supabaseStoreFromClient(sb) {
       const team = await this.loadTeam();
       team.projects = team.team ? await this.loadProjects(team.team.id) : null;
       team.files = await this.loadFiles();
+      team.messages = team.team ? await this.loadMessages(team.team.id) : null;
       return { profile, settings, tasks, milestones, goals, daily, weekly, me: userId, ...team };
     },
 
@@ -114,6 +115,26 @@ export function supabaseStoreFromClient(sb) {
       return check(res);
     },
     async deleteProject(id) { check(await sb.from("projects").delete().eq("id", id)); },
+
+    /** The team chat's latest messages (oldest first), or null before 20261004000000_team_chat.sql is run. */
+    async loadMessages(teamId) {
+      const { data, error } = await sb.from("messages").select("*").eq("team_id", teamId).order("created_at", { ascending: false }).limit(400);
+      if (error && /messages/.test(error.message)) return null;
+      return check({ data, error }).reverse();
+    },
+    async sendMessage(m) {
+      return check(await sb.from("messages").insert({ team_id: m.team_id, recipient_id: m.recipient_id || null, body: m.body }).select().single());
+    },
+    async deleteMessage(id) { check(await sb.from("messages").delete().eq("id", id)); },
+    /** New and deleted messages as they happen (Supabase Realtime). Returns a stop function. */
+    subscribeMessages(teamId, { onInsert, onDelete }) {
+      if (typeof sb.channel !== "function") return () => {};
+      const ch = sb.channel(`chat-${teamId}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `team_id=eq.${teamId}` }, (p) => onInsert(p.new))
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (p) => p.old?.id && onDelete(p.old.id))
+        .subscribe();
+      return () => sb.removeChannel(ch);
+    },
 
     /** Files shared on tasks, or null before 20261001000000_task_files.sql is run. */
     async loadFiles() {
@@ -255,6 +276,7 @@ export function createMemoryStore(seed) {
   db.invites = db.invites || [];
   db.projects = db.projects || [];
   db.files = db.files || [];
+  db.messages = db.messages || [];
   db.tasks.forEach((t) => { t.user_id = t.user_id || db.me; });
   const now = () => new Date().toISOString();
   const recalc = () => {
@@ -293,6 +315,13 @@ export function createMemoryStore(seed) {
       async updatePassword() {}, async signOut() { location.search = ""; },
     },
     async load() { recalc(); return JSON.parse(JSON.stringify({ ...db })); },
+    async sendMessage(m) {
+      const row = { id: uuid(), team_id: db.team.id, sender_id: db.me, recipient_id: m.recipient_id || null, body: m.body, created_at: now() };
+      db.messages.push(row);
+      return { ...row };
+    },
+    async deleteMessage(id) { db.messages = db.messages.filter((x) => x.id !== id); },
+    subscribeMessages() { return () => {}; },
     async saveTask(t) {
       const saved = save("tasks", [...TASK_FIELDS, "user_id"], t);
       const row = db.tasks.find((r) => r.id === saved.id);
