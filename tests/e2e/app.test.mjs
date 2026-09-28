@@ -136,7 +136,7 @@ test("a task with a past deadline becomes overdue automatically, and can be move
   assert.match(await r.getAttribute("class"), /st-overdue/);
   assert.match(await r.innerText(), /OVERDUE/i);
   assert.match(await r.innerText(), /yesterday/);
-  await page.click('#li-nav .li-nav-link:text-is("Tasks")');
+  await page.click('#li-nav [data-view=tasks]');
   await page.click('.li-status-tabs a:has-text("Overdue")');
   await page.waitForFunction(() => location.hash === "#/tasks?status=overdue");
   assert.equal(await row(page, "E2E: late thing").count(), 1, "shows under Overdue");
@@ -226,9 +226,9 @@ test("quarter view: switch quarters, add a goal with progress", async () => {
 
 test("Tasks: a tab on the main page; every task, no filters", async () => {
   const page = await open("");
-  const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+  const tabs = (await page.locator("#li-nav .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(tabs.slice(0, 4).map((t) => t.trim()), ["Overview", "Today", "Tasks", "Calendar"]);
-  await page.click('#li-nav .li-nav-link:text-is("Tasks")');
+  await page.click('#li-nav [data-view=tasks]');
   await page.waitForFunction(() => location.hash === "#/tasks");
   await page.waitForSelector("#li-task-results .li-task");
   assert.equal(await page.locator("#li-filters, .li-search, #li-view select[name=priority]").count(), 0, "no filters");
@@ -312,6 +312,25 @@ test("assign one task to several people; the owner keeps, edits, extends, revoke
   await card2.locator("[data-delete-assignment]").click();
   await page.locator("#li-modal button[type=submit]").click();
   await page.waitForFunction(() => ![...document.querySelectorAll(".li-assignment")].some((c) => c.textContent.includes("v2")));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("a dot on Tasks counts your unfinished tasks (red when some are overdue); the Team card shows each person's", async () => {
+  const page = await open("");
+  const dot = page.locator("#li-nav [data-view=tasks] .li-nav-dot");
+  const unfinished = Number(await dot.innerText());
+  assert.ok(unfinished > 0 && await dot.isVisible());
+  assert.match(await dot.getAttribute("class"), /late/, "the demo has overdue tasks: red");
+  // Finishing one lowers the count.
+  await page.click("#li-nav [data-view=today]");
+  await row(page, "Test keyboard handling on iOS").locator("[data-act=toggle]").click();
+  await skipLearningLog(page);
+  await page.waitForFunction((n) => document.querySelector("#li-nav [data-view=tasks] .li-nav-dot").textContent === String(n - 1), unfinished);
+  // Team card: Ben has an unfinished task.
+  await page.click('#li-nav a[href="#/"]');
+  const ben = page.locator("#li-team-card .li-tm-row", { hasText: "Ben" });
+  assert.ok(Number(await ben.locator(".li-nav-dot").innerText()) >= 1);
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -456,7 +475,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   const appFiles = requests.filter((u) => /\/app\/.+\.(js|css)/.test(u));
   assert.ok(appFiles.length > 20, "app files requested");
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
-  const nav = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+  const nav = (await page.locator("#li-nav .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
   const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
   assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
@@ -575,7 +594,7 @@ test("team: the owner sees everyone's progress, assigns tasks and invites collea
   const page = await open("today");
   // Colleagues' tasks never mix into your own Today.
   assert.equal(await page.locator("#li-view .li-task:visible").filter({ hasText: "(sample)" }).count(), 0);
-  const tabs = await page.locator("#li-nav .li-nav-link").allInnerTexts();
+  const tabs = (await page.locator("#li-nav .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(tabs, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
   await page.click('#li-nav a[href="#/team"]');
   await page.waitForSelector(".li-team-table");
