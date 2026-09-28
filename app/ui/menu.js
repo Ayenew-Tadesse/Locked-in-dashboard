@@ -16,11 +16,13 @@ export function applyTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch { /* still applies for this visit */ }
 }
 
-let menu, btn, lastFocus;
+let menu, btn, lastFocus, logoutHandler;
+const logoutShown = () => !!document.getElementById("logout-btn") && !document.getElementById("logout-btn").hidden;
 
 /** Adds the ☰ button to the page's top row and builds the (closed) drawer. */
 export function setupMenu({ onLogout } = {}) {
   if (document.getElementById("li-menu")) return;
+  logoutHandler = onLogout;
   const top = document.querySelector(".page-top");
   const bar = document.createElement("div");
   bar.className = "li-topbar";
@@ -71,7 +73,7 @@ function renderMenu() {
     <button type="button" class="li-menu-link" data-theme="${theme === "dark" ? "light" : "dark"}" aria-label="Switch to ${theme === "dark" ? "light" : "dark"} background">${theme === "dark"
       ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Light mode</span>`
       : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Dark mode</span>`}</button>
-    ${document.getElementById("logout-btn") && !document.getElementById("logout-btn").hidden ? `<button type="button" class="li-menu-link li-menu-logout" data-logout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Log out</span></button>` : ""}`;
+    ${logoutShown() ? `<button type="button" class="li-menu-link li-menu-logout" data-logout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Log out</span></button>` : ""}`;
 }
 
 export function openMenu() {
@@ -88,4 +90,30 @@ export function closeMenu() {
   btn.setAttribute("aria-expanded", "false");
   document.documentElement.classList.remove("li-modal-open");
   if (lastFocus && document.contains(lastFocus) && lastFocus !== document.body) lastFocus.focus({ preventScroll: true });
+}
+
+/**
+ * On laptops and desktops the ☰ items sit at the right of the tab row
+ * instead: Profile, Projects (owner), Settings, Light / Dark, Log out.
+ * `el` is redrawn with the tab row; CSS shows it from 1000px and hides the ☰.
+ */
+export function renderMenuBar(el) {
+  if (!el) return;
+  const route = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
+  const theme = currentTheme();
+  const link = (name, label) => `<a href="#/${name}" class="li-nav-link${route === name ? " active" : ""}"${route === name ? ' aria-current="page"' : ""}>${label}</a>`;
+  el.innerHTML = `
+    ${link("profile", "Profile")}
+    ${state.isOwner && state.projects !== undefined ? link("projects", "Projects") : ""}
+    ${link("settings", "Settings")}
+    <button type="button" class="li-nav-link li-nav-theme" data-theme="${theme === "dark" ? "light" : "dark"}" aria-label="Switch to ${theme === "dark" ? "light" : "dark"} background" title="${theme === "dark" ? "Light" : "Dark"} mode">${theme === "dark" ? "☀" : "☾"}</button>
+    ${logoutShown() ? `<button type="button" class="li-nav-link" data-logout>Log out</button>` : ""}`;
+  if (!el.dataset.wired) {
+    el.dataset.wired = "1";
+    el.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-theme]");
+      if (t) { applyTheme(t.dataset.theme); renderMenuBar(el); }
+      if (e.target.closest("[data-logout]")) logoutHandler?.();
+    });
+  }
 }
