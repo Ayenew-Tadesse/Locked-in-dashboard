@@ -268,3 +268,24 @@ per device (localStorage). Messages don't redraw the page: state emits
 `li:messages` and only the chat repaints. Hidden until there's a colleague,
 and before the migration is run.
 
+## Portfolio for hiring managers (added later)
+
+`portfolio.html` is a separate page a hiring manager opens from a private
+link, `portfolio.html#t=<secret>` (the secret stays after `#`, so it never
+reaches a server log). It calls `public.portfolio_view(secret)` from
+migration `20261005000000_portfolio.sql`: a SECURITY DEFINER function that
+checks the link (SHA-256 hash, not revoked, not expired), counts the view and
+returns a prepared summary of the owner's own work only: about (name,
+headline, bio, approach, contact links), activity (finished tasks, 30/90 days,
+hours, a 26-week map, weekly scores), projects, milestones, quarterly goals
+and recent finished tasks with a learning log. It never returns files,
+private notes or colleagues' data. `portfolio_links` rows are the owner's
+only (RLS); anon has no table access.
+
+The owner manages it on ☰ → Portfolio (`app/views/portfolio.js`): headline,
+bio, approach, links, which sections show and which task categories feed
+"How I work" (saved in `user_settings.preferences.portfolio`), share links
+(create: shown once; switch off; views and last opened), and a live preview.
+`app/core/portfolio.js` builds the same summary in the browser for the
+preview and `?demo=1`; `app/portfolio/render.js` draws it for both.
+

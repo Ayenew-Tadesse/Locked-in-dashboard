@@ -343,3 +343,49 @@ do $$ begin
 exception when insufficient_privilege or foreign_key_violation then raise notice 'ok - nobody writes to another team';
 end $$;
 reset role;
+
+-- 13. Portfolio links for hiring managers --------------------------------------
+select pg_temp.act_as(:owner);
+update user_settings set preferences = '{"portfolio":{"headline":"Mobile developer","show":{"plan":false}}}';
+insert into tasks (title, status, learning_changed, learning_how, learning_solved)
+  values ('Owner: booking store', 'completed', 'Added the booking store', 'One slice per step', 'Props five levels deep');
+insert into portfolio_links (name, token_hash, token_prefix)
+  values ('Acme', encode(sha256(convert_to('lip_acme_link_secret_0123456789', 'UTF8')), 'hex'), 'lip_acme');
+insert into portfolio_links (name, token_hash, token_prefix, expires_at)
+  values ('Old', encode(sha256(convert_to('lip_old_link_secret_0123456789', 'UTF8')), 'hex'), 'lip_old', now() - interval '1 day');
+reset role;
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from portfolio_links) = 0, 'colleagues can''t see the owner''s portfolio links');
+reset role;
+set role anon;
+do $$ declare r jsonb; begin
+  r := public.portfolio_view('lip_acme_link_secret_0123456789');
+  if r -> 'about' ->> 'headline' <> 'Mobile developer' then raise exception 'FAILED: headline'; end if;
+  if r -> 'plan' <> 'null'::jsonb then raise exception 'FAILED: hidden sections stay hidden'; end if;
+  if not (r -> 'work') @> '[{"title":"Owner: booking store","how":"One slice per step"}]' then raise exception 'FAILED: learning logs'; end if;
+  if r::text like '%Ana%' or r::text like '%sample%' or r::text like '%22222222%' then raise exception 'FAILED: colleague data in the portfolio'; end if;
+  if (r -> 'activity' ->> 'completed_total')::int < 1 then raise exception 'FAILED: activity'; end if;
+  raise notice 'ok - a valid link shows the owner''s work only, following their choices';
+end $$;
+do $$ begin
+  perform public.portfolio_view('lip_old_link_secret_0123456789');
+  raise exception 'FAILED: expired link accepted';
+exception when invalid_authorization_specification then raise notice 'ok - an expired link is refused';
+end $$;
+do $$ begin
+  perform count(*) from public.portfolio_links;
+  raise exception 'FAILED: anon read the links table';
+exception when insufficient_privilege then raise notice 'ok - visitors can''t read the links table';
+end $$;
+reset role;
+select pg_temp.act_as(:owner);
+update portfolio_links set revoked_at = now() where name = 'Acme';
+select pg_temp.check((select views from portfolio_links where name = 'Acme') = 1, 'each open is counted');
+reset role;
+set role anon;
+do $$ begin
+  perform public.portfolio_view('lip_acme_link_secret_0123456789');
+  raise exception 'FAILED: revoked link accepted';
+exception when invalid_authorization_specification then raise notice 'ok - a revoked link is refused';
+end $$;
+reset role;
