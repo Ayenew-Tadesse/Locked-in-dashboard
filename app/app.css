@@ -605,3 +605,17 @@ html:not(.app-mode) .li-team-card{display:none;}
 .li-tm-role{flex:none;font-size:10.5px;}
 .li-tm-role.owner{background:var(--accent-soft);color:var(--accent);}
 .li-tm-empty{margin:10px 0 0;}
+
+/* Assign to (several people) and the owner's "Assigned by me" list. */
+.li-assignees{display:flex;flex-wrap:wrap;gap:6px 16px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0;}
+.li-assignees legend{padding:0 4px;font-size:12px;color:var(--ink-2);}
+.li-check-row{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;cursor:pointer;}
+.li-assignments{display:flex;flex-direction:column;gap:12px;}
+.li-assignment{margin-top:0;}
+.li-asg-title h3{margin:0 0 4px;font-size:15px;font-weight:600;}
+.li-asg-desc{margin:8px 0 0;font-size:13px;color:var(--ink-2);white-space:pre-wrap;}
+.li-asg-people{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.li-asg-people li{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 10px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);}
+.li-asg-name{font-size:13.5px;font-weight:500;}
+.li-asg-actions{margin-top:12px;}
+.li-asg-note{margin:0;font-size:12.5px;}

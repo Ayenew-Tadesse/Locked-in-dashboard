@@ -238,3 +238,15 @@ Under the Tasks card, the owner sees a Team card (`app/views/team-card.js`):
 everyone on the team with their initials, display name and role (Owner /
 Colleague), owner first. Tapping a person opens their Team page. Colleagues
 don't see it. On phones it sits between Tasks and Activity.
+
+## One task for several people (added later)
+
+The owner can tick several people in **Assign to**; each gets their own copy
+of the task (own progress, files, learning log). Migration
+`20261003000000_task_groups.sql` adds `tasks.group_id`, which links the
+copies. Tasks → **Assigned by me** lists every task the owner pushed, one
+card per assignment with each person's status: **+ Add person**, **Edit**
+(shared fields on every copy; progress stays), **Revoke** (one person's
+copy) and **Delete task** (every copy). Before the migration, copies are
+saved without the link and each is managed on its own.
+

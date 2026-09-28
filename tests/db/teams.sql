@@ -300,3 +300,17 @@ delete from storage.objects where name like :ana || '/%';
 delete from task_files where user_id = :ana;
 reset role;
 select pg_temp.check((select count(*) from storage.objects) = 0 and (select count(*) from task_files where user_id = :ana) = 0, 'the owner can delete a member''s files');
+
+-- 11. One task for several people (group_id links the copies) --------------
+select pg_temp.act_as(:owner);
+insert into tasks (user_id, title, group_id) values
+  (:ana, 'Shared: write release notes', '99999999-0000-0000-0000-000000000009'),
+  (:owner, 'Shared: write release notes', '99999999-0000-0000-0000-000000000009');
+update tasks set due_date = '2026-10-10' where group_id = '99999999-0000-0000-0000-000000000009';
+select pg_temp.check((select count(*) from tasks where group_id = '99999999-0000-0000-0000-000000000009' and due_date = '2026-10-10') = 2, 'the owner edits every copy of an assignment');
+delete from tasks where group_id = '99999999-0000-0000-0000-000000000009' and user_id = :ana;
+select pg_temp.check((select count(*) from tasks where group_id = '99999999-0000-0000-0000-000000000009') = 1, 'the owner revokes one person''s copy');
+reset role;
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from tasks where group_id = '99999999-0000-0000-0000-000000000009') = 0, 'a colleague sees only their own copies');
+reset role;
