@@ -1,5 +1,5 @@
 // Builds the static site into dist/:
-//   - copies index.html and app/
+//   - copies index.html, portfolio.html and app/
 //   - writes config.js from environment variables (public values only)
 //
 //   SUPABASE_URL=... SUPABASE_ANON_KEY=... node scripts/build.mjs
@@ -38,6 +38,7 @@ const out = root + "dist/";
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
 cpSync(root + "index.html", out + "index.html");
+cpSync(root + "portfolio.html", out + "portfolio.html");
 cpSync(root + "app", out + "app", { recursive: true });
 const config = url && anon ? { supabaseUrl: url.replace(/\/$/, ""), supabaseAnonKey: anon } : demoMode ? { demo: demoMode } : null;
 writeFileSync(out + "config.js",

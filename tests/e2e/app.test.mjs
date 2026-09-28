@@ -43,7 +43,7 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(BASE + "?demo=1" + (hash ? "#/" + hash : ""));
   // Pages from the ☰ menu open full screen (no tab row).
-  await page.waitForSelector(/^(profile|projects|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
+  await page.waitForSelector(/^(profile|projects|portfolio|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
   page.errors = errors;
   return page;
 }
@@ -344,7 +344,7 @@ test("laptops and desktops: the ☰ items sit in the tab row; phones keep the �
   const page = await open("", { width: 1280, height: 800 });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "no ☰ on a wide screen");
   const extra = page.locator("#li-nav-extra");
-  assert.deepEqual((await extra.locator(".li-nav-link").allInnerTexts()).map((t) => t.trim()), ["Profile", "Projects", "Settings", "☀", "Log out"]);
+  assert.deepEqual((await extra.locator(".li-nav-link").allInnerTexts()).map((t) => t.trim()), ["Profile", "Projects", "Portfolio", "Settings", "☀", "Log out"]);
   const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), ext = await extra.boundingBox();
   assert.ok(Math.abs(tabs.y - ext.y) < 12 && ext.x >= tabs.x + tabs.width - 1, "same line, on the right");
   // Light / Dark from the bar.
@@ -428,14 +428,98 @@ test("team chat: hidden until there's a colleague (and before the chat SQL is ru
   await page.close();
 });
 
+test("portfolio (owner): share links, what's on it, and a live preview", async () => {
+  const page = await open("portfolio", { width: 390, height: 844 });
+  await page.waitForSelector("#li-pf-preview .pf-hero");
+  assert.equal(await page.textContent("#li-page-title"), "Portfolio");
+  const preview = page.locator("#li-pf-preview");
+  for (const id of ["#pf-activity", "#pf-projects", "#pf-milestones", "#pf-work"]) assert.equal(await preview.locator(id).count(), 1, `${id} in the preview`);
+  assert.ok(!/\(sample\)/.test(await preview.innerText()), "nothing about colleagues");
+  // Create a link: shown once, with the page address and the secret after #.
+  await page.waitForSelector("#li-pf-list .li-empty");
+  await page.fill("#li-pf-new [name=name]", "Acme Corp");
+  await page.click("#li-pf-new button[type=submit]");
+  const url = await page.locator("#li-pf-url").inputValue();
+  assert.match(url, /\/portfolio\.html#t=lip_[A-Za-z0-9_-]{40,}$/);
+  await page.click("#li-modal [data-close]:has-text('Done')");
+  const row = page.locator("#li-pf-list li", { hasText: "Acme Corp" });
+  assert.match(await row.innerText(), /0 views · expires/);
+  // Edit what's on it: the preview follows.
+  await page.fill("#li-pf-form [name=headline]", "Mobile & web developer");
+  await page.uncheck("#li-pf-form [name=show_logs]");
+  await page.click("#li-pf-form button[type=submit]");
+  await page.waitForFunction(() => document.querySelector("#li-pf-preview .pf-headline")?.textContent === "Mobile & web developer");
+  assert.equal(await preview.locator("#pf-work").count(), 0, "How I work hidden");
+  // Switch the link off.
+  await row.locator("[data-revoke-link]").click();
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => /Switched off/.test(document.querySelector("#li-pf-list").textContent));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("portfolio page (hiring managers): opens from a link, refuses bad links, fits a phone", async () => {
+  const calls = [];
+  const page = await browser.newPage({ viewport: { width: 375, height: 800 } });
+  page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(e.message));
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
+    body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
+  await page.exposeFunction("__rpcCall", (name, args) => calls.push([name, args]));
+  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: `
+    const summary = { generated_at: "2026-09-28T10:00:00Z",
+      about: { name: "Ayenew Shiferaw", headline: "Mobile developer", bio: "I build travel apps.", approach: "Quarters, milestones, daily tickets.", links: { email: "a@example.com", github: "https://github.com/x", linkedin: "javascript:alert(1)" } },
+      activity: { completed_total: 42, completed_30: 12, completed_90: 30, minutes_total: 1200, today: "2026-09-28",
+        days: [{ date: "2026-09-28", done: 2 }, { date: "2026-09-27", done: 1 }, { date: "2026-09-25", done: 4 }], weeks: [{ week_start: "2026-09-21", score: 80 }] },
+      projects: [{ name: "Guxo Flights", description: "Flight booking", stage: "Build", status: "good", links: { web: "https://guxo.example" }, checklist: [{ done: true }, { done: false }] },
+                 { name: "Old app", description: "Shipped", status: "good", links: {}, checklist: [{ done: true }] }],
+      milestones: [{ title: "Booking flow", status: "in_progress", pct: 60, deadline: "2026-10-10" }, { title: "Foundations", status: "completed", pct: 100, completed_at: "2026-09-20T00:00:00Z" }],
+      plan: null,
+      work: [{ title: "Booking store", day: "2026-09-27", changed: "Added the booking store", how: "One slice per step", solved: "Props five levels deep", minutes: 90 }] };
+    export function createClient() { return { rpc: async (name, args) => { await window.__rpcCall(name, args);
+      return args.p_token === "lip_good_secret_0123456789abcdef" ? { data: summary, error: null } : { data: null, error: { message: "invalid link", code: "28000" } }; } }; }` }));
+  await page.goto(BASE.replace(/\/?$/, "/") + "portfolio.html#t=lip_good_secret_0123456789abcdef");
+  await page.waitForSelector(".pf-hero h1");
+  assert.deepEqual(calls[0], ["portfolio_view", { p_token: "lip_good_secret_0123456789abcdef" }]);
+  const text = await page.locator("#pf-root").innerText();
+  assert.match(text, /Ayenew Shiferaw[\s\S]*Mobile developer[\s\S]*42\s*tasks finished[\s\S]*Guxo Flights[\s\S]*Old app[\s\S]*Booking flow[\s\S]*Foundations[\s\S]*Booking store[\s\S]*One slice per step/i);
+  assert.equal(await page.locator("#pf-plan").count(), 0, "hidden sections stay hidden");
+  assert.equal(await page.locator('.pf-contact[href^="javascript"]').count(), 0, "only safe links");
+  assert.equal(await page.title(), "Ayenew Shiferaw · Portfolio");
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), "fits a phone");
+  assert.equal(await page.locator("#gate, .gate").count(), 0, "no passcode screen");
+  // A switched-off or expired link.
+  await page.goto(BASE.replace(/\/?$/, "/") + "portfolio.html#t=lip_revoked_secret_0123456789");
+  await page.reload();
+  await page.waitForSelector(".pf-message");
+  assert.match(await page.locator(".pf-message").innerText(), /expired or was switched off/);
+  // No link at all.
+  await page.goto(BASE.replace(/\/?$/, "/") + "portfolio.html");
+  await page.reload();
+  await page.waitForSelector(".pf-message");
+  assert.match(await page.locator(".pf-message").innerText(), /opens from a private link/);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("portfolio page: ?demo=1 shows a sample portfolio", async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.goto(BASE.replace(/\/?$/, "/") + "portfolio.html?demo=1");
+  await page.waitForSelector("#pf-work article");
+  assert.ok((await page.locator(".pf-heat .pf-cell").count()) === 26 * 7);
+  await page.close();
+});
+
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
-  const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects"];
+  const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio"];
   for (const [width, height] of sizes) {
     const page = await open("", { width, height });
     for (const v of views) {
       await page.goto(BASE + "?demo=1#/" + v);
-      await page.waitForSelector(/^(profile|projects|settings)$/.test(v) ? "#li-back" : "#li-nav .li-nav-link");
+      await page.waitForSelector(/^(profile|projects|portfolio|settings)$/.test(v) ? "#li-back" : "#li-nav .li-nav-link");
       await page.waitForTimeout(100);
       const where = `${v || "overview"} at ${width}px`;
       const r = await page.evaluate(() => {
@@ -956,7 +1040,7 @@ test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", 
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Portfolio", "Settings", "Light mode", "Log out"]);
   // Light background: the row switches it and then offers Dark mode.
   await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");

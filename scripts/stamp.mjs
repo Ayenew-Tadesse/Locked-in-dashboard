@@ -1,4 +1,4 @@
-// Version-stamps the app's files in index.html so phones and computers load
+// Version-stamps the app's files in index.html and portfolio.html so phones and computers load
 // every update instead of reusing saved copies (GitHub Pages lets browsers
 // keep files for 10 minutes, and a mix of old and new files can break).
 //
@@ -14,7 +14,6 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const root = new URL("..", import.meta.url).pathname;
-const page = join(root, "index.html");
 const hash = (file) => createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 10);
 
 function files(dir) {
@@ -31,30 +30,40 @@ const imports = Object.fromEntries(modules.map((f) => {
 }));
 const map = `<script type="importmap" id="li-versions">${JSON.stringify({ imports })}</script>`;
 
-const before = readFileSync(page, "utf8");
-let html = before;
-const swap = (re, value, what) => {
-  if (!re.test(html)) throw new Error(`Couldn't find ${what} in index.html`);
-  html = html.replace(re, value);
-};
-swap(/href="app\/app\.css(\?v=[0-9a-f]+)?"/, `href="app/app.css?v=${hash(join(root, "app/app.css"))}"`, "the app stylesheet");
-swap(/<script src="config\.js(\?v=[0-9a-f]+)?"><\/script>/, `<script src="config.js?v=${hash(join(root, "config.js"))}"></script>`, "config.js");
-swap(/<script type="module" src="(\.\/)?app\/main\.js(\?v=[0-9a-f]+)?"><\/script>/, `<script type="module" src="${imports["./app/main.js"].slice(2)}"></script>`, "app/main.js");
-if (/<script type="importmap" id="li-versions">.*?<\/script>/.test(html)) {
-  html = html.replace(/<script type="importmap" id="li-versions">.*?<\/script>/, map);
-} else {
-  // The import map must come before the first module script: put it right
-  // after the app stylesheet link.
-  html = html.replace(/(<link rel="stylesheet" href="app\/app\.css\?v=[0-9a-f]+">)/, `$1\n${map}`);
+// Each page: its stylesheets, config.js, its entry module, and the import map
+// (placed right after its first stylesheet, before any module script).
+const PAGES = [
+  { file: "index.html", css: ["app/app.css", "app/portfolio.css"], main: "app/main.js" },
+  { file: "portfolio.html", css: ["app/portfolio.css"], main: "app/portfolio-page.js" },
+];
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+let stale = [], changed = [];
+for (const pg of PAGES) {
+  const path = join(root, pg.file);
+  const before = readFileSync(path, "utf8");
+  let html = before;
+  const swap = (re, value, what) => {
+    if (!re.test(html)) throw new Error(`Couldn't find ${what} in ${pg.file}`);
+    html = html.replace(re, value);
+  };
+  for (const css of pg.css) swap(new RegExp(`href="${esc(css)}(\\?v=[0-9a-f]+)?"`), `href="${css}?v=${hash(join(root, css))}"`, css);
+  swap(/<script src="config\.js(\?v=[0-9a-f]+)?"><\/script>/, `<script src="config.js?v=${hash(join(root, "config.js"))}"></script>`, "config.js");
+  swap(new RegExp(`<script type="module" src="(\\./)?${esc(pg.main)}(\\?v=[0-9a-f]+)?"></script>`), `<script type="module" src="${imports["./" + pg.main].slice(2)}"></script>`, pg.main);
+  if (/<script type="importmap" id="li-versions">.*?<\/script>/.test(html)) {
+    html = html.replace(/<script type="importmap" id="li-versions">.*?<\/script>/, map);
+  } else {
+    html = html.replace(new RegExp(`(<link rel="stylesheet" href="${esc(pg.css[0])}\\?v=[0-9a-f]+">)`), `$1\n${map}`);
+  }
+  if (html !== before) { stale.push(pg.file); changed.push([path, html]); }
 }
 
 if (process.argv.includes("--check")) {
-  if (html !== before) {
-    console.error("index.html version stamps are out of date. Run: node scripts/stamp.mjs");
+  if (stale.length) {
+    console.error(`Version stamps are out of date in ${stale.join(", ")}. Run: node scripts/stamp.mjs`);
     process.exit(1);
   }
   console.log("Version stamps are up to date.");
 } else {
-  writeFileSync(page, html);
-  console.log(html === before ? "Version stamps already up to date." : "Updated version stamps in index.html.");
+  for (const [path, html] of changed) writeFileSync(path, html);
+  console.log(changed.length ? `Updated version stamps in ${stale.join(", ")}.` : "Version stamps already up to date.");
 }

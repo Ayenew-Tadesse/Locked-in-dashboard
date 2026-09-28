@@ -21,9 +21,9 @@ async function sha256Hex(text) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-function newTokenString() {
+function newTokenString(prefix = "lki_") {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return "lki_" + btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return prefix + btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -252,6 +252,22 @@ export function supabaseStoreFromClient(sb) {
     },
     async revokeToken(id) { check(await sb.from("api_tokens").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
 
+    // Portfolio share links (20261005000000_portfolio.sql). null: not set up yet.
+    async listPortfolioLinks() {
+      const { data, error } = await sb.from("portfolio_links").select("id,name,token_prefix,created_at,expires_at,revoked_at,last_viewed_at,views").order("created_at", { ascending: false });
+      if (error && /portfolio_links/.test(error.message)) return null;
+      return check({ data, error });
+    },
+    /** The link's secret is returned once and never stored; only its SHA-256 hash is saved. */
+    async createPortfolioLink({ name, expires_at }) {
+      const token = newTokenString("lip_");
+      const token_hash = await sha256Hex(token);
+      const row = check(await sb.from("portfolio_links").insert({ name, expires_at: expires_at || null, token_hash, token_prefix: token.slice(0, 10) })
+        .select("id,name,token_prefix,created_at,expires_at,revoked_at,last_viewed_at,views").single());
+      return { token, row };
+    },
+    async revokePortfolioLink(id) { check(await sb.from("portfolio_links").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
+
     /** Bulk import (ids generated here so rows can reference each other). */
     async importData({ goals = [], milestones = [], tasks = [], dailyNotes = [] }) {
       for (const [table, rows] of [["quarterly_goals", goals], ["milestones", milestones], ["tasks", tasks]]) {
@@ -306,6 +322,7 @@ export function createMemoryStore(seed) {
     return db[list].find((r) => r[key] === row[key]);
   };
   const tokens = [];
+  const portfolioLinks = [];
 
   return {
     mode: "demo",
@@ -394,6 +411,14 @@ export function createMemoryStore(seed) {
       return { token, row };
     },
     async revokeToken(id) { const t = tokens.find((x) => x.id === id); if (t) t.revoked_at = now(); },
+    async listPortfolioLinks() { return portfolioLinks.slice(); },
+    async createPortfolioLink({ name, expires_at }) {
+      const token = newTokenString("lip_");
+      const row = { id: uuid(), name, token_prefix: token.slice(0, 10), created_at: now(), expires_at: expires_at || null, revoked_at: null, last_viewed_at: null, views: 0 };
+      portfolioLinks.unshift(row);
+      return { token, row: { ...row } };
+    },
+    async revokePortfolioLink(id) { const l = portfolioLinks.find((x) => x.id === id); if (l) l.revoked_at = now(); },
     async importData({ goals = [], milestones = [], tasks = [], dailyNotes = [] }) {
       db.goals.push(...goals); db.milestones.push(...milestones);
       db.tasks.push(...tasks.map((t) => ({ created_at: now(), ...t })));
