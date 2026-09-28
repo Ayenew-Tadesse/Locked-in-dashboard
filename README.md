@@ -34,7 +34,8 @@ extended into a productivity and milestone tracker backed by a real database.
   weekday morning (Oct–Dec in full; later months get week-by-week plans, turned into daily tickets monthly).
   Each ticket explains the Goal, How it works, Steps and Done when. See `app/plan/year-plan.js`.
 - **Learning log and Daily report PDF:** completing a task asks what changed, how, and what problem it solved;
-  the Daily report's **Download PDF** turns that, the ticket's notes and the day's GitHub commits into a PDF.
+  the report PDF (Day, Week, Month or Quarter, from the Tasks card) lists what was completed with each learning log
+  and the files shared, what's still open or overdue, every milestone's progress and, for the owner, each colleague's work.
 - **Team portal:** colleagues sign in with their own accounts (invitation only). Members see their own work and
   the team's goals and milestones; the owner's **Team** page shows everyone's progress, their learning logs and
   daily reports, and lets the owner assign tasks and manage invitations.
