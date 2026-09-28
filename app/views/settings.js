@@ -6,7 +6,6 @@ import { formatDay, dayOf } from "../core/dates.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { buildYearSetup, buildMissingHistory } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
-import { DEFAULT_REPOS } from "../report/daily-report.js";
 
 // "Set up my year" has been done: afterwards only missing history is offered.
 const setUp = () => !!(state.settings.plan_loaded_at || state.settings.legacy_imported_at);
@@ -71,15 +70,6 @@ export function renderSettings(el) {
         ${PLAN_STATS.goals} quarterly goals, ${PLAN_STATS.milestones} milestones and ${PLAN_STATS.tickets} daily tickets from ${esc(formatDay(PLAN_STATS.first, { month: "short", day: "numeric" }))} to ${esc(formatDay(PLAN_STATS.last, { month: "short", day: "numeric" }))}.</p>
       ${state.settings.plan_loaded_at ? `<p class="li-sub">Year plan loaded on ${esc(formatDay(dayOf(state.settings.plan_loaded_at, state.timeZone)))}.
         "Add missing history" adds any of the original dashboard's days that aren't here yet (like Sep 20–21) without duplicating anything.</p>` : ""}
-    </section>
-
-    <section class="li-card" id="report-settings">
-      <div class="li-card-head"><span class="card-label">Daily report PDF</span></div>
-      <p class="li-sub">The PDF lists the code you pushed that day in these GitHub repositories (owner/name, one per line). Public repositories only.</p>
-      <form class="li-form" id="li-repos-form">
-        <label class="li-field full">Repositories<textarea name="repos" rows="3" maxlength="1000">${esc((state.settings.preferences?.githubRepos || DEFAULT_REPOS).join("\n"))}</textarea></label>
-        <div class="li-form-actions full"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save repositories</button></div>
-      </form>
     </section>`;
 
   // Scoring
@@ -173,17 +163,6 @@ export function renderSettings(el) {
       await reload();
       toast("Your year is set up");
     } catch (e) { toast("Setup failed: " + e.message, "error"); }
-  });
-  el.querySelector("#li-repos-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const repos = e.target.elements.repos.value.split(/[\s,]+/).map((r) => r.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "")).filter(Boolean);
-    const bad = repos.filter((r) => !/^[\w.-]+\/[\w.-]+$/.test(r));
-    if (bad.length) { toast(`Use owner/name, e.g. Ayenew-Tadesse/Guxo-Flights (check: ${bad.join(", ")})`, "error"); return; }
-    try {
-      const s = await state.store.savePreferences({ ...(state.settings.preferences || {}), githubRepos: repos });
-      state.settings = { ...state.settings, ...s };
-      toast("Repositories saved");
-    } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 }
 

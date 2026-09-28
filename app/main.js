@@ -12,7 +12,7 @@ import { displayName, needsProfile, greetingOptions } from "./core/people.js";
 import { openTaskForm, completeTask } from "./ui/task-ui.js";
 import { buildWarnings } from "./core/insights.js";
 import { scoreDay, scorePeriod, scoreQuarter } from "./core/scoring.js";
-import { weekRange, monthRange, quarterOf, dayOf, formatRange } from "./core/dates.js";
+import { weekRange, monthRange, quarterOf, dayOf, formatRange, formatDay } from "./core/dates.js";
 import { isOverdue } from "./core/tasks.js";
 import { renderOverview } from "./views/overview.js";
 import { renderToday } from "./views/today.js";
@@ -30,7 +30,7 @@ import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { renderTeamCard } from "./views/team-card.js";
-import { DEFAULT_REPOS, fetchCommits, buildDailyReport, renderDailyReportPdf } from "./report/daily-report.js";
+import { downloadReport } from "./report/download.js";
 
 const VIEWS = {
   overview: { label: "Overview", render: renderOverview },
@@ -279,19 +279,14 @@ function addReportPdfButton() {
   if (!nav || document.getElementById("li-report-pdf")) return;
   nav.insertAdjacentHTML("afterend", `<div class="li-report-actions">
     <button type="button" class="li-btn small" id="li-report-pdf">Download PDF</button>
-    <span class="li-sub">What was modified, how, and what problem it solved</span></div>`);
+    <span class="li-sub">What was completed, how, the files shared, and milestone progress</span></div>`);
   document.getElementById("li-report-pdf").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     const day = window.LockedInLegacy?.reportDay?.() || state.today;
     btn.disabled = true;
     btn.textContent = "Preparing…";
     try {
-      const github = await fetchCommits(state.settings.preferences?.githubRepos || DEFAULT_REPOS, day);
-      const s = scoreDay(state.tasks, day, state.cfg, { today: state.today, timeZone: state.timeZone });
-      const report = buildDailyReport({ day, tasks: state.tasks, milestones: state.milestones, files: state.files || [], dailyNote: state.daily[day]?.notes,
-        score: s.score, github, timeZone: state.timeZone });
-      const doc = await renderDailyReportPdf(report);
-      doc.save(`locked-in-daily-report-${day}.pdf`);
+      await downloadReport({ period: "day", start: day, end: day, label: formatDay(day, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) });
       showToast("Daily report downloaded");
     } catch (err) {
       console.error(err);

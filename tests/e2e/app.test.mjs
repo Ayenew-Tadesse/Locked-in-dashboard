@@ -428,7 +428,7 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
       }
       return out;
     });
-    for (const period of ["day", "month"]) {
+    for (const period of ["month", "day"]) {
       await page.click(`#li-tasks-card [data-period=${period}]`);
       const hugs = await page.locator("#li-tasks-card").evaluate((e) => e.scrollHeight <= e.clientHeight + 1 && getComputedStyle(e).overflowY === "visible");
       assert.ok(hugs, `Tasks card hugs its content (${period}, ${width}px)`);
@@ -437,7 +437,6 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
     await page.click("#li-tasks-card [data-report]");
     await page.waitForSelector("#report-card:not([hidden])");
     assert.deepEqual(await overlaps(), [], `no overlapping cards with the report open (${width}px)`);
-    await page.click("#li-tasks-card [data-period=day]");
     await page.evaluate(() => localStorage.removeItem("li_tasks_period"));
     assert.equal(await page.locator("#li-tasks-card a", { hasText: "Open Today" }).count(), 0, "no Open Today link");
     assert.deepEqual(page.errors, [], `no errors at ${width}px`);
@@ -540,7 +539,9 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
     assert.match(await card.locator(".li-tc-progress").innerText(), /% complete/);
   }
   assert.equal(await card.locator('a[href="#/quarter"]').count(), 1, "quarter view link");
-  // Daily report opens from the card.
+  // Week, month and quarter download their report; Day opens the daily report card.
+  assert.equal((await card.locator("[data-report-pdf]").innerText()).trim(), "Quarterly report ⤓");
+  await card.locator("[data-period=day]").click();
   await card.locator("[data-report]").click();
   assert.ok(await page.locator("#report-card").isVisible());
   // Settings lives in the ☰ menu (no longer in the footer).
@@ -583,14 +584,11 @@ test("year plan: tickets explain how it works; completing one asks for a learnin
   await page.close();
 });
 
-test("daily report: Download PDF includes what changed, how, the problem solved and the day's commits", async () => {
+test("report PDFs: completed work with learning logs and files, open work, milestones and the team; no GitHub", async () => {
   const page = await unlockedPage({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-  await page.route("https://api.github.com/**", (route) => {
-    const url = route.request().url();
-    if (/\/commits\/[0-9a-f]+/.test(url)) return route.fulfill({ json: { files: [{ filename: "src/store/booking.ts", status: "added", additions: 42, deletions: 0 }] } });
-    return route.fulfill({ json: [{ sha: "a1b2c3d4e5f6", commit: { message: "Add the booking store", author: { date: new Date().toISOString() } } }] });
-  });
+  let github = 0;
+  await page.route("https://api.github.com/**", (route) => { github++; return route.abort(); });
   await page.goto(BASE + "?demo=1#/today");
   await page.waitForSelector("#li-nav .li-nav-link");
   const r = row(page, "Test keyboard handling on iOS");
@@ -600,19 +598,28 @@ test("daily report: Download PDF includes what changed, how, the problem solved 
   await page.fill("#li-modal [name=learning_solved]", "Inputs were hidden behind the keyboard on iOS");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });
-  // Open the Daily report from the Overview's Tasks card, then download.
+  // Daily: open the report from the Overview's Tasks card (Day), then download.
   await page.click('#li-nav a[href="#/"]');
+  await page.click("#li-tasks-card [data-period=day]");
   await page.click("#li-tasks-card [data-report]");
   await page.waitForSelector("#li-report-pdf");
-  const [download] = await Promise.all([page.waitForEvent("download"), page.click("#li-report-pdf")]);
-  assert.match(download.suggestedFilename(), /^locked-in-daily-report-\d{4}-\d{2}-\d{2}\.pdf$/);
-  const pdf = readFileSync(await download.path()).toString("latin1");
+  const [daily] = await Promise.all([page.waitForEvent("download"), page.click("#li-report-pdf")]);
+  assert.match(daily.suggestedFilename(), /^locked-in-daily-report-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const pdf = readFileSync(await daily.path()).toString("latin1");
   assert.ok(pdf.startsWith("%PDF-"), "a real PDF");
-  for (const s of ["Test keyboard handling on iOS", "What was modified", "Screens move up with the keyboard",
-    "How it was modified", "KeyboardAvoidingView per screen", "What problem was solved",
-    "Inputs were hidden behind the keyboard on iOS", "Add the booking store", "src/store/booking.ts"]) {
-    assert.ok(pdf.includes(s), `PDF contains "${s}"`);
+  for (const s of ["Daily report", "COMPLETED", "Test keyboard handling on iOS", "What was done", "Screens move up with the keyboard",
+    "KeyboardAvoidingView per screen", "Problem solved", "Inputs were hidden behind the keyboard on iOS", "STILL OPEN", "MILESTONES", "complete", "TEAM", "Ana \\(sample\\)"]) {
+    assert.ok(pdf.includes(s), `daily PDF contains "${s}"`);
   }
+  assert.ok(!/commit|GitHub/i.test(pdf), "no GitHub section");
+  // Weekly: switch the card to Week and download straight away.
+  await page.click("#li-tasks-card [data-period=week]");
+  const [weekly] = await Promise.all([page.waitForEvent("download"), page.click("#li-tasks-card [data-report-pdf]")]);
+  assert.match(weekly.suggestedFilename(), /^locked-in-weekly-report-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const wpdf = readFileSync(await weekly.path()).toString("latin1");
+  for (const s of ["Weekly report", "Test keyboard handling on iOS", "Screens move up with the keyboard", "MILESTONES"]) assert.ok(wpdf.includes(s), `weekly PDF contains "${s}"`);
+  assert.equal(github, 0, "GitHub is never called");
+  await page.evaluate(() => localStorage.removeItem("li_tasks_period"));
   await page.close();
 });
 

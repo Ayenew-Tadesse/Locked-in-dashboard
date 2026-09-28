@@ -7,7 +7,7 @@ import { roadmapDone } from "../../app/legacy-import.js";
 import { projectsFromLegacy, projectProgress, safeUrl } from "../../app/core/projects.js";
 import { weekdayIndex, addDays } from "../../app/core/dates.js";
 import { computeMilestone, computeGoal } from "../../app/core/insights.js";
-import { buildDailyReport, fetchCommits, pdfText } from "../../app/report/daily-report.js";
+import { buildReport, pdfText } from "../../app/report/daily-report.js";
 
 let n = 0;
 const newId = () => "id" + ++n;
@@ -75,37 +75,32 @@ test("setup: history + plan, finished roadmap items stay finished", () => {
   assert.equal(Math.round(g1.percentage_complete), 33);
 });
 
-test("report: completed tasks with learning log, senior notes, open work and commits", () => {
+test("report: completed tasks with learning log and files, open work, milestones and the team", () => {
   const plan = buildYearPlan(newId);
   const t = { ...plan.tasks[0], status: "completed", completed_at: "2026-09-28T14:00:00Z", actual_minutes: 170,
     learning_changed: "Added docs/booking-state.md", learning_how: "Listed screens and data", learning_solved: "Clear shape before coding" };
   const open = { ...plan.tasks[1], date: "2026-09-28" };
-  const github = { repos: [{ repo: "a/b", commits: [{ sha: "abc1234", time: null, message: "Add store", files: [] }] }] };
-  const r = buildDailyReport({ day: "2026-09-28", tasks: [t, open], milestones: plan.milestones, dailyNote: "Good start", score: 90, github, timeZone: "UTC" });
+  const late = { id: "late", title: "Late thing", date: "2026-09-24", due_date: "2026-09-25", status: "not_started" };
+  const files = [{ task_id: t.id, name: "booking-state.png" }];
+  const ana = { id: "a1", user_id: "ana", title: "Ana's screen", status: "completed", completed_at: "2026-09-27T10:00:00Z", date: "2026-09-27", learning_changed: "Built it" };
+  // A week: Sep 22-28.
+  const r = buildReport({ period: "week", start: "2026-09-22", end: "2026-09-28", label: "Sep 22 - 28", tasks: [t, open, late], milestones: plan.milestones,
+    files, note: "Good week", score: 90, people: [{ name: "Ana", tasks: [ana] }], today: "2026-09-28", timeZone: "UTC" });
+  assert.equal(r.title, "Weekly report");
   assert.equal(r.completed.length, 1);
   assert.equal(r.completed[0].changed, "Added docs/booking-state.md");
-  assert.match(r.completed[0].seniorNotes, /state store/);
+  assert.deepEqual(r.completed[0].files, ["booking-state.png"]);
   assert.match(r.completed[0].milestone, /state management/);
-  assert.equal(r.open.length, 1);
+  assert.deepEqual(r.open.map((o) => [o.title, o.overdue]), [[open.title, false], ["Late thing", true]]);
   assert.equal(r.missingLogs, 0);
-  assert.match(r.summary, /1 task completed · 2h 50m logged · daily score 90\/100 · 1 commit pushed/);
-});
-
-test("report: GitHub commits are read per repository and failures are explained", async () => {
-  const calls = [];
-  const fake = async (url) => {
-    calls.push(url);
-    if (url.includes("/missing/")) return { ok: false, status: 404 };
-    if (url.includes("/limited/")) return { ok: false, status: 403 };
-    if (url.includes("/commits/abc")) return { ok: true, status: 200, json: async () => ({ files: [{ filename: "src/store.ts", status: "added", additions: 40, deletions: 0 }] }) };
-    return { ok: true, status: 200, json: async () => [{ sha: "abc123456", commit: { message: "Add store\n\nWhy: shared state", author: { date: "2026-09-28T15:00:00Z" } } }] };
-  };
-  const out = await fetchCommits(["me/app", "me/missing", "me/limited"], "2026-09-28", fake);
-  assert.equal(out.repos[0].commits[0].sha, "abc1234");
-  assert.equal(out.repos[0].commits[0].files[0].name, "src/store.ts");
-  assert.match(out.repos[1].error, /not found/);
-  assert.match(out.repos[2].error, /limit/);
-  assert.match(calls[0], /since=.*&until=/);
+  assert.ok(r.milestones.length > 0 && "pct" in r.milestones[0] && "pace" in r.milestones[0], "every milestone's progress");
+  assert.deepEqual(r.people.map((p) => [p.name, p.completed.length]), [["Ana", 1]]);
+  assert.match(r.summary, /^1 task completed · 2h 50m logged · 2 still open \(1 overdue\) · score 90\/100$/);
+  assert.ok(!("code" in r), "no GitHub section");
+  // A day only counts that day.
+  const d = buildReport({ period: "day", start: "2026-09-27", end: "2026-09-27", label: "Sep 27", tasks: [t, open], today: "2026-09-28", timeZone: "UTC" });
+  assert.equal(d.title, "Daily report");
+  assert.equal(d.completed.length, 0);
 });
 
 test("report: PDF text is cleaned to what the PDF font can show", () => {

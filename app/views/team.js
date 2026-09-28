@@ -6,7 +6,7 @@ import { addDays, weekRange, formatDay, relativeDay, dayOf, formatMinutes } from
 import { isOverdue, sortTasks } from "../core/tasks.js";
 import { esc, tile, scoreValue, scoreTone, pct, confirmDialog, openModal } from "../ui/dom.js";
 import { taskList, openTaskForm, fileList } from "../ui/task-ui.js";
-import { buildDailyReport, renderDailyReportPdf } from "../report/daily-report.js";
+import { downloadReport } from "../report/download.js";
 
 const tasksOf = (userId) => (userId === state.me ? state.tasks : state.teamTasks.filter((t) => t.user_id === userId));
 
@@ -141,10 +141,7 @@ function renderMember(el, userId) {
     const btn = e.currentTarget;
     btn.disabled = true;
     try {
-      const report = buildDailyReport({ day: today, tasks: s.tasks, milestones: state.milestones, files: state.files || [], score: s.day.score, timeZone: state.timeZone });
-      report.title = `Daily report: ${m.name}`;
-      const doc = await renderDailyReportPdf(report);
-      doc.save(`locked-in-daily-report-${m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${today}.pdf`);
+      await downloadReport({ period: "day", start: today, end: today, label: formatDay(today, { weekday: "long", month: "long", day: "numeric", year: "numeric" }), userId, name: m.name });
     } catch (err) { toast("Couldn't make the PDF: " + err.message, "error"); }
     finally { btn.disabled = false; }
   });

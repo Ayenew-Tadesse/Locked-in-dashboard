@@ -4,11 +4,13 @@
 // Ongoing / Completed with who's in charge of each, how much of that
 // period's work is done, and opens the daily report. A colleague sees their
 // own tasks as Available / Completed, read-only.
-import { state } from "../state.js";
+import { state, toast } from "../state.js";
 import { weekRange, monthRange, quarterOf, quarterRange, formatDay, formatRange, MONTHS } from "../core/dates.js";
 import { isOverdue, sortTasks } from "../core/tasks.js";
 import { esc, progressBar, pct } from "../ui/dom.js";
 import { taskList, quickAddForm } from "../ui/task-ui.js";
+import { downloadReport } from "../report/download.js";
+import { PERIOD_NAMES } from "../report/daily-report.js";
 
 const PERIODS = { day: "Day", week: "Week", month: "Month", quarter: "Quarter" };
 const SHOW = 8; // tasks listed before "Show all"
@@ -91,7 +93,8 @@ export function renderTasksCard(el) {
     ${quickAddForm("tasks-card-quick", today, "Add a task for today…")}
     <div class="li-tc-foot">
       ${period === "week" ? `<a class="li-link" href="#/week">Open week view</a>` : period === "quarter" ? `<a class="li-link" href="#/quarter">Open quarter view</a>` : period === "month" ? `<a class="li-link" href="#/analytics">Open analytics</a>` : "<span></span>"}
-      ${readOnly ? "" : `<button type="button" class="report-btn" data-report aria-expanded="${reportOpen}" aria-controls="report-card">Daily report</button>`}
+      ${readOnly ? "" : period === "day" ? `<button type="button" class="report-btn" data-report aria-expanded="${reportOpen}" aria-controls="report-card">Daily report</button>`
+        : `<button type="button" class="report-btn" data-report-pdf title="Download the ${PERIOD_NAMES[period].toLowerCase()} report as a PDF">${PERIOD_NAMES[period]} report ⤓</button>`}
     </div>`;
   el.hidden = false;
 
@@ -107,5 +110,18 @@ export function renderTasksCard(el) {
   el.querySelector("[data-report]")?.addEventListener("click", (e) => {
     document.getElementById("report-btn")?.click();
     e.currentTarget.setAttribute("aria-expanded", document.getElementById("report-btn")?.getAttribute("aria-expanded") || "false");
+  });
+  // Week, month and quarter: download that period's report straight away.
+  el.querySelector("[data-report-pdf]")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget, text = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Preparing…";
+    try {
+      await downloadReport({ period, start: r.start, end: r.end, label: label(today, r) });
+      toast(`${PERIOD_NAMES[period]} report downloaded`);
+    } catch (err) {
+      console.error(err);
+      toast("Couldn't make the PDF: " + err.message, "error");
+    } finally { btn.disabled = false; btn.textContent = text; }
   });
 }
