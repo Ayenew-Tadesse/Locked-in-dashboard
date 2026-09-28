@@ -13,6 +13,7 @@ import { openTaskForm, completeTask } from "./ui/task-ui.js";
 import { buildWarnings } from "./core/insights.js";
 import { scoreDay, scorePeriod, scoreQuarter } from "./core/scoring.js";
 import { weekRange, monthRange, quarterOf, dayOf, formatRange } from "./core/dates.js";
+import { isOverdue } from "./core/tasks.js";
 import { renderOverview } from "./views/overview.js";
 import { renderToday } from "./views/today.js";
 import { renderTasks } from "./views/tasks.js";
@@ -83,6 +84,18 @@ function renderNav(active) {
     window.addEventListener("resize", () => navFades(sc));
   }
   let current = null;
+  // A dot with a count on Tasks while you have unfinished tasks (red if any are overdue).
+  const open = state.tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled");
+  const late = open.some((t) => isOverdue(t, state.today));
+  const tasksTab = sc.querySelector('[data-view="tasks"]');
+  if (tasksTab) {
+    let dot = tasksTab.querySelector(".li-nav-dot");
+    if (!dot) { dot = document.createElement("span"); dot.className = "li-nav-dot"; tasksTab.append(dot); }
+    dot.hidden = !open.length;
+    dot.textContent = open.length > 99 ? "99+" : String(open.length);
+    dot.classList.toggle("late", late);
+    tasksTab.setAttribute("aria-label", open.length ? `Tasks, ${open.length} unfinished${late ? ", some overdue" : ""}` : "Tasks");
+  }
   sc.querySelectorAll(".li-nav-link").forEach((a) => {
     const on = a.dataset.view === active;
     a.classList.toggle("active", on);
