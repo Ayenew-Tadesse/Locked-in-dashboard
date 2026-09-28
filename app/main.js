@@ -28,6 +28,7 @@ import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu } from "./ui/menu.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
+import { renderTeamCard } from "./views/team-card.js";
 import { DEFAULT_REPOS, fetchCommits, buildDailyReport, renderDailyReportPdf } from "./report/daily-report.js";
 
 const VIEWS = {
@@ -191,6 +192,7 @@ function render() {
     // instead); their Tasks card is read-only.
     document.documentElement.classList.toggle("li-colleague", state.isColleague);
     try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
+    try { renderTeamCard($("#li-team-card")); } catch (e) { console.error(e); }
     try { renderProjectCards($("#li-projects")); } catch (e) { console.error(e); }
   }
   feedLegacy();
