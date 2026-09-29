@@ -1,6 +1,6 @@
 // Profile (from the ☰ menu): who you are on the team, and your name,
 // greeting and time zone.
-import { state, saveProfile, toast } from "../state.js";
+import { state, saveProfile, toast, ROLE_LABELS } from "../state.js";
 import { esc } from "../ui/dom.js";
 import { displayName, greetingOptions, canGreet } from "../core/people.js";
 
@@ -12,7 +12,7 @@ export function initials(name) {
 
 export function renderProfile(el) {
   const p = state.profile || {};
-  const role = state.team ? (state.isOwner ? "Owner" : "Member") : "";
+  const role = state.team ? (ROLE_LABELS[state.team.role] || "Member") : "";
   el.innerHTML = `
     <header class="li-view-head">
       <div class="li-profile-id">

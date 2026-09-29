@@ -1,6 +1,6 @@
 // Team page (owner only): everyone's progress, invitations, and each
 // person's work, learning logs and daily report.
-import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast } from "../state.js";
+import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, ROLE_LABELS } from "../state.js";
 import { scoreDay, scorePeriod } from "../core/scoring.js";
 import { addDays, weekRange, formatDay, relativeDay, dayOf, formatMinutes } from "../core/dates.js";
 import { isOverdue, sortTasks } from "../core/tasks.js";
@@ -24,13 +24,15 @@ function stats(userId) {
 function signupLink() { return location.origin + location.pathname; }
 
 export function renderTeam(el, params, id) {
-  if (!state.isOwner) {
-    el.innerHTML = `<p class="li-empty">The Team page is for the team owner.</p>`;
+  if (!state.isManager) {
+    el.innerHTML = `<p class="li-empty">The Team page is for the team owner and admins.</p>`;
     return;
   }
   if (id) return renderMember(el, id);
   const today = state.today;
-  const people = [...state.members].sort((a, b) => (a.role === "owner" ? -1 : b.role === "owner" ? 1 : a.name.localeCompare(b.name)));
+  // The owner sees everyone; an admin sees themselves and the colleagues they manage.
+  const rank = { owner: 0, admin: 1, member: 2 };
+  const people = state.members.filter(managesPerson).sort((a, b) => (rank[a.role] ?? 2) - (rank[b.role] ?? 2) || a.name.localeCompare(b.name));
   const all = people.map((m) => ({ m, s: stats(m.user_id) }));
   const teamWeek = all.filter((x) => x.s.week.score != null);
   const avgWeek = teamWeek.length ? Math.round(teamWeek.reduce((a, x) => a + x.s.week.score, 0) / teamWeek.length) : null;
@@ -40,7 +42,7 @@ export function renderTeam(el, params, id) {
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Team</span><h2 class="li-h2">${esc(state.team.name)}</h2></div>
-      <button type="button" class="li-btn small" id="li-rename-team">Rename</button>
+      ${state.isOwner ? `<button type="button" class="li-btn small" id="li-rename-team">Rename</button>` : ""}
     </header>
     <div class="li-kpis">
       ${tile("People", String(people.length), `${people.length - 1} colleague${people.length - 1 === 1 ? "" : "s"} · ${state.invites.length} invited`)}
@@ -53,32 +55,35 @@ export function renderTeam(el, params, id) {
       <div class="li-table-wrap"><table class="li-team-table">
         <thead><tr><th>Person</th><th>Today</th><th>Daily score</th><th>Weekly score</th><th>30-day completion</th><th>Overdue</th><th>Last done</th><th></th></tr></thead>
         <tbody>${all.map(({ m, s }) => `<tr>
-          <td><a class="li-link li-person" href="#/team/${esc(m.user_id)}">${esc(m.name)}</a>${m.role === "owner" ? ` <span class="li-pill">Owner</span>` : ""}${m.user_id === state.me ? ` <small class="li-muted">(you)</small>` : ""}</td>
+          <td><a class="li-link li-person" href="#/team/${esc(m.user_id)}">${esc(m.name)}</a>${m.role !== "member" ? ` <span class="li-pill ${esc(m.role)}">${esc(ROLE_LABELS[m.role])}</span>` : ""}${m.user_id === state.me ? ` <small class="li-muted">(you)</small>` : ""}</td>
           <td>${s.day.counts.completed}/${s.day.counts.total}</td>
           <td class="tone-${scoreTone(s.day.score)}">${s.day.score ?? "—"}</td>
           <td class="tone-${scoreTone(s.week.score)}">${s.week.score ?? "—"}</td>
           <td>${s.month.totals.completion_rate == null ? "—" : s.month.totals.completion_rate + "%"}</td>
           <td class="${s.overdue ? "tone-red" : ""}">${s.overdue}</td>
           <td>${s.lastDone ? esc(relativeDay(s.lastDone, today)) : "—"}</td>
-          <td><button type="button" class="li-btn small" data-assign="${esc(m.user_id)}">Assign task</button></td>
+          <td><span class="li-btn-row"><button type="button" class="li-btn small" data-assign="${esc(m.user_id)}">Assign task</button>
+            ${roleButton(m)}</span></td>
         </tr>`).join("")}</tbody>
       </table></div>
     </section>
     <section class="li-card" id="li-invites">
-      <div class="li-card-head"><span class="card-label">Invite colleagues</span></div>
-      <p class="li-sub">Sign-up is by invitation only. Add a colleague's email, then send them the sign-up link. They create their account with that email and join as a member.</p>
+      <div class="li-card-head"><span class="card-label">Invite ${state.isOwner ? "people" : "colleagues"}</span></div>
+      <p class="li-sub">Sign-up is by invitation only. Add their email, then send them the sign-up link. They create their account with that email and join ${state.isOwner ? "as a colleague or an admin" : "as a colleague"}.</p>
       <form class="li-quick-add today-add" id="li-invite-form" autocomplete="off">
-        <input type="email" name="email" placeholder="colleague@example.com" aria-label="Colleague's email" required>
+        <input type="email" name="email" placeholder="colleague@example.com" aria-label="Their email" required>
+        ${state.isOwner ? `<select name="role" aria-label="Join as"><option value="member">as a colleague</option><option value="admin">as an admin</option></select>` : ""}
         <button type="submit">Invite</button>
       </form>
-      ${state.invites.length ? `<ul class="li-mini">${state.invites.map((i) => `<li><span>${esc(i.email)} <small class="li-muted">invited ${esc(formatDay(dayOf(i.created_at, state.timeZone) || today))}</small></span>
+      ${state.invites.length ? `<ul class="li-mini">${state.invites.map((i) => `<li><span>${esc(i.email)}${i.role === "admin" ? ` <span class="li-pill admin">Admin</span>` : ""} <small class="li-muted">invited ${esc(formatDay(dayOf(i.created_at, state.timeZone) || today))}</small></span>
         <span class="li-btn-row"><button type="button" class="li-btn small" data-copy-link>Copy sign-up link</button>
         <button type="button" class="li-btn small danger-ghost" data-revoke-invite="${esc(i.id)}">Cancel</button></span></li>`).join("")}</ul>`
         : `<p class="li-empty">No pending invitations.</p>`}
     </section>`;
 
   el.querySelectorAll("[data-assign]").forEach((b) => b.addEventListener("click", () => openTaskForm({ user_id: b.dataset.assign, date: today })));
-  el.querySelector("#li-rename-team").addEventListener("click", async () => {
+  wireRoleButtons(el);
+  el.querySelector("#li-rename-team")?.addEventListener("click", async () => {
     openModal({ eyebrow: "Team", title: "Rename the team", submitLabel: "Save",
       body: `<label class="li-field full">Team name<input name="name" maxlength="80" required value="${esc(state.team.name)}"></label>`,
       async onSubmit(v) { if (!v.name.trim()) throw new Error("Give the team a name."); await renameTeam(v.name.trim()); toast("Team renamed"); } });
@@ -86,8 +91,9 @@ export function renderTeam(el, params, id) {
   el.querySelector("#li-invite-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = e.target.elements.email.value.trim();
+    const role = e.target.elements.role?.value === "admin" ? "admin" : "member";
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast("Enter a valid email address.", "error"); return; }
-    await inviteMember(email).then(() => toast(`Invited ${email}. Send them the sign-up link.`), () => {});
+    await inviteMember(email, role).then(() => toast(`Invited ${email}${role === "admin" ? " as an admin" : ""}. Send them the sign-up link.`), () => {});
   });
   el.querySelectorAll("[data-copy-link]").forEach((b) => b.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(signupLink()); toast("Sign-up link copied"); }
@@ -101,6 +107,7 @@ export function renderTeam(el, params, id) {
 function renderMember(el, userId) {
   const m = state.members.find((x) => x.user_id === userId);
   if (!m) { el.innerHTML = `<p class="li-empty">That person isn't on the team. <a class="li-link" href="#/team">Back to Team</a></p>`; return; }
+  if (!managesPerson(m)) { el.innerHTML = `<p class="li-empty">Admins see the colleagues they manage. <a class="li-link" href="#/team">Back to Team</a></p>`; return; }
   const today = state.today;
   const s = stats(userId);
   const wk = weekRange(today);
@@ -111,11 +118,12 @@ function renderMember(el, userId) {
 
   el.innerHTML = `
     <header class="li-view-head">
-      <div><a class="li-link" href="#/team">&#8249; Team</a><h2 class="li-h2">${esc(m.name)}</h2><span class="li-sub">${esc(m.email)} · ${m.role === "owner" ? "Owner" : "Member"}</span></div>
+      <div><a class="li-link" href="#/team">&#8249; Team</a><h2 class="li-h2">${esc(m.name)}</h2><span class="li-sub">${esc(m.email)} · ${esc(ROLE_LABELS[m.role] || "Colleague")}</span></div>
       <div class="li-btn-row">
         <button type="button" class="li-btn primary" data-assign>${self ? "+ New task" : "Assign task"}</button>
         <button type="button" class="li-btn" id="li-member-pdf">Today's report (PDF)</button>
-        ${self ? "" : `<button type="button" class="li-btn danger-ghost" id="li-remove-member">Remove from team</button>`}
+        ${roleButton(m)}
+        ${self || !state.isOwner ? "" : `<button type="button" class="li-btn danger-ghost" id="li-remove-member">Remove from team</button>`}
       </div>
     </header>
     <div class="li-kpis">
@@ -146,6 +154,7 @@ function renderMember(el, userId) {
     finally { btn.disabled = false; }
   });
   el.querySelector("#li-remove-member")?.addEventListener("click", () => confirmRemoval(m));
+  wireRoleButtons(el);
 }
 
 // Removal deletes the person's account and all their data, so it asks for
@@ -168,4 +177,23 @@ function confirmRemoval(m) {
       location.hash = "#/team";
     },
   });
+}
+
+// Owner only: make someone an admin, or a colleague again.
+function roleButton(m) {
+  if (!state.isOwner || m.role === "owner" || m.user_id === state.me) return "";
+  return m.role === "admin"
+    ? `<button type="button" class="li-btn small ghost" data-role="member" data-person="${esc(m.user_id)}">Remove admin</button>`
+    : `<button type="button" class="li-btn small ghost" data-role="admin" data-person="${esc(m.user_id)}">Make admin</button>`;
+}
+function wireRoleButtons(el) {
+  el.querySelectorAll("[data-role][data-person]").forEach((b) => b.addEventListener("click", async () => {
+    const m = state.members.find((x) => x.user_id === b.dataset.person);
+    const admin = b.dataset.role === "admin";
+    const text = admin
+      ? `Make ${m.name} an admin? They'll be able to see colleagues' work, assign and manage their tasks, invite colleagues and manage projects. They won't see your own tasks.`
+      : `Make ${m.name} a colleague again? They'll only see and work on their own tasks.`;
+    if (!(await confirmDialog(text, admin ? "Make admin" : "Remove admin"))) return;
+    await setMemberRole(m.user_id, b.dataset.role).then(() => toast(admin ? `${m.name} is now an admin` : `${m.name} is a colleague again`), () => {});
+  }));
 }

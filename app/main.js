@@ -76,7 +76,7 @@ function route() {
 // neighbours are visible. Fades on the edges show there's more to scroll.
 let navActive = null;
 function renderNav(active) {
-  const tabs = state.isOwner ? [...NAV, "team"] : NAV; // Team: owner only
+  const tabs = state.isManager ? [...NAV, "team"] : NAV; // Team: owner and admins
   let sc = $("#li-nav .li-nav-scroll");
   const fresh = !sc || sc.dataset.tabs !== tabs.join();
   if (fresh) {

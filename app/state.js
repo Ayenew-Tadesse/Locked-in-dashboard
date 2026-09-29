@@ -22,7 +22,10 @@ export const state = {
   get isOwner() { return this.team?.role === "owner"; },
   // Colleagues work on the tasks the owner gives them; only the owner (or
   // someone without a team) adds new ones. The database enforces the same.
-  get isColleague() { return !!this.team && !this.isOwner; },
+  get isAdmin() { return this.team?.role === "admin"; },
+  // The owner and admins run the team: assign and manage colleagues' tasks, invite, manage projects.
+  get isManager() { return this.isOwner || this.isAdmin; },
+  get isColleague() { return !!this.team && this.team.role === "member"; },
   get canAddTasks() { return !this.isColleague; },
   milestones: [],
   goals: [],
@@ -310,8 +313,18 @@ async function refreshTeam() {
   const t = await state.store.loadTeam();
   state.team = t.team; state.members = t.members; state.invites = t.invites;
 }
-export async function inviteMember(email) {
-  await guard(() => state.store.inviteMember(state.team.id, email), "Couldn't invite");
+/** People you manage: everyone for the owner; colleagues (and yourself) for an admin. */
+export function managesPerson(m) {
+  return state.isOwner || (state.isAdmin && (m.user_id === state.me || m.role === "member"));
+}
+export const ROLE_LABELS = { owner: "Owner", admin: "Admin", member: "Colleague" };
+export async function setMemberRole(userId, role) {
+  await guard(() => state.store.setMemberRole(userId, role), "Couldn't change the role");
+  await refreshTeam();
+  emit();
+}
+export async function inviteMember(email, role = "member") {
+  await guard(() => state.store.inviteMember(state.team.id, email, role), "Couldn't invite");
   await refreshTeam();
   emit();
 }

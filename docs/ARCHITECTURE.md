@@ -298,3 +298,18 @@ them first: highlights and experience, then projects, how I work, skills,
 activity, milestones and the plan. Fields of switched-off sections are
 removed inside `portfolio_view`, so they never reach a visitor.
 
+## Team admins (added later)
+
+Migration `20261007000000_team_admins.sql` adds a third role, `admin`.
+`private.owns_member(user)` now means "manages": the owner manages everyone
+on the team, an admin manages colleagues (role `member`). Everything built
+on it follows: tasks (see, assign, edit, delete), task files and storage,
+score snapshots. `private.is_admin(team)` (owner or admin) lets admins read
+and cancel invitations, invite colleagues (only the owner invites admins)
+and manage projects. Owner only: `public.set_member_role(member, role)`,
+removing someone completely, renaming the team, team goals and milestones.
+Admins don't see the owner's or other admins' tasks. In the app,
+`state.isManager` (owner or admin) gates the Team tab and page, the Team
+card, assigning and "Assigned by me", and Projects; `managesPerson(m)` limits
+lists to the people you manage.
+
