@@ -91,7 +91,7 @@ export function supabaseStoreFromClient(sb) {
       if (res.error && /greeting/.test(res.error.message)) res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email)").eq("team_id", team.id);
       const members = check(res)
         .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, name: displayName(r.profiles) || "Member", greeting: r.profiles?.greeting || null, email: r.profiles?.email || "" }));
-      const invites = team.role === "owner"
+      const invites = team.role === "owner" || team.role === "admin"
         ? check(await sb.from("team_invites").select("*").eq("team_id", team.id).is("accepted_at", null).is("revoked_at", null).order("created_at"))
         : [];
       return { team, members, invites };
@@ -160,8 +160,16 @@ export function supabaseStoreFromClient(sb) {
       await sb.storage.from("task-files").remove([f.path]);
       check(await sb.from("task_files").delete().eq("id", f.id));
     },
-    async inviteMember(teamId, email) {
-      return check(await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId }).select().single());
+    async inviteMember(teamId, email, role = "member") {
+      const res = await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId, ...(role === "admin" ? { role } : {}) }).select().single();
+      if (res.error && role === "admin" && /role_check|violates check/.test(res.error.message)) throw new Error("run the latest SQL update in Supabase first (20261007000000_team_admins.sql)");
+      return check(res);
+    },
+    /** Owner only: make someone an admin, or a colleague again (20261007000000_team_admins.sql). */
+    async setMemberRole(memberId, role) {
+      const { error } = await sb.rpc("set_member_role", { member: memberId, new_role: role });
+      if (error && /set_member_role|schema cache/.test(error.message)) throw new Error("run the latest SQL update in Supabase first (20261007000000_team_admins.sql)");
+      if (error) throw new Error(error.message);
     },
     async revokeInvite(id) { check(await sb.from("team_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
     /** Deletes the member's account and all their data (owner only; see 20260928000000_remove_member.sql). */
@@ -365,11 +373,16 @@ export function createMemoryStore(seed) {
     },
     async fileUrl(f) { return f.url || "about:blank"; },
     async deleteTaskFile(f) { db.files = db.files.filter((x) => x.id !== f.id); },
-    async inviteMember(teamId, email) {
+    async setMemberRole(memberId, role) {
+      const m = db.members.find((x) => x.user_id === memberId);
+      if (!m || m.role === "owner") throw new Error("Only the team owner can change this person's role.");
+      m.role = role;
+    },
+    async inviteMember(teamId, email, role = "member") {
       const e = email.trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error("Enter a valid email address.");
       if (db.invites.some((i) => i.email === e) || db.members.some((m) => m.email === e)) throw new Error("That email is already invited or in the team.");
-      const inv = { id: uuid(), team_id: teamId, email: e, role: "member", created_at: now() };
+      const inv = { id: uuid(), team_id: teamId, email: e, role, created_at: now() };
       db.invites.push(inv);
       return { ...inv };
     },

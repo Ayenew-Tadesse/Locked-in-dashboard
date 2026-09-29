@@ -391,3 +391,72 @@ do $$ begin
 exception when invalid_authorization_specification then raise notice 'ok - a revoked link is refused';
 end $$;
 reset role;
+
+-- 14. Admins ------------------------------------------------------------------
+select pg_temp.act_as(:ben);
+do $$ begin
+  perform public.set_member_role('22222222-0000-0000-0000-000000000002', 'admin');
+  raise exception 'FAILED: a colleague made someone an admin';
+exception when insufficient_privilege then raise notice 'ok - colleagues can''t make admins';
+end $$;
+reset role;
+select pg_temp.act_as(:owner);
+select public.set_member_role(:ana, 'admin');
+insert into tasks (user_id, title) values (:ben, 'Ben: admin can see this');
+insert into tasks (title) values ('Owner: private plan');
+reset role;
+select pg_temp.check((select role from team_members where user_id = :ana) = 'admin', 'the owner makes someone an admin');
+
+select pg_temp.act_as(:ana);
+select pg_temp.check(exists (select 1 from tasks where title = 'Ben: admin can see this'), 'admins see colleagues'' tasks');
+select pg_temp.check(not exists (select 1 from tasks where title = 'Owner: private plan'), 'admins don''t see the owner''s tasks');
+insert into tasks (user_id, title) values (:ben, 'Ana assigns Ben');
+select pg_temp.check((select assigned_by from tasks where title = 'Ana assigns Ben') = :ana, 'admins assign tasks to colleagues');
+update tasks set due_date = '2026-12-01' where title = 'Ana assigns Ben';
+delete from tasks where title = 'Ana assigns Ben';
+select pg_temp.check(not exists (select 1 from tasks where title = 'Ana assigns Ben'), 'admins edit and delete colleagues'' tasks');
+insert into tasks (title) values ('Ana: her own task');
+select pg_temp.check(exists (select 1 from tasks where title = 'Ana: her own task'), 'admins add their own tasks');
+do $$ begin
+  insert into tasks (user_id, title) values ('11111111-0000-0000-0000-000000000001', 'Ana assigns the owner');
+  raise exception 'FAILED: an admin assigned the owner a task';
+exception when insufficient_privilege then raise notice 'ok - admins can''t give the owner tasks';
+end $$;
+insert into team_invites (team_id, email, invited_by) select team_id, 'newbie@example.com', :ana from team_members where user_id = :ana;
+select pg_temp.check(exists (select 1 from team_invites where email = 'newbie@example.com'), 'admins invite colleagues');
+do $$ begin
+  insert into team_invites (team_id, email, role, invited_by) select team_id, 'boss@example.com', 'admin', '22222222-0000-0000-0000-000000000002' from team_members where user_id = '22222222-0000-0000-0000-000000000002';
+  raise exception 'FAILED: an admin invited an admin';
+exception when insufficient_privilege then raise notice 'ok - only the owner invites admins';
+end $$;
+insert into projects (team_id, name) select team_id, 'Admin project' from team_members where user_id = :ana;
+update projects set stage = 'Build' where name = 'Admin project';
+delete from projects where name = 'Admin project';
+select pg_temp.check(not exists (select 1 from projects where name = 'Admin project'), 'admins manage projects');
+do $$ begin
+  perform public.set_member_role('33333333-0000-0000-0000-000000000003', 'admin');
+  raise exception 'FAILED: an admin made an admin';
+exception when insufficient_privilege then raise notice 'ok - admins can''t make admins';
+end $$;
+do $$ begin
+  perform public.remove_member_completely('33333333-0000-0000-0000-000000000003');
+  raise exception 'FAILED: an admin removed someone completely';
+exception when insufficient_privilege then raise notice 'ok - admins can''t remove people completely';
+end $$;
+update teams set name = 'Renamed by admin';
+reset role;
+select pg_temp.check((select count(*) from teams where name = 'Renamed by admin') = 0, 'admins can''t rename the team');
+
+select pg_temp.act_as(:ben);
+select pg_temp.check(not exists (select 1 from tasks where title = 'Ana: her own task'), 'colleagues don''t see an admin''s tasks');
+reset role;
+select pg_temp.act_as(:owner);
+select pg_temp.check(exists (select 1 from tasks where title = 'Ana: her own task'), 'the owner sees admins'' tasks');
+select public.set_member_role(:ana, 'member');
+do $$ begin
+  perform public.set_member_role('11111111-0000-0000-0000-000000000001', 'member');
+  raise exception 'FAILED: the owner''s role changed';
+exception when insufficient_privilege then raise notice 'ok - the owner stays the owner';
+end $$;
+reset role;
+select pg_temp.check((select role from team_members where user_id = :ana) = 'member', 'the owner turns an admin back into a colleague');

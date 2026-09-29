@@ -695,3 +695,6 @@ html.li-modal-open .li-chat:not([data-open="true"]){display:none;}
   .li-pf-exp-row [data-k="role"], .li-pf-exp-row [data-k="company"], .li-pf-exp-row .li-pf-exp-sum{grid-column:1 / 3;}
   .li-pf-exp-btns{grid-column:3;grid-row:1 / 5;}
 }
+.li-tm-role.admin, .li-pill.admin{background:var(--good-soft);color:var(--good);}
+.li-tm-row.static{cursor:default;}
+.li-tm-row.static:hover{border-color:var(--line);}

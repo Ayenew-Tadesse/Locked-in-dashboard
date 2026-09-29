@@ -54,7 +54,7 @@ export function renderProjectCards(el) {
 export function openProjectDetails(id) {
   const p = state.projects.find((x) => x.id === id);
   if (!p) return;
-  const form = openModal({ eyebrow: p.code ? `Project · ${p.code}` : "Project", title: p.name, body: `<div class="li-project-detail full">${projectCard(p, { canTick: state.isOwner })}</div>`, cancelLabel: "Close", wide: true });
+  const form = openModal({ eyebrow: p.code ? `Project · ${p.code}` : "Project", title: p.name, body: `<div class="li-project-detail full">${projectCard(p, { canTick: state.isManager })}</div>`, cancelLabel: "Close", wide: true });
   const box = form.querySelector(".li-project-detail");
   box.addEventListener("change", async (e) => {
     const cb = e.target.closest("[data-item]");
@@ -62,7 +62,7 @@ export function openProjectDetails(id) {
     await toggleProjectItem(id, cb.dataset.item).then(() => {
       toast(cb.checked ? "Checklist item done" : "Marked not done");
       const fresh = state.projects.find((x) => x.id === id);
-      if (fresh && document.contains(box)) box.innerHTML = projectCard(fresh, { canTick: state.isOwner });
+      if (fresh && document.contains(box)) box.innerHTML = projectCard(fresh, { canTick: state.isManager });
     }, () => { cb.checked = !cb.checked; });
   });
 }

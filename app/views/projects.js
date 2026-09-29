@@ -12,7 +12,7 @@ export function renderProjects(el) {
     return;
   }
   const list = state.projects;
-  if (!state.isOwner) {
+  if (!state.isManager) {
     el.innerHTML = `<header class="li-view-head"><div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2></div></header>
       ${list.length ? list.map((p) => projectCard(p)).join("") : `<p class="li-empty">No projects yet.</p>`}`;
     return;

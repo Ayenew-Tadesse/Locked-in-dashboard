@@ -1,5 +1,5 @@
 // Task rows (with quick actions) and the add/edit task form.
-import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES, assignTask } from "../state.js";
+import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES, assignTask, managesPerson } from "../state.js";
 import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES, countdownText } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
@@ -105,8 +105,8 @@ export function openTaskForm(task = {}) {
   const cats = categoriesOf(state.tasks);
   const ms = state.milestones.filter((m) => m.status !== "cancelled" || m.id === t.milestone_id);
   // The team owner can give a task to anyone on the team.
-  const assignable = state.isOwner && state.members.length > 1;
-  const people = state.members.map((m) => [m.user_id, m.user_id === state.me ? `Me (${m.name})` : m.name]);
+  const assignable = state.isManager && state.members.length > 1;
+  const people = state.members.filter(managesPerson).map((m) => [m.user_id, m.user_id === state.me ? `Me (${m.name})` : m.name]);
   openModal({
     eyebrow: editing ? "Edit task" : "New task",
     title: editing ? t.title : "Add a task",

@@ -1,7 +1,7 @@
 // Tasks: every task grouped by planned day, with buttons to show one status
 // at a time (#/tasks?status=ongoing). The Overview's Overdue tile opens
 // #/tasks?status=overdue.
-import { state, myAssignments, memberName, filesFor, addPersonToAssignment, editAssignment, revokeAssignment, deleteAssignment, toast, SHARED_TASK_FIELDS } from "../state.js";
+import { state, myAssignments, memberName, filesFor, addPersonToAssignment, editAssignment, revokeAssignment, deleteAssignment, toast, SHARED_TASK_FIELDS, managesPerson } from "../state.js";
 import { effectiveStatus, sortTasks, PRIORITIES, categoriesOf } from "../core/tasks.js";
 import { formatDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, confirmDialog, options } from "../ui/dom.js";
@@ -20,7 +20,7 @@ export function renderTasks(el, params) {
   const today = state.today;
   // Older links used ?deadline=overdue.
   const key = params.get("deadline") === "overdue" ? "overdue" : params.get("status");
-  if (key === "assigned" && state.isOwner) return renderAssigned(el);
+  if (key === "assigned" && state.isManager) return renderAssigned(el);
   const tab = TABS.find(([k]) => k === key) || TABS[0];
   const counts = Object.fromEntries(TABS.map(([k, , keep]) => [k, state.tasks.filter((t) => keep(effectiveStatus(t, today))).length]));
   const list = sortTasks(state.tasks.filter((t) => tab[2](effectiveStatus(t, today))), today);
@@ -45,7 +45,7 @@ export function renderTasks(el, params) {
 function statusTabs(active, counts) {
   return `<nav class="li-seg li-status-tabs" aria-label="Show tasks by status">
       ${TABS.map(([k, label]) => `<a class="li-btn small${k === active ? " on" : ""}${k === "overdue" && counts.overdue ? " li-st-overdue" : ""}" href="#/tasks${k === "all" ? "" : "?status=" + k}"${k === active ? ' aria-current="true"' : ""}>${label} <span class="li-count">${counts[k]}</span></a>`).join("")}
-      ${state.isOwner ? `<a class="li-btn small${active === "assigned" ? " on" : ""}" href="#/tasks?status=assigned"${active === "assigned" ? ' aria-current="true"' : ""}>Assigned by me <span class="li-count">${myAssignments().length}</span></a>` : ""}
+      ${state.isManager ? `<a class="li-btn small${active === "assigned" ? " on" : ""}" href="#/tasks?status=assigned"${active === "assigned" ? ' aria-current="true"' : ""}>Assigned by me <span class="li-count">${myAssignments().length}</span></a>` : ""}
     </nav>`;
 }
 
@@ -91,7 +91,7 @@ function assignmentCard({ key, copies }) {
   const t = copies[0], today = state.today;
   const people = [...copies].sort((a, b) => memberName(a.user_id).localeCompare(memberName(b.user_id)));
   const done = copies.filter((c) => c.status === "completed").length;
-  const canAdd = state.members.some((m) => !copies.some((c) => c.user_id === m.user_id));
+  const canAdd = state.members.some((m) => managesPerson(m) && !copies.some((c) => c.user_id === m.user_id));
   return `<section class="li-card li-assignment" data-assignment="${esc(key)}">
     <div class="li-asg-head">
       <div class="li-asg-title">
@@ -124,7 +124,7 @@ function assignmentCard({ key, copies }) {
 
 function addPersonForm(t) {
   const have = new Set(state.tasks.concat(state.teamTasks).filter((c) => (t.group_id ? c.group_id === t.group_id : c.id === t.id)).map((c) => c.user_id));
-  const free = state.members.filter((m) => !have.has(m.user_id));
+  const free = state.members.filter((m) => !have.has(m.user_id) && managesPerson(m));
   openModal({
     eyebrow: "Add person", title: t.title, submitLabel: "Assign",
     body: `<fieldset class="full li-assignees"><legend>Also give this task to</legend>

@@ -537,6 +537,47 @@ test("portfolio page: ?demo=1 shows a sample portfolio", async () => {
   await page.close();
 });
 
+test("admins: the owner makes someone an admin, invites an admin, and turns them back", async () => {
+  const page = await open("team");
+  await page.waitForSelector(".li-team-table");
+  const ana = page.locator(".li-team-table tr", { hasText: "Ana (sample)" });
+  await ana.locator('[data-role="admin"]').click();
+  assert.match(await page.locator("#li-modal").innerText(), /won't see your own tasks/);
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-team-table tr")].some((r) => r.textContent.includes("Ana (sample)") && r.querySelector(".li-pill.admin")));
+  // Invite someone as an admin.
+  await page.fill("#li-invite-form [name=email]", "lead@example.com");
+  await page.selectOption("#li-invite-form [name=role]", "admin");
+  await page.click("#li-invite-form button[type=submit]");
+  await page.waitForFunction(() => /lead@example\.com\s*Admin/.test(document.querySelector("#li-invites").textContent));
+  // The Team card shows the role.
+  await page.click('#li-nav a[href="#/"]');
+  assert.match(await page.locator("#li-team-card .li-tm-row", { hasText: "Ana" }).innerText(), /ADMIN/i);
+  // Back to colleague.
+  await page.click('#li-nav a[href="#/team"]');
+  await page.locator(".li-team-table tr", { hasText: "Ana (sample)" }).locator('[data-role="member"]').click();
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-team-table tr")].some((r) => r.textContent.includes("Ana (sample)") && r.querySelector('[data-role="admin"]')));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("admins: they manage the team but not its settings", async () => {
+  const page = await dbPage({ signedIn: true, role: "admin" });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+  assert.equal(await page.locator("[data-new-task]").first().count(), 1, "admins add tasks");
+  assert.equal(await page.locator('#li-nav [data-view="team"]').count(), 1, "admins get the Team tab");
+  assert.ok(await page.locator("#li-team-card").isVisible(), "and the Team card");
+  assert.equal(await (await menuItem(page, 'a[href="#/projects"]')).count(), 1, "and Projects");
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => { location.hash = "#/team"; });
+  await page.waitForSelector("#li-invite-form");
+  assert.equal(await page.locator("#li-rename-team, #li-invite-form [name=role], [data-role]").count(), 0, "no rename, no admin invites, no role changes");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
   const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio"];
