@@ -4,7 +4,7 @@ import { state, toast } from "../state.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { formatDay, dayOf } from "../core/dates.js";
 import { categoriesOf } from "../core/tasks.js";
-import { PORTFOLIO_SECTIONS, PORTFOLIO_LINKS, portfolioPrefs, buildPortfolioData } from "../core/portfolio.js";
+import { PORTFOLIO_SECTIONS, PORTFOLIO_LINKS, INDUSTRIES, RESEARCH_METHODS, portfolioPrefs, buildPortfolioData } from "../core/portfolio.js";
 import { renderPortfolio } from "../portfolio/render.js";
 
 let links; // undefined: not loaded yet; null: the table isn't set up yet
@@ -28,6 +28,7 @@ function previewData() {
 export function renderPortfolioPage(el) {
   if (state.isColleague) { el.innerHTML = `<p class="li-empty">The portfolio is for the team owner.</p>`; return; }
   const p = portfolioPrefs(state.settings.preferences);
+  const d = p.details;
   const cats = categoriesOf(state.tasks);
   el.innerHTML = `
     <section class="li-card li-pf-intro">
@@ -47,11 +48,52 @@ export function renderPortfolioPage(el) {
 
     <section class="li-card">
       <div class="li-card-head"><span class="card-label">What's on it</span></div>
-      <form class="li-form" id="li-pf-form" autocomplete="off">
-        <label class="li-field full">Headline<input name="headline" maxlength="120" value="${esc(p.headline)}" placeholder="e.g. Mobile & web developer"></label>
-        <label class="li-field full">About you<textarea name="bio" rows="3" maxlength="1500" placeholder="Two or three sentences about you and the work you do.">${esc(p.bio)}</textarea></label>
-        <label class="li-field full">My approach <small class="li-muted">(shown under "How I work")</small><textarea name="approach" rows="3" maxlength="2000" placeholder="How you plan, build and check your work.">${esc(p.approach)}</textarea></label>
-        ${PORTFOLIO_LINKS.map(([k, label]) => `<label class="li-field">${esc(label)}<input name="link_${k}" maxlength="300" value="${esc(p.links[k] || "")}" placeholder="${k === "email" ? "you@example.com" : "https://…"}"></label>`).join("")}
+      <form class="li-form li-pf-form" id="li-pf-form" autocomplete="off">
+        <fieldset class="full li-pf-group"><legend>The basics</legend>
+          <label class="li-field">Title<input name="d_title" maxlength="80" value="${esc(d.title)}" placeholder="e.g. Senior UI/UX Designer"></label>
+          <label class="li-field">Years of experience<input name="d_years" type="number" min="0" max="60" inputmode="numeric" value="${esc(d.years)}" placeholder="5"></label>
+          <label class="li-field">Location<input name="d_location" maxlength="80" value="${esc(d.location)}" placeholder="e.g. Addis Ababa, Ethiopia"></label>
+          <div class="li-field"><span>Open to</span><div class="li-pf-checks">
+            ${[["remote", "Remote"], ["hybrid", "Hybrid"], ["relocation", "Relocation"]].map(([k, l]) => `<label class="li-check-row"><input type="checkbox" name="d_open_${k}"${d.open[k] ? " checked" : ""}> ${l}</label>`).join("")}
+          </div></div>
+          <label class="li-field full">Roles you're looking for<input name="d_roles" maxlength="200" value="${esc(d.roles)}" placeholder="e.g. Senior Product Designer, Lead UX Designer"></label>
+          <label class="li-field full">Headline <small class="li-muted">(leave empty to use "Title · years of experience")</small><input name="headline" maxlength="120" value="${esc(p.headline)}" placeholder="e.g. Senior UI/UX Designer designing booking and commerce products"></label>
+          <label class="li-field full">About you<textarea name="bio" rows="3" maxlength="1500" placeholder="Two or three sentences: who you are, what you design, for whom.">${esc(p.bio)}</textarea></label>
+        </fieldset>
+
+        <fieldset class="full li-pf-group"><legend>Experience</legend>
+          <div class="li-pf-exp" id="li-pf-exp">${d.experience.map(expRow).join("")}</div>
+          <button type="button" class="li-btn small" id="li-pf-exp-add">+ Add a role</button>
+        </fieldset>
+
+        <fieldset class="full li-pf-group"><legend>Highlights and industries</legend>
+          <label class="li-field full">Highlights <small class="li-muted">(one per line, up to 6: results with numbers work best)</small><textarea name="d_highlights" rows="4" maxlength="1500" placeholder="Redesigned checkout: conversion +18%&#10;Cut booking from 7 steps to 4&#10;Built a design system used by 3 product teams">${esc(d.highlights.join("\n"))}</textarea></label>
+          <div class="li-field full"><span>Industries</span><div class="li-pf-checks">
+            ${INDUSTRIES.map((x) => `<label class="li-check-row"><input type="checkbox" name="d_ind[]" value="${esc(x)}"${d.industries.includes(x) ? " checked" : ""}> ${esc(x)}</label>`).join("")}
+          </div></div>
+          <label class="li-field full">Other industries <small class="li-muted">(comma-separated)</small><input name="d_ind_other" maxlength="200" value="${esc(d.industries.filter((x) => !INDUSTRIES.includes(x)).join(", "))}"></label>
+        </fieldset>
+
+        <fieldset class="full li-pf-group"><legend>How you work</legend>
+          <label class="li-field full">My approach<textarea name="approach" rows="3" maxlength="2000" placeholder="Your design philosophy in a few sentences.">${esc(p.approach)}</textarea></label>
+          <label class="li-field full">Process steps <small class="li-muted">(one per line)</small><textarea name="d_process" rows="4" maxlength="800" placeholder="Research&#10;Problem framing&#10;User flows&#10;Wireframes and prototypes&#10;Usability testing&#10;Handoff and measuring">${esc(d.process.join("\n"))}</textarea></label>
+          <div class="li-field full"><span>Research methods</span><div class="li-pf-checks">
+            ${RESEARCH_METHODS.map((x) => `<label class="li-check-row"><input type="checkbox" name="d_meth[]" value="${esc(x)}"${d.methods.includes(x) ? " checked" : ""}> ${esc(x)}</label>`).join("")}
+          </div></div>
+          <label class="li-field full">Other methods <small class="li-muted">(comma-separated)</small><input name="d_meth_other" maxlength="200" value="${esc(d.methods.filter((x) => !RESEARCH_METHODS.includes(x)).join(", "))}"></label>
+          <label class="li-field full">Working with developers and product<textarea name="d_collaboration" rows="2" maxlength="1000" placeholder="e.g. Design systems in Figma, dev-mode specs, weekly design reviews, pairing on tricky states.">${esc(d.collaboration)}</textarea></label>
+          <label class="li-field full">What I bring<textarea name="d_different" rows="2" maxlength="1000" placeholder="e.g. Accessibility (WCAG AA), bilingual Amharic/English interfaces, I prototype in code.">${esc(d.different)}</textarea></label>
+        </fieldset>
+
+        <fieldset class="full li-pf-group"><legend>Skills and tools</legend>
+          <label class="li-field full">Skills <small class="li-muted">(comma-separated)</small><input name="d_skills" maxlength="400" value="${esc(d.skills.join(", "))}" placeholder="Design systems, Interaction design, Prototyping, Accessibility, UX writing"></label>
+          <label class="li-field full">Tools <small class="li-muted">(comma-separated)</small><input name="d_tools" maxlength="400" value="${esc(d.tools.join(", "))}" placeholder="Figma, FigJam, Framer, Protopie, Maze, Adobe CC"></label>
+        </fieldset>
+
+        <fieldset class="full li-pf-group"><legend>Contact links</legend>
+          ${PORTFOLIO_LINKS.map(([k, label]) => `<label class="li-field">${esc(label)}<input name="link_${k}" maxlength="300" value="${esc(p.links[k] || "")}" placeholder="${k === "email" ? "you@example.com" : "https://…"}"></label>`).join("")}
+        </fieldset>
+
         <fieldset class="full li-assignees"><legend>Sections to show</legend>
           ${PORTFOLIO_SECTIONS.map(([k, label, hint]) => `<label class="li-check-row" title="${esc(hint)}"><input type="checkbox" name="show_${k}"${p.show[k] ? " checked" : ""}> ${esc(label)}</label>`).join("")}
         </fieldset>
@@ -70,8 +112,24 @@ export function renderPortfolioPage(el) {
   el.querySelector("#li-pf-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target.elements;
+    const lines = (v) => v.split("\n").map((x) => x.trim()).filter(Boolean);
+    const commas = (v) => v.split(",").map((x) => x.trim()).filter(Boolean);
+    const ticked = (name) => [...e.target.querySelectorAll(`[name="${name}"]:checked`)].map((c) => c.value);
+    const details = {
+      title: f.d_title.value.trim(), years: f.d_years.value === "" ? "" : Math.max(0, Math.min(60, Math.round(Number(f.d_years.value)) || 0)),
+      location: f.d_location.value.trim(), roles: f.d_roles.value.trim(),
+      open: { remote: f.d_open_remote.checked, hybrid: f.d_open_hybrid.checked, relocation: f.d_open_relocation.checked },
+      experience: [...e.target.querySelectorAll(".li-pf-exp-row")].map((r) => Object.fromEntries(["role", "company", "from", "to", "summary"]
+        .map((k) => [k, r.querySelector(`[data-k="${k}"]`).value.trim()]))).filter((x) => x.role || x.company),
+      highlights: lines(f.d_highlights.value).slice(0, 6),
+      industries: [...new Set([...ticked("d_ind[]"), ...commas(f.d_ind_other.value)])],
+      process: lines(f.d_process.value).slice(0, 10),
+      methods: [...new Set([...ticked("d_meth[]"), ...commas(f.d_meth_other.value)])],
+      collaboration: f.d_collaboration.value.trim(), different: f.d_different.value.trim(),
+      skills: commas(f.d_skills.value).slice(0, 30), tools: commas(f.d_tools.value).slice(0, 30),
+    };
     const portfolio = {
-      headline: f.headline.value.trim(), bio: f.bio.value.trim(), approach: f.approach.value.trim(),
+      headline: f.headline.value.trim(), bio: f.bio.value.trim(), approach: f.approach.value.trim(), details,
       links: Object.fromEntries(PORTFOLIO_LINKS.map(([k]) => [k, f["link_" + k].value.trim()]).filter(([, v]) => v)),
       show: Object.fromEntries(PORTFOLIO_SECTIONS.map(([k]) => [k, f["show_" + k].checked])),
       categories: [...e.target.querySelectorAll('[name="cats[]"]:checked')].map((c) => c.value),
@@ -84,9 +142,26 @@ export function renderPortfolioPage(el) {
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 
+  // Experience rows: add, move up/down, remove.
+  const exp = el.querySelector("#li-pf-exp");
+  el.querySelector("#li-pf-exp-add").addEventListener("click", () => {
+    exp.insertAdjacentHTML("beforeend", expRow({}));
+    exp.lastElementChild.querySelector("input").focus();
+  });
+  exp.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-exp]");
+    if (!b) return;
+    const row = b.closest(".li-pf-exp-row");
+    if (b.dataset.exp === "remove") row.remove();
+    if (b.dataset.exp === "up" && row.previousElementSibling) row.previousElementSibling.before(row);
+    if (b.dataset.exp === "down" && row.nextElementSibling) row.nextElementSibling.after(row);
+  });
+
   el.querySelector("#li-pf-new").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (links === null) { toast("Run the portfolio SQL update in Supabase first (20261005000000_portfolio.sql)", "error"); return; }
+    // Check again: the SQL may have been run since this page was opened.
+    if (links === null) links = await state.store.listPortfolioLinks().catch(() => null);
+    if (links === null) { toast("Run the portfolio SQL update in Supabase first (20261005000000_portfolio.sql)", "error"); drawLinks(el); return; }
     const f = e.target.elements, name = f.name.value.trim();
     if (!name) return;
     const days = Number(f.expires.value);
@@ -145,4 +220,19 @@ function showLink(name, url) {
       });
     },
   });
+}
+
+function expRow(e = {}) {
+  return `<div class="li-pf-exp-row">
+    <input data-k="role" maxlength="80" value="${esc(e.role || "")}" placeholder="Role, e.g. Senior UI/UX Designer" aria-label="Role">
+    <input data-k="company" maxlength="80" value="${esc(e.company || "")}" placeholder="Company or client" aria-label="Company">
+    <input data-k="from" maxlength="20" value="${esc(e.from || "")}" placeholder="From, e.g. 2022" aria-label="From">
+    <input data-k="to" maxlength="20" value="${esc(e.to || "")}" placeholder="To, e.g. Present" aria-label="To">
+    <input data-k="summary" class="li-pf-exp-sum" maxlength="240" value="${esc(e.summary || "")}" placeholder="One line: what you did and the result" aria-label="Summary">
+    <span class="li-pf-exp-btns">
+      <button type="button" class="li-icon-btn" data-exp="up" aria-label="Move up" title="Move up">&#8593;</button>
+      <button type="button" class="li-icon-btn" data-exp="down" aria-label="Move down" title="Move down">&#8595;</button>
+      <button type="button" class="li-icon-btn" data-exp="remove" aria-label="Remove role" title="Remove">&#10005;</button>
+    </span>
+  </div>`;
 }

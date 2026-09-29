@@ -289,3 +289,12 @@ bio, approach, links, which sections show and which task categories feed
 `app/core/portfolio.js` builds the same summary in the browser for the
 preview and `?demo=1`; `app/portfolio/render.js` draws it for both.
 
+Profile details (`preferences.portfolio.details`, migration
+`20261006000000_portfolio_details.sql`): title, years, location, open to
+(remote/hybrid/relocation), roles wanted, experience (role, company, years,
+summary), highlights, industries, process steps, research methods, working
+with developers and product, what I bring, skills and tools. The page shows
+them first: highlights and experience, then projects, how I work, skills,
+activity, milestones and the plan. Fields of switched-off sections are
+removed inside `portfolio_view`, so they never reach a visitor.
+

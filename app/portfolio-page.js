@@ -6,7 +6,7 @@ import { buildPortfolioData } from "./core/portfolio.js";
 
 const root = document.getElementById("pf-root");
 const config = window.LOCKEDIN_CONFIG || {};
-const show = (html) => { root.innerHTML = `<div class="pf pf-message">${html}</div>`; };
+const show = (html) => { root.innerHTML = `<div class="pf pf-message">${html}</div>`; root.removeAttribute("aria-busy"); };
 
 async function demo() {
   const { demoSeed } = await import("./demo.js");
@@ -22,7 +22,15 @@ async function demo() {
     name: "Ayenew Shiferaw",
     preferences: { portfolio: { headline: "Mobile & web developer", bio: "I build travel and commerce apps end to end, from the data model to the last pixel. This page is generated live from the dashboard I plan and track my work in.",
       approach: "I plan the year in quarters and milestones, break them into daily tickets, and write down what changed, how, and what problem it solved every time I finish one.",
-      links: { email: "hello@example.com", github: "https://github.com/" } } },
+      links: { email: "hello@example.com", linkedin: "https://www.linkedin.com/", behance: "https://www.behance.net/" },
+      details: { title: "Senior UI/UX Designer", years: 5, location: "Addis Ababa, Ethiopia", open: { remote: true, relocation: true }, roles: "Senior Product Designer, Lead UX Designer",
+        highlights: ["Cut flight booking from 7 steps to 4", "Built a design system shared by 3 apps", "Usability-tested every release with real travellers"],
+        experience: [{ role: "Senior UI/UX Designer", company: "Guxo", from: "2023", to: "Present", summary: "Leading design for flight, bus and shopping apps." },
+          { role: "UI/UX Designer", company: "Agency client work", from: "2021", to: "2023", summary: "Web and mobile products for travel and retail." }],
+        industries: ["Travel", "E-commerce"], process: ["Research", "Problem framing", "Flows", "Prototype", "Usability testing", "Handoff and measuring"],
+        methods: ["User interviews", "Usability testing", "Analytics"], skills: ["Design systems", "Interaction design", "Prototyping", "Accessibility"],
+        tools: ["Figma", "FigJam", "Framer", "Protopie"], collaboration: "Specs in Figma dev mode, weekly design reviews with engineers.",
+        different: "Bilingual Amharic/English interfaces and designing for low-bandwidth networks." } } },
     tasks: d.tasks.filter((t) => !String(t.user_id || "").startsWith("sample-")), projects: [
       { name: "Guxo Flights", description: "Flight booking", stage: "Build", status: "good", links: {}, checklist: [{ done: true }, { done: true }, { done: false }] },
       { name: "Guxo", description: "Bus booking · local transit", stage: "Design", status: "idle", links: {}, checklist: [{ done: false }, { done: false }] },
@@ -40,7 +48,10 @@ async function main() {
   const { data, error } = await sb.rpc("portfolio_view", { p_token: token });
   if (error) {
     const expired = /invalid link/i.test(error.message) || error.code === "28000";
-    show(`<h1>Private portfolio</h1><p>${expired ? "This link has expired or was switched off. Ask for a new one." : "This portfolio couldn't be loaded. Please try again in a moment."}</p>`);
+    const notReady = /portfolio_view|function|schema cache|PGRST202/i.test(`${error.message} ${error.code}`);
+    console.error("portfolio_view:", error);
+    show(`<h1>Private portfolio</h1><p>${expired ? "This link has expired or was switched off. Ask for a new one."
+      : notReady ? "This portfolio isn't ready yet. Please try again later." : "This portfolio couldn't be loaded. Please try again in a moment."}</p>`);
     return;
   }
   render(data);
