@@ -444,6 +444,27 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.click("#li-modal [data-close]:has-text('Done')");
   const row = page.locator("#li-pf-list li", { hasText: "Acme Corp" });
   assert.match(await row.innerText(), /0 views · expires/);
+  // Your profile: basics, a role, highlights, skills; the preview follows.
+  await page.fill("#li-pf-form [name=d_title]", "Senior UI/UX Designer");
+  await page.fill("#li-pf-form [name=d_years]", "5");
+  await page.check("#li-pf-form [name=d_open_remote]");
+  await page.click("#li-pf-exp-add");
+  await page.fill('#li-pf-exp .li-pf-exp-row:last-child [data-k=role]', "Lead designer");
+  await page.fill('#li-pf-exp .li-pf-exp-row:last-child [data-k=company]', "Guxo");
+  await page.fill("#li-pf-form [name=d_highlights]", "Cut booking from 7 steps to 4\nBuilt a design system");
+  await page.check('#li-pf-form [name="d_ind[]"][value=Travel]');
+  await page.fill("#li-pf-form [name=d_tools]", "Figma, Framer");
+  await page.click("#li-pf-form button[type=submit]");
+  await page.waitForSelector("#li-pf-preview #pf-highlights");
+  assert.match(await preview.locator(".pf-headline").innerText(), /Senior UI\/UX Designer · 5 years of experience/);
+  assert.match(await preview.innerText(), /Open to remote[\s\S]*Cut booking from 7 steps to 4[\s\S]*Lead designer · Guxo/);
+  assert.deepEqual(await preview.locator("#pf-skills .pf-tags li").allInnerTexts(), ["Figma", "Framer", "Travel"]);
+  // Saved: it's all there after reopening the page.
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.waitForSelector(".li-formula");
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-form");
+  assert.equal(await page.inputValue('#li-pf-exp .li-pf-exp-row [data-k=role]'), "Lead designer");
   // Edit what's on it: the preview follows.
   await page.fill("#li-pf-form [name=headline]", "Mobile & web developer");
   await page.uncheck("#li-pf-form [name=show_logs]");
@@ -469,7 +490,10 @@ test("portfolio page (hiring managers): opens from a link, refuses bad links, fi
   await page.exposeFunction("__rpcCall", (name, args) => calls.push([name, args]));
   await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: `
     const summary = { generated_at: "2026-09-28T10:00:00Z",
-      about: { name: "Ayenew Shiferaw", headline: "Mobile developer", bio: "I build travel apps.", approach: "Quarters, milestones, daily tickets.", links: { email: "a@example.com", github: "https://github.com/x", linkedin: "javascript:alert(1)" } },
+      about: { name: "Ayenew Shiferaw", headline: "Mobile developer", bio: "I build travel apps.", approach: "Quarters, milestones, daily tickets.", links: { email: "a@example.com", github: "https://github.com/x", linkedin: "javascript:alert(1)" },
+        details: { title: "Senior UI/UX Designer", years: 5, location: "Addis Ababa", open: { remote: true },
+          highlights: ["Cut booking from 7 steps to 4"], experience: [{ role: "Lead designer", company: "Guxo", from: "2023", to: "Present" }],
+          skills: ["Design systems"], tools: ["Figma"], process: ["Research", "Prototype", "Test"] } },
       activity: { completed_total: 42, completed_30: 12, completed_90: 30, minutes_total: 1200, today: "2026-09-28",
         days: [{ date: "2026-09-28", done: 2 }, { date: "2026-09-27", done: 1 }, { date: "2026-09-25", done: 4 }], weeks: [{ week_start: "2026-09-21", score: 80 }] },
       projects: [{ name: "Guxo Flights", description: "Flight booking", stage: "Build", status: "good", links: { web: "https://guxo.example" }, checklist: [{ done: true }, { done: false }] },
@@ -483,7 +507,8 @@ test("portfolio page (hiring managers): opens from a link, refuses bad links, fi
   await page.waitForSelector(".pf-hero h1");
   assert.deepEqual(calls[0], ["portfolio_view", { p_token: "lip_good_secret_0123456789abcdef" }]);
   const text = await page.locator("#pf-root").innerText();
-  assert.match(text, /Ayenew Shiferaw[\s\S]*Mobile developer[\s\S]*42\s*tasks finished[\s\S]*Guxo Flights[\s\S]*Old app[\s\S]*Booking flow[\s\S]*Foundations[\s\S]*Booking store[\s\S]*One slice per step/i);
+  // Highlights and experience first, then projects, how I work, skills, activity and milestones.
+  assert.match(text, /Ayenew Shiferaw[\s\S]*Mobile developer[\s\S]*Senior UI\/UX Designer · 5 years · Addis Ababa · Open to remote[\s\S]*Cut booking from 7 steps to 4[\s\S]*Lead designer[\s\S]*Guxo Flights[\s\S]*Old app[\s\S]*Research[\s\S]*Prototype[\s\S]*Booking store[\s\S]*One slice per step[\s\S]*Design systems[\s\S]*Figma[\s\S]*42\s*tasks finished[\s\S]*Booking flow[\s\S]*Foundations/i);
   assert.equal(await page.locator("#pf-plan").count(), 0, "hidden sections stay hidden");
   assert.equal(await page.locator('.pf-contact[href^="javascript"]').count(), 0, "only safe links");
   assert.equal(await page.title(), "Ayenew Shiferaw · Portfolio");

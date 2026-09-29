@@ -5,19 +5,47 @@
 import { addDays, dayOf } from "./dates.js";
 
 export const PORTFOLIO_SECTIONS = [
+  ["highlights", "Highlights", "Your best results, near the top"],
+  ["experience", "Experience", "Roles and companies, as a timeline"],
+  ["skills", "Skills & tools", "Skills, tools and industries"],
+  ["process", "Process", "Your process steps, research methods and how you work with others"],
   ["activity", "Activity", "Tasks finished, streak, hours and a 6-month activity map"],
   ["projects", "Projects", "Ongoing and finished projects with progress and links"],
   ["milestones", "Milestones", "Completed and in-progress milestones"],
   ["plan", "Plan", "The yearly objective's quarterly goals"],
   ["logs", "How I work", "Recent finished tasks with what changed, how, and the problem solved"],
 ];
-export const PORTFOLIO_LINKS = [["email", "Email"], ["linkedin", "LinkedIn"], ["github", "GitHub"], ["website", "Website"]];
+export const PORTFOLIO_LINKS = [["email", "Email"], ["linkedin", "LinkedIn"], ["behance", "Behance"], ["dribbble", "Dribbble"], ["github", "GitHub"], ["website", "Website"]];
+export const INDUSTRIES = ["Travel", "E-commerce", "Fintech", "Health", "SaaS", "Education", "Logistics", "Media"];
+export const RESEARCH_METHODS = ["User interviews", "Usability testing", "Surveys", "Analytics", "A/B testing", "Heuristic reviews", "Card sorting", "Competitive analysis"];
+// Which detail fields belong to which switchable section (the rest always show).
+export const DETAIL_SECTIONS = { highlights: ["highlights"], experience: ["experience"], skills: ["skills", "tools", "industries"], process: ["process", "methods", "collaboration", "different"] };
+
+const list = (v) => (Array.isArray(v) ? v : []).map((x) => String(x).trim()).filter(Boolean);
+/** The profile details, cleaned: { title, years, location, open, roles, experience, highlights, ... }. */
+export function portfolioDetails(d = {}) {
+  return {
+    title: d.title || "", years: d.years ?? "", location: d.location || "", roles: d.roles || "",
+    open: { remote: !!d.open?.remote, hybrid: !!d.open?.hybrid, relocation: !!d.open?.relocation },
+    experience: (Array.isArray(d.experience) ? d.experience : []).map((e) => ({ role: e.role || "", company: e.company || "", from: e.from || "", to: e.to || "", summary: e.summary || "" }))
+      .filter((e) => e.role || e.company),
+    highlights: list(d.highlights), industries: list(d.industries), process: list(d.process), methods: list(d.methods),
+    skills: list(d.skills), tools: list(d.tools), collaboration: d.collaboration || "", different: d.different || "",
+  };
+}
+/** The details a visitor may see: fields of switched-off sections are left out. */
+export function visibleDetails(details, show) {
+  const d = portfolioDetails(details);
+  for (const [section, keys] of Object.entries(DETAIL_SECTIONS)) if (show[section] === false) for (const k of keys) delete d[k];
+  return d;
+}
 
 /** The saved choices, with every section shown unless switched off. */
 export function portfolioPrefs(preferences) {
   const p = (preferences && preferences.portfolio) || {};
   return {
     headline: p.headline || "", bio: p.bio || "", approach: p.approach || "",
+    details: portfolioDetails(p.details),
     links: { ...(p.links || {}) },
     show: Object.fromEntries(PORTFOLIO_SECTIONS.map(([k]) => [k, p.show?.[k] !== false])),
     categories: Array.isArray(p.categories) ? p.categories : [],
@@ -35,7 +63,8 @@ export function buildPortfolioData({ name, preferences, tasks = [], projects = [
   const msTitle = (id) => milestones.find((m) => m.id === id)?.title || null;
   return {
     generated_at: new Date().toISOString(),
-    about: { name, headline: p.headline || null, bio: p.bio || null, approach: p.approach || null, links: p.links },
+    about: { name, headline: p.headline || null, bio: p.bio || null, approach: p.approach || null, links: p.links,
+      details: visibleDetails(p.details, p.show) },
     activity: !p.show.activity ? null : {
       completed_total: done.length, completed_30: since(30), completed_90: since(90),
       minutes_total: done.reduce((s, t) => s + (Number(t.actual_minutes) || 0), 0),

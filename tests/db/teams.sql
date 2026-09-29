@@ -346,7 +346,7 @@ reset role;
 
 -- 13. Portfolio links for hiring managers --------------------------------------
 select pg_temp.act_as(:owner);
-update user_settings set preferences = '{"portfolio":{"headline":"Mobile developer","show":{"plan":false}}}';
+update user_settings set preferences = '{"portfolio":{"headline":"Mobile developer","show":{"plan":false,"experience":false},"details":{"title":"Senior UI/UX Designer","years":5,"skills":["Design systems"],"experience":[{"role":"Lead designer","company":"Secret Co"}]}}}';
 insert into tasks (title, status, learning_changed, learning_how, learning_solved)
   values ('Owner: booking store', 'completed', 'Added the booking store', 'One slice per step', 'Props five levels deep');
 insert into portfolio_links (name, token_hash, token_prefix)
@@ -365,6 +365,8 @@ do $$ declare r jsonb; begin
   if not (r -> 'work') @> '[{"title":"Owner: booking store","how":"One slice per step"}]' then raise exception 'FAILED: learning logs'; end if;
   if r::text like '%Ana%' or r::text like '%sample%' or r::text like '%22222222%' then raise exception 'FAILED: colleague data in the portfolio'; end if;
   if (r -> 'activity' ->> 'completed_total')::int < 1 then raise exception 'FAILED: activity'; end if;
+  if r -> 'about' -> 'details' ->> 'title' <> 'Senior UI/UX Designer' or not (r -> 'about' -> 'details' -> 'skills') ? 'Design systems' then raise exception 'FAILED: profile details'; end if;
+  if r::text like '%Secret Co%' then raise exception 'FAILED: a hidden section left the database'; end if;
   raise notice 'ok - a valid link shows the owner''s work only, following their choices';
 end $$;
 do $$ begin

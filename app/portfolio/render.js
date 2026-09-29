@@ -60,12 +60,32 @@ export function renderPortfolio(data) {
   const ms = data.milestones || [];
   const msDone = ms.filter((m) => m.status === "completed");
   const msOpen = ms.filter((m) => m.status !== "completed");
-  const sections = [];
+  const d = a.details || {};
+  const sections = {};
+  const tags = (items) => `<ul class="pf-tags">${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`;
+
+  if (d.highlights?.length) {
+    sections.highlights = `<section class="pf-section" id="pf-highlights"><h2>Highlights</h2>
+      <ul class="pf-highlights">${d.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></section>`;
+  }
+  if (d.experience?.length) {
+    sections.experience = `<section class="pf-section" id="pf-experience"><h2>Experience</h2>
+      <ol class="pf-timeline">${d.experience.map((e) => `<li>
+        <div class="pf-when">${esc([e.from, e.to].filter(Boolean).join(" – "))}</div>
+        <div><b>${esc(e.role)}</b>${e.company ? `<span class="pf-at"> · ${esc(e.company)}</span>` : ""}${e.summary ? `<p>${esc(e.summary)}</p>` : ""}</div>
+      </li>`).join("")}</ol></section>`;
+  }
+  if (d.skills?.length || d.tools?.length || d.industries?.length) {
+    sections.skills = `<section class="pf-section" id="pf-skills"><h2>Skills &amp; tools</h2>
+      ${d.skills?.length ? `<h3 class="pf-h3">Skills</h3>${tags(d.skills)}` : ""}
+      ${d.tools?.length ? `<h3 class="pf-h3">Tools</h3>${tags(d.tools)}` : ""}
+      ${d.industries?.length ? `<h3 class="pf-h3">Industries</h3>${tags(d.industries)}` : ""}</section>`;
+  }
 
   if (act) {
     const s = activityStats(act);
     const weeks = act.weeks || [];
-    sections.push(`<section class="pf-section" id="pf-activity"><h2>Activity</h2>
+    sections.activity = (`<section class="pf-section" id="pf-activity"><h2>Activity</h2>
       <div class="pf-stats">
         ${stat(act.completed_total, "tasks finished")}
         ${stat(act.completed_30, "in the last 30 days")}
@@ -79,7 +99,7 @@ export function renderPortfolio(data) {
     </section>`);
   }
   if (data.projects) {
-    sections.push(`<section class="pf-section" id="pf-projects"><h2>Ongoing projects</h2>
+    sections.projects = (`<section class="pf-section" id="pf-projects"><h2>Ongoing projects</h2>
       ${ongoing.length ? `<div class="pf-grid">${ongoing.map(projectCard).join("")}</div>` : `<p class="pf-empty">No ongoing projects right now.</p>`}
       ${finished.length ? `<h2 class="pf-sub">Projects completed</h2><div class="pf-grid">${finished.map(projectCard).join("")}</div>` : ""}
     </section>`);
@@ -88,20 +108,25 @@ export function renderPortfolio(data) {
     const item = (m) => `<li><div><b>${esc(m.title)}</b>${m.description ? `<p>${esc(m.description)}</p>` : ""}</div>
       <span class="pf-ms-meta">${m.status === "completed" ? `Completed${m.completed_at ? " " + esc(formatDay(String(m.completed_at).slice(0, 10), { month: "short", day: "numeric", year: "numeric" })) : ""}`
         : `${m.pct}%${m.deadline ? " · due " + esc(formatDay(m.deadline, { month: "short", day: "numeric", year: "numeric" })) : ""}`}</span></li>`;
-    sections.push(`<section class="pf-section" id="pf-milestones"><h2>Milestones</h2>
+    sections.milestones = (`<section class="pf-section" id="pf-milestones"><h2>Milestones</h2>
       ${msOpen.length ? `<h3 class="pf-h3">In progress</h3><ul class="pf-ms">${msOpen.map(item).join("")}</ul>` : ""}
       ${msDone.length ? `<h3 class="pf-h3">Achieved</h3><ul class="pf-ms done">${msDone.map(item).join("")}</ul>` : ""}
     </section>`);
   }
   if (data.plan && data.plan.length) {
-    sections.push(`<section class="pf-section" id="pf-plan"><h2>The plan</h2>
+    sections.plan = (`<section class="pf-section" id="pf-plan"><h2>The plan</h2>
       <ol class="pf-plan">${data.plan.map((g) => `<li><span class="pf-q">Q${g.quarter} ${g.year}</span><b>${esc(g.title)}</b>
         <div class="pf-bar"><i style="width:${g.pct}%"></i></div><span class="pf-plan-meta">${esc(STATUS[g.status] || "")} · ${g.pct}%</span></li>`).join("")}</ol>
     </section>`);
   }
-  if (data.work || a.approach) {
-    sections.push(`<section class="pf-section" id="pf-work"><h2>How I work</h2>
+  const hasProcess = d.process?.length || d.methods?.length || d.collaboration || d.different;
+  if (data.work || a.approach || hasProcess) {
+    sections.work = (`<section class="pf-section" id="pf-work"><h2>How I work</h2>
       ${a.approach ? `<p class="pf-approach">${esc(a.approach)}</p>` : ""}
+      ${d.process?.length ? `<ol class="pf-process" id="pf-process">${d.process.map((p, i) => `<li><span>${i + 1}</span>${esc(p)}</li>`).join("")}</ol>` : ""}
+      ${d.methods?.length ? `<h3 class="pf-h3">Research methods</h3>${tags(d.methods)}` : ""}
+      ${d.collaboration ? `<h3 class="pf-h3">Working with developers and product</h3><p class="pf-approach">${esc(d.collaboration)}</p>` : ""}
+      ${d.different ? `<h3 class="pf-h3">What I bring</h3><p class="pf-approach">${esc(d.different)}</p>` : ""}
       ${data.work?.length ? `<p class="pf-note">Recent finished work, in my own words: what changed, how, and the problem it solved.</p>
         <div class="pf-work">${data.work.map((w) => `<article>
           <header><h3>${esc(w.title)}</h3><span>${esc(formatDay(w.day, { month: "short", day: "numeric", year: "numeric" }))}${w.milestone ? ` · ${esc(w.milestone)}` : w.category ? ` · ${esc(w.category)}` : ""}${w.minutes ? ` · ${esc(formatMinutes(w.minutes))}` : ""}</span></header>
@@ -110,15 +135,23 @@ export function renderPortfolio(data) {
     </section>`);
   }
 
+  const headline = a.headline || [d.title, d.years ? `${d.years} years of experience` : ""].filter(Boolean).join(" · ");
+  const open = Object.entries(d.open || {}).filter(([, v]) => v).map(([k]) => ({ remote: "remote", hybrid: "hybrid", relocation: "relocation" })[k]);
+  const facts = [a.headline && d.title ? d.title : null, a.headline && d.years ? `${d.years} years` : null, d.location || null,
+    open.length ? `Open to ${open.join(", ").replace(/, ([^,]*)$/, " or $1")}` : null].filter(Boolean);
+  // Highlights and experience first: what hiring managers look for.
+  const order = ["highlights", "experience", "projects", "work", "skills", "activity", "milestones", "plan"];
   return `<div class="pf">
     <header class="pf-hero">
       <p class="pf-eyebrow">Portfolio</p>
       <h1>${esc(a.name || "Portfolio")}</h1>
-      ${a.headline ? `<p class="pf-headline">${esc(a.headline)}</p>` : ""}
+      ${headline ? `<p class="pf-headline">${esc(headline)}</p>` : ""}
+      ${facts.length ? `<p class="pf-facts">${facts.map(esc).join(" · ")}</p>` : ""}
+      ${d.roles ? `<p class="pf-facts">Looking for: ${esc(d.roles)}</p>` : ""}
       ${a.bio ? `<p class="pf-bio">${esc(a.bio)}</p>` : ""}
       ${contactLinks(a.links)}
     </header>
-    ${sections.join("") || `<p class="pf-empty">Nothing to show yet.</p>`}
+    ${order.map((k) => sections[k] || "").join("") || `<p class="pf-empty">Nothing to show yet.</p>`}
     <footer class="pf-foot">Live from my work dashboard · updated ${esc(formatDay(String(data.generated_at || new Date().toISOString()).slice(0, 10), { month: "long", day: "numeric", year: "numeric" }))}</footer>
   </div>`;
 }
