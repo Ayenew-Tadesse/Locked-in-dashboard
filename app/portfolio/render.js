@@ -34,8 +34,8 @@ function heatmap(activity) {
     const level = n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4;
     cells.push(`<i class="pf-cell l${level}" title="${esc(formatDay(d, { weekday: "short", month: "short", day: "numeric" }))}: ${n} task${n === 1 ? "" : "s"} finished"></i>`);
   }
-  return `<div class="pf-heat" role="img" aria-label="Tasks finished per day over the last 6 months">${cells.join("")}</div>
-    <div class="pf-heat-legend"><span>${esc(formatDay(start, { month: "short", year: "numeric" }))}</span><span class="pf-heat-scale">Less <i class="pf-cell l0"></i><i class="pf-cell l1"></i><i class="pf-cell l2"></i><i class="pf-cell l3"></i><i class="pf-cell l4"></i> More</span><span>Today</span></div>`;
+  return `<div class="pf-heat-wrap"><div class="pf-heat" role="img" aria-label="Tasks finished per day over the last 6 months">${cells.join("")}</div>
+    <div class="pf-heat-legend"><span>${esc(formatDay(start, { month: "short", year: "numeric" }))}</span><span class="pf-heat-scale">Less <i class="pf-cell l0"></i><i class="pf-cell l1"></i><i class="pf-cell l2"></i><i class="pf-cell l3"></i><i class="pf-cell l4"></i> More</span><span>Today</span></div></div>`;
 }
 
 function stat(value, label) { return `<div class="pf-stat"><b>${esc(value)}</b><span>${esc(label)}</span></div>`; }
@@ -87,14 +87,14 @@ export function renderPortfolio(data, opts = {}) {
     const s = activityStats(act);
     const weeks = act.weeks || [];
     sections.activity = (`<section class="pf-section" id="pf-activity"><h2>Activity</h2>
-      <div class="pf-stats">
+      <div class="pf-act"><div class="pf-stats">
         ${stat(act.completed_total, "tasks finished")}
         ${stat(act.completed_30, "in the last 30 days")}
         ${stat(s.activeDays90, "active days (90)")}
         ${stat(s.streak ? `${s.streak} day${s.streak === 1 ? "" : "s"}` : "—", "current streak")}
         ${act.minutes_total ? stat(formatMinutes(act.minutes_total), "logged") : ""}
       </div>
-      ${heatmap(act)}
+      ${heatmap(act)}</div>
       ${weeks.length ? `<div class="pf-weeks" aria-label="Weekly score, last ${weeks.length} weeks">${weeks.map((w) => `<span title="Week of ${esc(formatDay(w.week_start, { month: "short", day: "numeric" }))}: ${Math.round(w.score)}/100"><i style="height:${Math.max(4, Math.round(w.score))}%"></i></span>`).join("")}</div>
         <p class="pf-note">Weekly score (0–100): tasks finished on time, time logged and consistency.</p>` : ""}
     </section>`);
@@ -121,7 +121,7 @@ export function renderPortfolio(data, opts = {}) {
     </section>`);
   }
   const hasProcess = d.process?.length || d.methods?.length || d.collaboration || d.different;
-  if (data.work || a.approach || hasProcess) {
+  if (data.work?.length || a.approach || hasProcess) {
     sections.work = (`<section class="pf-section" id="pf-work"><h2>How I work</h2>
       ${a.approach ? `<p class="pf-approach">${esc(a.approach)}</p>` : ""}
       ${d.process?.length ? `<ol class="pf-process" id="pf-process">${d.process.map((p, i) => `<li><span>${i + 1}</span>${esc(p)}</li>`).join("")}</ol>` : ""}
