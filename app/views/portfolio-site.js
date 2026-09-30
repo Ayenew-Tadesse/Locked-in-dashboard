@@ -177,7 +177,7 @@ export function wireEditor(el, hooks) {
   let portrait = currentSite().portrait ?? draftSite().portrait ?? "";
   const form = el.querySelector("#li-pf-form");
   let dirty = false;
-  const setDirty = (v) => { dirty = v; hooks.dirty?.(v); };
+  const setDirty = (v) => { dirty = v; hooks.dirty?.(v); if (!v) hooks.draft?.(null); };
   form.addEventListener("input", () => { if (!dirty) setDirty(true); });
   form.addEventListener("change", (e) => { if (!e.target.matches("[data-portrait]") && !dirty) setDirty(true); });
   el.querySelectorAll(".li-pf-sec").forEach((d) => d.addEventListener("toggle", () => { if (d.open) openSections.add(d.dataset.sec); else openSections.delete(d.dataset.sec); }));
@@ -226,7 +226,7 @@ export function wireEditor(el, hooks) {
     const list = el.querySelector(box);
     list.insertAdjacentHTML("beforeend", html());
     list.lastElementChild.querySelector("input")?.focus();
-    setDirty(true);
+    setDirty(true); live();
   });
   add("#li-pf-skill-add", "#li-pf-skill-groups", skillGroupRow);
   add("#li-pf-contact-add", "#li-pf-contacts", contactRow);
@@ -238,12 +238,12 @@ export function wireEditor(el, hooks) {
       portrait = await upload(file, file.name);
       el.querySelector("#li-pf-portrait figure")?.remove();
       el.querySelector("#li-pf-portrait").insertAdjacentHTML("afterbegin", `<figure><img src="${esc(portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove photo">&#10005;</button></figure>`);
-      setDirty(true);
+      setDirty(true); live();
     } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
   });
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // Everything on the form as saved preferences.portfolio (nothing is saved here).
+  function readForm() {
     const f = form.elements;
     const rows = (box, keys) => [...form.querySelectorAll(`${box} .li-pf-grouprow`)].map((r) => Object.fromEntries(keys.map((k) => [k, r.querySelector(`[data-k="${k}"]`).value.trim()])));
     const open = { remote: f.open_remote.checked, hybrid: f.open_hybrid.checked, relocation: f.open_relocation.checked };
@@ -284,6 +284,19 @@ export function wireEditor(el, hooks) {
       show: { ...(old.show || {}), ...Object.fromEntries(EDITOR_SECTIONS.map((k) => [k, !!f["show_" + k]?.checked])) },
       categories: [...form.querySelectorAll('[name="cats[]"]:checked')].map((c) => c.value),
     };
+    return portfolio;
+  }
+  // The preview follows as you type (a moment after you pause); Save makes it real.
+  let typing = 0;
+  const live = () => { clearTimeout(typing); typing = setTimeout(() => hooks.draft?.(dirty ? readForm() : null), 250); };
+  form.addEventListener("input", live);
+  form.addEventListener("change", live);
+  form.addEventListener("click", (e) => { if (e.target.closest("[data-row-remove],[data-remove-portrait],[data-exp]")) live(); });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearTimeout(typing);
+    const prefs = state.settings.preferences || {}, portfolio = readForm();
     try {
       const s = await state.store.savePreferences({ ...prefs, portfolio });
       state.settings = { ...state.settings, ...s };
@@ -293,7 +306,7 @@ export function wireEditor(el, hooks) {
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 
-  wireCaseCards(el, hooks);
+  wireCaseCards(el, { saved() { hooks.saved(); if (dirty) hooks.draft?.(readForm()); } });
   return { save: () => form.requestSubmit(), isDirty: () => dirty };
 }
 

@@ -72,11 +72,13 @@ export function portfolioUrl(token) {
   return new URL("portfolio.html", location.href.split("#")[0].replace(/[^/]*$/, "")).href + "#t=" + encodeURIComponent(token);
 }
 
+let draft = null; // the editor's unsaved portfolio, shown in the preview while you type
+
 function previewData() {
   const own = (x) => !x.user_id || x.user_id === state.me;
   return buildPortfolioData({
     name: state.profile?.name || "",
-    preferences: state.settings.preferences,
+    preferences: draft ? { ...(state.settings.preferences || {}), portfolio: draft } : state.settings.preferences,
     tasks: state.tasks, projects: state.projects || [],
     milestones: state.milestones.filter(own), goals: state.goals.filter(own),
     weekly: Object.values(state.weekly || {}), today: state.today, timeZone: state.timeZone,
@@ -86,6 +88,7 @@ function previewData() {
 export function renderPortfolioPage(el) {
   if (state.isColleague) { el.innerHTML = `<p class="li-empty">The portfolio is for the team owner.</p>`; return; }
   previewChannel();
+  draft = null;
   el.innerHTML = `
     ${editorHtml()}
 
@@ -121,6 +124,7 @@ export function renderPortfolioPage(el) {
   const bar = document.getElementById("li-pagebar-actions");
   const editor = wireEditor(el, {
     saved() { drawPreview(); announceSaved(); },
+    draft(p) { draft = p; drawPreview(); },
     reload() { renderPortfolioPage(el); },
     dirty(on) {
       const b = bar?.querySelector("#li-pf-save");
