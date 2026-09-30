@@ -7,6 +7,7 @@
 // that shows it decides how to switch views.
 import { esc } from "../ui/dom.js";
 import { safeUrl, projectProgress } from "../core/projects.js";
+import { hasResume } from "./resume.js";
 
 /** Is there a site to lay out? */
 export function hasSite(site) {
@@ -71,7 +72,7 @@ function home(data, live) {
       <div class="pf-s-actions">
         ${s.cases?.length ? `<a class="pf-btn pf-btn--solid" href="#pf-cases" data-scroll="pf-cases">View projects</a>` : ""}
         ${s.contact?.length ? `<a class="pf-btn pf-btn--outline" href="#pf-contact" data-scroll="pf-contact">Contact me</a>` : ""}
-        ${link(s.resume, "Resume")}
+        ${hasResume(s) ? `<a class="pf-btn pf-btn--outline" href="#page=resume" data-resume>Resume</a>` : link(s.resume, "Resume")}
       </div>
       ${social ? `<nav class="pf-socials" aria-label="Social">${social}</nav>` : ""}
     </div>

@@ -325,6 +325,18 @@ fields back in step. Case studies are cards: tap to edit (delete is in the
 editor), drag onto another to swap (mouse anywhere on the card, touch by the
 grip, Ctrl/⌘ + arrow keys); they save straight away.
 
+**Resume.** ☰ → Resume (`app/views/resume.js`) edits
+`preferences.portfolio.site.cv` section by section (header and contact links,
+summary, core skills, selected projects, front-end development, experience,
+education, certification, additional, sections to show), with a live
+preview; entries and rows reorder by their grip (`app/ui/sortable.js`: mouse,
+touch or arrow keys). It starts from the resume the owner wrote.
+`app/portfolio/resume.js` draws it as a classic white-paper resume for both
+the dashboard and the portfolio: the Resume button opens
+`portfolio.html#t=…&page=resume` on the same private link (no SQL:
+`portfolio_view` already sends `site`), and Download PDF prints only the
+resume (`html.cv-print`).
+
 **Edit | Save | Preview on web** sit in the Portfolio page's top bar
 (`#li-pagebar-actions`). Preview on web opens `portfolio.html` in a named tab
 through a private link of your own ("My preview (you)", one hour, kept in

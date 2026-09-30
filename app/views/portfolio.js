@@ -6,6 +6,7 @@ import { formatDay, dayOf } from "../core/dates.js";
 import { buildPortfolioData } from "../core/portfolio.js";
 import { renderPortfolio } from "../portfolio/render.js";
 import { editorHtml, wireEditor } from "./portfolio-site.js";
+import { printResume } from "../portfolio/resume.js";
 
 let previewView = null; // the case study open in the preview
 
@@ -27,7 +28,7 @@ function previewChannel() {
   return channel;
 }
 /** After every portfolio save: the preview tab reloads what hiring managers see. */
-function announceSaved() {
+export function announceSaved() {
   try { previewChannel()?.postMessage({ type: "saved", data: state.store?.mode === "demo" ? previewData() : undefined }); } catch { /* the tab refreshes on its next open */ }
 }
 const readPreview = () => { try { return JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); } catch { return null; } };
@@ -45,11 +46,11 @@ async function previewToken() {
 function pageUrl(query, hash) {
   return new URL("portfolio.html", location.href.split("#")[0].replace(/[^/]*$/, "")).href.split("?")[0] + "?" + query + "#" + hash;
 }
-async function openWebPreview() {
+export async function openWebPreview(view = previewView) {
   // Open (or reuse) the tab straight away, so pop-up blockers allow it.
   const w = window.open("", PREVIEW_TAB);
   if (!w) { toast("Allow pop-ups for this site to open the preview", "error"); return; }
-  const caseHash = previewView ? "case=" + encodeURIComponent(previewView) : "";
+  const caseHash = view === "resume" ? "page=resume" : view ? "case=" + encodeURIComponent(view) : "";
   try {
     let url;
     if (state.store.mode === "demo") url = pageUrl("demo=1&live=1", caseHash);
@@ -111,11 +112,12 @@ export function renderPortfolioPage(el) {
   const drawPreview = () => { el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView }); };
   // Links inside the preview: open a case study, go back home, or scroll to a section.
   el.querySelector("#li-pf-preview").addEventListener("click", (e) => {
-    const a = e.target.closest("[data-case],[data-home],[data-scroll]");
+    const a = e.target.closest("[data-case],[data-home],[data-scroll],[data-resume],[data-print-resume]");
     if (!a) return;
     e.preventDefault();
+    if (a.hasAttribute("data-print-resume")) { printResume(); return; }
     if (a.dataset.scroll) { el.querySelector("#" + a.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
-    previewView = a.hasAttribute("data-case") ? a.dataset.case : null;
+    previewView = a.hasAttribute("data-case") ? a.dataset.case : a.hasAttribute("data-resume") ? "resume" : null;
     drawPreview();
     el.querySelector(".li-pf-preview-card").scrollIntoView({ block: "start" });
   });
@@ -142,7 +144,7 @@ export function renderPortfolioPage(el) {
     </div>`;
     bar.querySelector("#li-pf-edit").addEventListener("click", () => el.querySelector("#li-pf-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     bar.querySelector("#li-pf-save").addEventListener("click", () => editor.save());
-    bar.querySelector("#li-pf-web").addEventListener("click", openWebPreview);
+    bar.querySelector("#li-pf-web").addEventListener("click", () => openWebPreview());
   }
 
   el.querySelector("#li-pf-new").addEventListener("submit", async (e) => {

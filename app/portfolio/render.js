@@ -6,17 +6,19 @@ import { addDays, formatDay, formatMinutes } from "../core/dates.js";
 import { projectProgress, safeUrl, LINK_LABELS } from "../core/projects.js";
 import { activityStats, PORTFOLIO_LINKS } from "../core/portfolio.js";
 import { hasSite, renderSite } from "./site.js";
+import { hasResume, renderResumePage } from "./resume.js";
 
 const STATUS = { not_started: "Not started", in_progress: "In progress", completed: "Completed", on_hold: "On hold" };
 const PROJECT_STATE = { good: "On track", warn: "Needs attention", idle: "Not started" };
 
-function contactLinks(links = {}) {
+function contactLinks(links = {}, resume = false) {
   const out = PORTFOLIO_LINKS.map(([k, label]) => {
     const v = (links[k] || "").trim();
     if (!v) return "";
     const href = k === "email" ? (/^[^@\s]+@[^@\s]+$/.test(v) ? `mailto:${v}` : null) : safeUrl(v);
     return href ? `<a class="pf-contact" href="${esc(href)}"${k === "email" ? "" : ' target="_blank" rel="noopener"'}>${esc(label)}</a>` : "";
   }).filter(Boolean);
+  if (resume) out.push(`<a class="pf-contact" href="#page=resume" data-resume>Resume</a>`);
   return out.length ? `<nav class="pf-contacts" aria-label="Contact">${out.join("")}</nav>` : "";
 }
 
@@ -135,6 +137,7 @@ export function renderPortfolio(data, opts = {}) {
   }
 
   // Laid out like your portfolio website when you've set one up (or imported it).
+  if (opts.view === "resume" && hasResume(data.site)) return renderResumePage(data.site.cv);
   if (hasSite(data.site)) return renderSite(data, sections, opts.view);
 
   const headline = a.headline || [d.title, d.years ? `${d.years} years of experience` : ""].filter(Boolean).join(" · ");
@@ -151,7 +154,7 @@ export function renderPortfolio(data, opts = {}) {
       ${facts.length ? `<p class="pf-facts">${facts.map(esc).join(" · ")}</p>` : ""}
       ${d.roles ? `<p class="pf-facts">Looking for: ${esc(d.roles)}</p>` : ""}
       ${a.bio ? `<p class="pf-bio">${esc(a.bio)}</p>` : ""}
-      ${contactLinks(a.links)}
+      ${contactLinks(a.links, hasResume(data.site))}
     </header>
     ${order.map((k) => sections[k] || "").join("") || `<p class="pf-empty">Nothing to show yet.</p>`}
     <footer class="pf-foot">Live from my work dashboard · updated ${esc(formatDay(String(data.generated_at || new Date().toISOString()).slice(0, 10), { month: "long", day: "numeric", year: "numeric" }))}</footer>

@@ -26,6 +26,7 @@ import { renderSettings } from "./views/settings.js";
 import { renderProfile } from "./views/profile.js";
 import { renderProjects } from "./views/projects.js";
 import { renderPortfolioPage } from "./views/portfolio.js";
+import { renderResumeEditor } from "./views/resume.js";
 import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { setupChat } from "./ui/chat.js";
@@ -47,6 +48,7 @@ const VIEWS = {
   profile: { label: "Profile", render: renderProfile },
   projects: { label: "Projects", render: renderProjects },
   portfolio: { label: "Portfolio", render: renderPortfolioPage },
+  resume: { label: "Resume", render: renderResumeEditor },
   team: { label: "Team", render: renderTeam },
 };
 
@@ -157,7 +159,7 @@ document.addEventListener("click", (e) => {
 
 // Pages from the ☰ menu open full screen (no greeting, quote or tabs) with
 // a Back button to the main page.
-const MENU_PAGES = new Set(["profile", "projects", "portfolio", "settings"]);
+const MENU_PAGES = new Set(["profile", "projects", "portfolio", "resume", "settings"]);
 let mainHash = "#/", mainScroll = 0, fromMain = false, restoreScroll = null;
 function syncPageMode(r) {
   const page = MENU_PAGES.has(r.name);
