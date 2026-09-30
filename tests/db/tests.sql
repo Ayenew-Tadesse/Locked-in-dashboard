@@ -248,6 +248,24 @@ do $$ begin
   raise exception 'FAILED: completed someone else''s task by id';
 exception when no_data_found then raise notice 'ok - a token can''t complete someone else''s task by id';
 end $$;
+insert into tasks (user_id, title) values (:a, 'From a header');
+select pg_temp.act_anon();
+select set_config('request.headers', '{"x-lockedin-token":"lki_done_token_for_tests_0123456789"}', false);
+select pg_temp.check((api_complete_task(null, null, 'From a header') ->> 'status') = 'completed',
+  'the token can come in the x-lockedin-token header');
+select set_config('request.headers', '{"x-lockedin-token":"lki_write_token_for_tests_0123456789"}', false);
+do $$ begin
+  perform api_complete_task(null, null, 'Twice');
+  raise exception 'FAILED: a header token without the permission completed a task';
+exception when invalid_authorization_specification then raise notice 'ok - a header token still needs the complete permission';
+end $$;
+select set_config('request.headers', '', false);
+do $$ begin
+  perform api_complete_task(null, null, 'Twice');
+  raise exception 'FAILED: completed a task with no token';
+exception when invalid_authorization_specification then raise notice 'ok - no token, no change';
+end $$;
+reset role;
 delete from tasks where user_id = :b; -- the account-deletion check below counts every task
 select pg_temp.check((select last_used_at is not null from api_tokens where name = 'Claude read'), 'token use is recorded');
 
