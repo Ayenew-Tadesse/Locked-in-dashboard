@@ -27,6 +27,7 @@ import { renderProfile } from "./views/profile.js";
 import { renderProjects } from "./views/projects.js";
 import { renderPortfolioPage } from "./views/portfolio.js";
 import { renderResumeEditor } from "./views/resume.js";
+import { startGithub } from "./github.js";
 import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { setupChat } from "./ui/chat.js";
@@ -251,6 +252,18 @@ function feedLegacy() {
     }
   }
   for (const [d, row] of Object.entries(state.daily)) if (row.notes) reports[d] = { summary: row.notes };
+  // Your GitHub commits: a day with any counts as active (green) on the Activity map.
+  const commitDays = {};
+  for (const [d, g] of Object.entries(state.github?.days || {})) {
+    if (!g.count) continue;
+    commitDays[d] = g.count;
+    const c = (contributions[d] = contributions[d] || { count: 0, repos: {}, items: [] });
+    c.count += g.count;
+    // Commits first in the day's list (finished tasks follow).
+    const commits = (g.items || []).map((it) => ({ repo: it.repo, text: it.text, kind: "commit" }));
+    for (const it of commits) c.repos[it.repo] = (c.repos[it.repo] || 0) + 1;
+    c.items = [...commits, ...c.items];
+  }
 
   const today = state.today, opts = { today, timeZone: state.timeZone };
   const day = scoreDay(state.tasks, today, state.cfg, opts);
@@ -273,7 +286,8 @@ function feedLegacy() {
       left: [quarter.goal_progress == null ? "No goals yet" : `Goals ${Math.round(quarter.goal_progress)}% done`, quarter.goal_progress == null ? "No goals" : `Goals ${Math.round(quarter.goal_progress)}%`],
       range: [`Q${q.quarter} · ${formatRange(quarter.start, quarter.end)}`, `Q${q.quarter} ${q.year}`] },
   };
-  L.update({ daily, contributions, reports, scores, unit: ["task completed", "tasks completed"] });
+  const unit = Object.keys(commitDays).length ? ["task or commit", "tasks and commits"] : ["task completed", "tasks completed"];
+  L.update({ daily, contributions, reports, scores, commitDays, unit });
 }
 
 // ---------------------------------------------------------------------------
@@ -388,6 +402,8 @@ async function start(store) {
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);
   render();
   try { setupChat(); } catch (e) { console.error(e); }
+  // GitHub commits turn Activity days green (fetched now and every 10 minutes).
+  startGithub(() => { feedLegacy(); window.dispatchEvent(new Event("li:github")); });
   // Reveal only now that the new design is drawn (no flash of the original page).
   document.documentElement.classList.remove("app-booting");
 }

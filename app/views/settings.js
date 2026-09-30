@@ -6,6 +6,8 @@ import { formatDay, dayOf } from "../core/dates.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { buildYearSetup, buildMissingHistory } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
+import { githubUsername, refreshGithub } from "../github.js";
+import { githubUser } from "../core/github.js";
 
 // "Set up my year" has been done: afterwards only missing history is offered.
 const setUp = () => !!(state.settings.plan_loaded_at || state.settings.legacy_imported_at);
@@ -51,6 +53,17 @@ export function renderSettings(el) {
     </section>
 
 
+    <section class="li-card" id="github">
+      <div class="li-card-head"><span class="card-label">GitHub</span></div>
+      <p class="li-sub">Days you commit to GitHub turn green on your Activity map, and the commits show in that day's list and daily report. Public repos only: nothing secret is stored here.</p>
+      <form class="li-quick-add today-add" id="li-gh-form" autocomplete="off">
+        <input name="user" maxlength="100" value="${esc(githubUsername())}" placeholder="Your GitHub username (empty: off)" aria-label="GitHub username">
+        <button type="submit" class="li-btn primary">Save</button>
+        <button type="button" class="li-btn" id="li-gh-refresh" title="Check GitHub now">&#8635; Refresh</button>
+      </form>
+      <p class="li-sub" id="li-gh-status" aria-live="polite"></p>
+    </section>
+
     <section class="li-card" id="api">
       <div class="li-card-head"><span class="card-label">API access for Claude</span><button type="button" class="li-btn small" id="li-new-token">+ New token</button></div>
       <p class="li-sub">Personal access tokens let an assistant read your data through <code>/api/v1</code> (e.g. "What are my tasks today?"). A token only sees your data, can be revoked at any time, and is shown once. Only a fingerprint (SHA-256) is stored.</p>
@@ -71,6 +84,41 @@ export function renderSettings(el) {
       ${state.settings.plan_loaded_at ? `<p class="li-sub">Year plan loaded on ${esc(formatDay(dayOf(state.settings.plan_loaded_at, state.timeZone)))}.
         "Add missing history" adds any of the original dashboard's days that aren't here yet (like Sep 20–21) without duplicating anything.</p>` : ""}
     </section>`;
+
+  // GitHub
+  const ghStatus = () => {
+    const box = el.querySelector("#li-gh-status");
+    if (!box || !document.contains(box)) { window.removeEventListener("li:github", ghStatus); return; }
+    const g = state.github || {};
+    if (!githubUsername()) { box.textContent = "Off: add your username to count your commits."; return; }
+    const days = Object.values(g.days || {});
+    const commits = days.reduce((n, d) => n + (d.count || 0), 0);
+    const ago = g.checkedAt ? Math.max(0, Math.round((Date.now() - g.checkedAt) / 60000)) : null;
+    box.textContent = g.loading && !g.checkedAt ? "Checking GitHub…"
+      : `${commits} commit${commits === 1 ? "" : "s"} on ${days.length} day${days.length === 1 ? "" : "s"} in the last 90 days`
+        + (ago == null ? "" : ` · last checked ${ago ? ago + " min ago" : "just now"}`) + (g.error ? ` · ${g.error}` : "");
+  };
+  window.addEventListener("li:github", ghStatus);
+  ghStatus();
+  el.querySelector("#li-gh-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const raw = e.target.elements.user.value.trim();
+    const user = raw ? githubUser(raw) : "";
+    if (raw && !user) { toast("That doesn't look like a GitHub username", "error"); return; }
+    try {
+      const prefs = state.settings.preferences || {};
+      const s = await state.store.savePreferences({ ...prefs, github: { username: user } });
+      state.settings = { ...state.settings, ...s };
+      e.target.elements.user.value = user;
+      toast(user ? "Saved: checking GitHub…" : "GitHub switched off");
+      await refreshGithub({ force: true });
+    } catch (err) { toast("Couldn't save: " + err.message, "error"); }
+  });
+  el.querySelector("#li-gh-refresh").addEventListener("click", async (e) => {
+    e.target.disabled = true;
+    await refreshGithub({ force: true }).catch(() => {});
+    e.target.disabled = false;
+  });
 
   // Scoring
   const sf = el.querySelector("#li-scoring-form");

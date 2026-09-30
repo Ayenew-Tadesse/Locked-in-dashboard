@@ -325,6 +325,17 @@ fields back in step. Case studies are cards: tap to edit (delete is in the
 editor), drag onto another to swap (mouse anywhere on the card, touch by the
 grip, Ctrl/⌘ + arrow keys); they save straight away.
 
+**GitHub commits on the Activity map.** `app/github.js` asks GitHub's
+public commit search (`app/core/github.js`, keyless, public repos only) for
+the last 90 days of `author:<username>` commits when the dashboard opens and
+every 10 minutes (cached 10 minutes in localStorage). The username is set in
+Settings → GitHub (empty switches it off); by default the owner uses this
+site's `<user>.github.io` account. `feedLegacy()` adds the commits to that
+day's contributions (listed first, by repo) and passes `commitDays`; the
+Activity map treats a day with commits as active (green, streak, daily
+report status), like a finished checklist. Private repos would need a
+server-side token.
+
 **Resume.** ☰ → Resume (`app/views/resume.js`) edits
 `preferences.portfolio.site.cv` section by section (header and contact links,
 summary, core skills, selected projects, front-end development, experience,
