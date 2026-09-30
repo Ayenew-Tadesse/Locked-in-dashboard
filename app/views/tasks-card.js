@@ -2,7 +2,8 @@
 // "Today's checklist" card). Switches between the day, week, month and
 // quarter. The owner sees the whole team's tasks grouped as Available /
 // Ongoing / Completed with who's in charge of each, how much of that
-// period's work is done, and opens the daily report. A colleague sees their
+// period's work is done, and downloads the week's, month's or quarter's
+// report (the daily report is in the ☰ menu). A colleague sees their
 // own tasks as Available / Completed, read-only.
 import { state, toast } from "../state.js";
 import { weekRange, monthRange, quarterOf, quarterRange, formatDay, formatRange, MONTHS } from "../core/dates.js";
@@ -69,7 +70,6 @@ export function renderTasksCard(el) {
     return { status, title, list, shown };
   });
   const p = pct(done, all.length);
-  const reportOpen = document.getElementById("report-btn")?.getAttribute("aria-expanded") === "true";
 
   el.innerHTML = `
     <div class="li-tc-top">
@@ -90,11 +90,10 @@ export function renderTasksCard(el) {
       : `<p class="li-empty">${esc(period === "day" ? "Nothing planned for today yet." : "No tasks in this period.")}</p>`}
     ${truncated ? `<button type="button" class="li-link li-tc-more" data-more>Show all ${all.length} tasks</button>` : ""}
     ${quickAddForm("tasks-card-quick", today, "Add a task for today…")}
-    <div class="li-tc-foot">
-      ${period === "week" ? `<a class="li-link" href="#/week">Open week view</a>` : period === "quarter" ? `<a class="li-link" href="#/quarter">Open quarter view</a>` : period === "month" ? `<a class="li-link" href="#/analytics">Open analytics</a>` : "<span></span>"}
-      ${readOnly ? "" : period === "day" ? `<button type="button" class="report-btn" data-report aria-expanded="${reportOpen}" aria-controls="report-card">Daily report</button>`
-        : `<button type="button" class="report-btn" data-report-pdf title="Download the ${PERIOD_NAMES[period].toLowerCase()} report as a PDF">${PERIOD_NAMES[period]} report ⤓</button>`}
-    </div>`;
+    ${period === "day" ? "" : `<div class="li-tc-foot">
+      ${period === "week" ? `<a class="li-link" href="#/week">Open week view</a>` : period === "quarter" ? `<a class="li-link" href="#/quarter">Open quarter view</a>` : `<a class="li-link" href="#/analytics">Open analytics</a>`}
+      ${readOnly ? "" : `<button type="button" class="report-btn" data-report-pdf title="Download the ${PERIOD_NAMES[period].toLowerCase()} report as a PDF">${PERIOD_NAMES[period]} report ⤓</button>`}
+    </div>`}`;
   el.hidden = false;
 
   el.querySelectorAll("[data-period]").forEach((b) => b.addEventListener("click", () => {
@@ -104,12 +103,6 @@ export function renderTasksCard(el) {
     renderTasksCard(el);
   }));
   el.querySelector("[data-more]")?.addEventListener("click", () => { expanded = true; renderTasksCard(el); });
-  // The daily report is the original dashboard's card; its button lives in the
-  // (hidden) checklist card, so this one presses it.
-  el.querySelector("[data-report]")?.addEventListener("click", (e) => {
-    document.getElementById("report-btn")?.click();
-    e.currentTarget.setAttribute("aria-expanded", document.getElementById("report-btn")?.getAttribute("aria-expanded") || "false");
-  });
   // Week, month and quarter: download that period's report straight away.
   el.querySelector("[data-report-pdf]")?.addEventListener("click", async (e) => {
     const btn = e.currentTarget, text = btn.textContent;
