@@ -32,6 +32,7 @@ export function setupMenu({ onLogout } = {}) {
   btn.className = "li-menu-btn";
   btn.setAttribute("aria-label", "Menu");
   btn.setAttribute("aria-expanded", "false");
+  document.getElementById("li-menu-btn-desk")?.setAttribute("aria-expanded", "false");
   btn.setAttribute("aria-controls", "li-menu");
   btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`;
   bar.appendChild(btn);
@@ -83,6 +84,7 @@ export function openMenu() {
   lastFocus = document.activeElement;
   menu.hidden = false;
   btn.setAttribute("aria-expanded", "true");
+  document.getElementById("li-menu-btn-desk")?.setAttribute("aria-expanded", "true");
   document.documentElement.classList.add("li-modal-open");
   menu.querySelector(".li-menu-link, [data-close]")?.focus();
 }
@@ -95,29 +97,19 @@ export function closeMenu() {
 }
 
 /**
- * On laptops and desktops the ☰ items sit at the right of the tab row
- * instead: Profile, Projects (owner), Settings, Light / Dark, Log out.
- * `el` is redrawn with the tab row; CSS shows it from 1000px and hides the ☰.
+ * On laptops and desktops a ☰ button sits at the right end of the tab row
+ * (the top-left one is hidden there); it opens the same menu.
+ * `el` is redrawn with the tab row; CSS shows it from 1000px.
  */
 export function renderMenuBar(el) {
   if (!el) return;
-  const route = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
-  const theme = currentTheme();
-  const link = (name, label) => `<a href="#/${name}" class="li-nav-link${route === name ? " active" : ""}"${route === name ? ' aria-current="page"' : ""}>${label}</a>`;
-  el.innerHTML = `
-    ${link("profile", "Profile")}
-    ${state.isManager && state.projects !== undefined ? link("projects", "Projects") : ""}
-    ${!state.isColleague ? link("portfolio", "Portfolio") : ""}
-    ${!state.isColleague ? link("resume", "Resume") : ""}
-    ${link("settings", "Settings")}
-    <button type="button" class="li-nav-link li-nav-theme" data-theme="${theme === "dark" ? "light" : "dark"}" aria-label="Switch to ${theme === "dark" ? "light" : "dark"} background" title="${theme === "dark" ? "Light" : "Dark"} mode">${theme === "dark" ? "☀" : "☾"}</button>
-    ${logoutShown() ? `<button type="button" class="li-nav-link" data-logout>Log out</button>` : ""}`;
+  el.innerHTML = `<button type="button" class="li-menu-btn" id="li-menu-btn-desk" aria-label="Menu" aria-haspopup="dialog" aria-controls="li-menu" aria-expanded="${menu && !menu.hidden}">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>`;
   if (!el.dataset.wired) {
     el.dataset.wired = "1";
     el.addEventListener("click", (e) => {
-      const t = e.target.closest("[data-theme]");
-      if (t) { applyTheme(t.dataset.theme); renderMenuBar(el); }
-      if (e.target.closest("[data-logout]")) logoutHandler?.();
+      if (!e.target.closest("#li-menu-btn-desk")) return;
+      if (menu && !menu.hidden) closeMenu(); else openMenu();
     });
   }
 }

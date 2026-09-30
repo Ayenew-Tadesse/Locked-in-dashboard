@@ -48,10 +48,10 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   return page;
 }
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
-// A ☰ item: from the ☰ drawer on phones and tablets, from the tab row on laptops and desktops.
+// A ☰ item: the ☰ is top left on phones and tablets, at the right of the tab row on laptops and desktops.
 async function menuItem(page, sel) {
-  if (await page.locator("#li-menu-btn").isVisible()) { await page.click("#li-menu-btn"); return page.locator(`#li-menu ${sel}`); }
-  return page.locator(`#li-nav-extra ${sel}`);
+  await page.click((await page.locator("#li-menu-btn").isVisible()) ? "#li-menu-btn" : "#li-menu-btn-desk");
+  return page.locator(`#li-menu ${sel}`);
 }
 // On weekdays the demo's two sample colleagues each have a task in progress today.
 const colleaguesToday = () => ([0, 6].includes(new Date().getDay()) ? 0 : 2);
@@ -343,26 +343,44 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   await page.close();
 });
 
-test("laptops and desktops: the ☰ items sit in the tab row; phones keep the ☰", async () => {
+test("laptops and desktops: the ☰ sits at the right of the tab row and opens from the right; phones keep the ☰ on the left", async () => {
   const page = await open("", { width: 1280, height: 800 });
-  assert.ok(await page.locator("#li-menu-btn").isHidden(), "no ☰ on a wide screen");
-  const extra = page.locator("#li-nav-extra");
-  assert.deepEqual((await extra.locator(".li-nav-link").allInnerTexts()).map((t) => t.trim()), ["Profile", "Projects", "Portfolio", "Resume", "Settings", "☀", "Log out"]);
-  const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), ext = await extra.boundingBox();
-  assert.ok(Math.abs(tabs.y - ext.y) < 12 && ext.x >= tabs.x + tabs.width - 1, "same line, on the right");
-  // Light / Dark from the bar.
-  await extra.locator(".li-nav-theme").click();
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
-  assert.equal(await extra.locator(".li-nav-theme").innerText(), "☾");
-  await extra.locator(".li-nav-theme").click();
-  await extra.locator('a[href="#/settings"]').click();
+  assert.ok(await page.locator("#li-menu-btn").isHidden(), "the top-left ☰ is hidden on a wide screen");
+  const desk = page.locator("#li-menu-btn-desk");
+  const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), b = await desk.boundingBox();
+  assert.ok(Math.abs((tabs.y + tabs.height / 2) - (b.y + b.height / 2)) < 12 && b.x >= tabs.x + tabs.width - 1, "same line, on the right");
+  assert.ok(b.x + b.width > 1280 - 80, "at the right edge");
+  assert.equal(await page.locator("#li-nav-extra .li-nav-link").count(), 0, "no inline menu links");
+  await desk.click();
+  assert.equal(await desk.getAttribute("aria-expanded"), "true");
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
+  const panel = await page.locator("#li-menu .li-menu").boundingBox();
+  assert.ok(panel.x + panel.width >= 1279 && panel.x > 640, "slides in on the right");
+  await page.click('#li-menu a[href="#/settings"]');
   await page.waitForSelector(".li-formula");
+  assert.ok(await page.locator("#li-menu").isHidden(), "closes after choosing");
   await page.setViewportSize({ width: 390, height: 800 });
   await page.click("#li-back");
   await page.waitForSelector("#li-menu-btn", { state: "visible" });
-  assert.ok(await extra.isHidden(), "phones use the ☰ instead");
+  assert.ok(await desk.isHidden(), "phones use the top-left ☰");
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("work pages end with their own content: no Overview cards underneath (the Overview keeps them)", async () => {
+  for (const width of [1280, 390]) {
+    const page = await open("", { width, height: 800 });
+    assert.ok(await page.locator(".dash-grid").isVisible(), `the Overview shows its cards at ${width}px`);
+    for (const v of ["today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team"]) {
+      await page.evaluate((h) => { location.hash = "#/" + h; }, v);
+      await page.waitForSelector("#li-view:not([hidden])");
+      assert.ok(await page.locator(".dash-grid").isHidden(), `${v} at ${width}px: no Objective / Activity underneath`);
+    }
+    await page.click('#li-nav a[href="#/"]');
+    await page.waitForSelector(".dash-grid", { state: "visible" });
+    assert.deepEqual(page.errors, []);
+    await page.close();
+  }
 });
 
 test("team chat: pull up the tray, group and one-to-one chats, unread counts, send and delete", async () => {
