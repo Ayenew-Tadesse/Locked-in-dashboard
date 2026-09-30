@@ -426,8 +426,20 @@ function editCase(original, done, onDelete) {
       <input data-flow-label="${i}" maxlength="40" value="${esc(s.label || "")}" placeholder="Step, e.g. Search" aria-label="Step name">
       <label class="li-btn small li-pf-upload">Image<input type="file" accept="image/*" data-flow-img="${i}" hidden></label>
       <button type="button" class="li-icon-btn" data-flow-remove="${i}" aria-label="Remove step">&#10005;</button></div>`).join("");
+  const SEXES = ["", "Female", "Male", "Other"];
   const personaHtml = () => personas.map((p, i) => `<div class="li-pf-persona" data-persona="${i}">
+      <div class="li-pf-persona-head">
+        <span class="li-pf-persona-photo">${imgUrl(p.photo) ? `<img src="${esc(p.photo)}" alt="">` : `<span aria-hidden="true">&#128100;</span>`}</span>
+        <span class="li-btn-row"><label class="li-btn small li-pf-upload">${imgUrl(p.photo) ? "Change photo" : "Upload photo"}<input type="file" accept="image/*" data-persona-photo="${i}" hidden></label>
+          ${imgUrl(p.photo) ? `<button type="button" class="li-btn small ghost" data-persona-photo-remove="${i}">Remove</button>` : ""}</span>
+      </div>
       <input data-p="name" maxlength="60" value="${esc(p.name || "")}" placeholder="Persona, e.g. The Frequent Flyer" aria-label="Persona name">
+      <div class="li-pf-persona-demo">
+        <input data-p="age" maxlength="12" value="${esc(p.age || "")}" placeholder="Age, e.g. 32" aria-label="Age">
+        <select data-p="sex" aria-label="Sex">${SEXES.map((x) => `<option value="${x}"${(p.sex || "") === x ? " selected" : ""}>${x || "Sex"}</option>`).join("")}</select>
+        <input data-p="location" maxlength="60" value="${esc(p.location || "")}" placeholder="Location" aria-label="Location">
+        <input data-p="occupation" maxlength="60" value="${esc(p.occupation || "")}" placeholder="Occupation" aria-label="Occupation">
+      </div>
       <input data-p="summary" maxlength="160" value="${esc(p.summary || "")}" placeholder="One line about them" aria-label="Summary">
       <textarea data-p="needs" rows="2" placeholder="Needs, one per line" aria-label="Needs">${esc((p.needs || []).join("\n"))}</textarea>
       <textarea data-p="frustrations" rows="2" placeholder="Frustrations, one per line" aria-label="Frustrations">${esc((p.frustrations || []).join("\n"))}</textarea>
@@ -494,23 +506,32 @@ function editCase(original, done, onDelete) {
         if (!(await onDelete())) editCase(original, done, onDelete);
       });
       const draw = () => { f.querySelector("#li-pf-shots").innerHTML = shotsHtml() + `<label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" multiple data-shots hidden></label>`; };
-      readPersonas = () => { personas = [...f.querySelectorAll("[data-persona]")].map((row) => ({
+      readPersonas = () => { personas = [...f.querySelectorAll("[data-persona]")].map((row, i) => ({
+        photo: personas[i]?.photo || "",
         name: row.querySelector('[data-p="name"]').value.trim(), summary: row.querySelector('[data-p="summary"]').value.trim(),
+        age: row.querySelector('[data-p="age"]').value.trim(), sex: row.querySelector('[data-p="sex"]').value,
+        location: row.querySelector('[data-p="location"]').value.trim(), occupation: row.querySelector('[data-p="occupation"]').value.trim(),
         needs: lines(row.querySelector('[data-p="needs"]').value), frustrations: lines(row.querySelector('[data-p="frustrations"]').value), goals: lines(row.querySelector('[data-p="goals"]').value) })); };
       readFlow = () => { f.querySelectorAll("[data-flow-label]").forEach((i) => { flow[Number(i.dataset.flowLabel)].label = i.value.trim(); }); };
       f.addEventListener("change", async (e) => {
         const up = async (file) => upload(file, file.name);
         try {
           if (e.target.matches("[data-shots]")) { for (const file of e.target.files) shots.push({ src: await up(file), alt: "" }); draw(); }
+          if (e.target.matches("[data-persona-photo]") && e.target.files[0]) {
+            readPersonas();
+            personas[Number(e.target.dataset.personaPhoto)].photo = await up(e.target.files[0]);
+            f.querySelector("#li-pf-personas").innerHTML = personaHtml();
+          }
           if (e.target.matches("[data-flow-img]")) { readFlow(); flow[Number(e.target.dataset.flowImg)].src = await up(e.target.files[0]); f.querySelector("#li-pf-flow").innerHTML = flowHtml(); }
         } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
       });
       f.addEventListener("click", (e) => {
-        const b = e.target.closest("[data-shot-remove],[data-flow-remove],[data-persona-remove],#li-pf-persona-add,#li-pf-flow-add");
+        const b = e.target.closest("[data-shot-remove],[data-flow-remove],[data-persona-remove],[data-persona-photo-remove],#li-pf-persona-add,#li-pf-flow-add");
         if (!b) return;
         if (b.matches("[data-shot-remove]")) { shots.splice(Number(b.dataset.shotRemove), 1); draw(); }
         if (b.matches("[data-flow-remove]")) { readFlow(); flow.splice(Number(b.dataset.flowRemove), 1); f.querySelector("#li-pf-flow").innerHTML = flowHtml(); }
         if (b.matches("#li-pf-flow-add")) { readFlow(); flow.push({ label: "", src: "" }); f.querySelector("#li-pf-flow").innerHTML = flowHtml(); }
+        if (b.matches("[data-persona-photo-remove]")) { readPersonas(); personas[Number(b.dataset.personaPhotoRemove)].photo = ""; f.querySelector("#li-pf-personas").innerHTML = personaHtml(); }
         if (b.matches("[data-persona-remove]")) { readPersonas(); personas.splice(Number(b.dataset.personaRemove), 1); f.querySelector("#li-pf-personas").innerHTML = personaHtml(); }
         if (b.matches("#li-pf-persona-add")) { readPersonas(); personas.push({}); f.querySelector("#li-pf-personas").innerHTML = personaHtml(); }
       });

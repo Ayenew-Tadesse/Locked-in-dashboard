@@ -93,6 +93,19 @@ function home(data, live) {
     }).join("")}</div></section>` : ""}`;
 }
 
+// A persona's photo in a circle, or their initials when there's none.
+function personaPhoto(p) {
+  const photo = img(p.photo, `Photo of ${p.name || "persona"}`, "pf-persona__photo");
+  if (photo) return photo;
+  const initials = String(p.name || "?").replace(/^the\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
+  return `<span class="pf-persona__photo pf-persona__initials" aria-hidden="true">${esc(initials)}</span>`;
+}
+// "32 · Female · Addis Ababa · Sales manager" (empty ones skipped).
+function demography(p) {
+  const bits = [p.age, p.sex, p.location, p.occupation].map((x) => String(x || "").trim()).filter(Boolean);
+  return bits.length ? `<p class="pf-persona__demo">${bits.map(esc).join(" · ")}</p>` : "";
+}
+
 const MARK = { yes: "&#10003;", partial: "&#8776;", no: "&#8212;" };
 
 function casePage(data, c) {
@@ -115,7 +128,8 @@ function casePage(data, c) {
     ${block("Design process", c.process && (c.process.intro || c.process.steps?.length) ? `${paras(c.process.intro)}<ol class="pf-steps">${(c.process.steps || []).map((s, n) => `<li><span>${String(n + 1).padStart(2, "0")}</span>${esc(s)}</li>`).join("")}</ol>` : "")}
     ${block("Problem statement", paras(c.problem))}
     ${block("Who I designed for", c.personas?.items?.length ? `${intro(c.personas.intro)}<div class="pf-personas">${c.personas.items.map((p) => `<div class="pf-persona">
-        <h3>${esc(p.name)}</h3>${p.summary ? `<p>${esc(p.summary)}</p>` : ""}
+        <div class="pf-persona__head">${personaPhoto(p)}<div><h3>${esc(p.name)}</h3>${demography(p)}</div></div>
+        ${p.summary ? `<p>${esc(p.summary)}</p>` : ""}
         ${[["Needs", p.needs], ["Frustrations", p.frustrations], ["Goals", p.goals]].filter(([, v]) => v?.length).map(([l, v]) => `<div class="pf-persona__row"><span>${l}</span><div>${v.map((t) => `<em>${esc(t)}</em>`).join("")}</div></div>`).join("")}
       </div>`).join("")}</div>` : "")}
     ${block("Competitive analysis", c.competitive?.rows?.length ? `${intro(c.competitive.intro)}<div class="pf-table-wrap"><table class="pf-compare"><thead><tr>${(c.competitive.columns || []).map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>
