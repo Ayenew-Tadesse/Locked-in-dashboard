@@ -195,6 +195,60 @@ exception when insufficient_privilege then raise notice 'ok - private functions 
 end $$;
 reset role;
 select pg_temp.check((select user_id = :a from tasks where title = 'Plan from Claude'), 'API-created task belongs to the token owner');
+
+-- 9b. Completing tasks with a 'complete' token ---------------------------------
+select pg_temp.act_as(:a);
+insert into api_tokens (name, token_hash, token_prefix, scopes) values
+  ('Claude complete', encode(sha256('lki_done_token_for_tests_0123456789'::bytea), 'hex'), 'lki_done', array['read', 'complete']);
+insert into tasks (title, status) values ('Map the booking flow', 'in_progress'), ('Twice', 'not_started'), ('Twice', 'not_started'), ('Dropped', 'cancelled');
+select pg_temp.act_as(:b);
+insert into tasks (title) values ('Map the booking flow');
+select pg_temp.act_anon();
+do $$ begin
+  perform api_complete_task('lki_write_token_for_tests_0123456789', null, 'Map the booking flow');
+  raise exception 'FAILED: a write token completed a task';
+exception when invalid_authorization_specification then raise notice 'ok - only tokens allowed to complete tasks can';
+end $$;
+select pg_temp.check(
+  (api_complete_task('lki_done_token_for_tests_0123456789', null, '  map the BOOKING flow ') ->> 'status') = 'completed',
+  'a complete token marks a task complete by its title');
+select pg_temp.check(
+  (api_complete_task('lki_done_token_for_tests_0123456789', null, 'Map the booking flow') ->> 'already_completed') = 'true',
+  'completing it again is harmless');
+do $$ begin
+  perform api_complete_task('lki_done_token_for_tests_0123456789', null, 'Twice');
+  raise exception 'FAILED: an ambiguous title was completed';
+exception when invalid_parameter_value then raise notice 'ok - two open tasks with the same title need the id';
+end $$;
+do $$ begin
+  perform api_complete_task('lki_done_token_for_tests_0123456789', null, 'Dropped');
+  raise exception 'FAILED: a cancelled task was completed';
+exception when invalid_parameter_value then raise notice 'ok - cancelled tasks stay cancelled';
+end $$;
+do $$ begin
+  perform api_complete_task('lki_done_token_for_tests_0123456789', null, 'No such task');
+  raise exception 'FAILED: a missing task was reported done';
+exception when no_data_found then raise notice 'ok - an unknown title is reported';
+end $$;
+reset role;
+select pg_temp.check((select status = 'completed' and completed_at is not null from tasks where title = 'Map the booking flow' and user_id = :a),
+  'the owner''s task is completed with a time');
+select pg_temp.check((select status = 'not_started' from tasks where title = 'Map the booking flow' and user_id = :b),
+  'someone else''s task with the same title is untouched');
+select pg_temp.act_anon();
+do $$ declare other uuid; begin
+  select id into other from tasks where title = 'Map the booking flow' and user_id = 'bbbbbbbb-0000-0000-0000-000000000002';
+  raise exception 'FAILED: anon read tasks';
+exception when insufficient_privilege then raise notice 'ok - the token doesn''t open up reading tasks';
+end $$;
+reset role;
+do $$ begin
+  perform api_complete_task('lki_done_token_for_tests_0123456789',
+    (select id from tasks where title = 'Map the booking flow' and user_id = 'bbbbbbbb-0000-0000-0000-000000000002'), null);
+  raise exception 'FAILED: completed someone else''s task by id';
+exception when no_data_found then raise notice 'ok - a token can''t complete someone else''s task by id';
+end $$;
+delete from tasks where user_id = :b; -- the account-deletion check below counts every task
 select pg_temp.check((select last_used_at is not null from api_tokens where name = 'Claude read'), 'token use is recorded');
 
 select pg_temp.act_as(:a);

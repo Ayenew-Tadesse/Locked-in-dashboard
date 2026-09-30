@@ -18,7 +18,8 @@ Claude ──HTTPS + personal token──► /api/v1/* (Vercel function)
 
 * Create tokens in the app: **Settings → API access for Claude → New token**.
   A token is shown once, and only its SHA-256 fingerprint is stored.
-* Scopes: `read` (always), and optionally `write`, which only allows creating tasks.
+* Scopes: `read` (always), and optionally `write`, which only allows creating
+  tasks, and `complete`, which only allows marking your own open tasks complete.
 * Revoke a token at any time and it stops working immediately. Tokens can expire
   (30/90/365 days or never).
 * The service-role key is never used. Even the API server can't read data
@@ -61,6 +62,28 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 `/summary` includes a one-line `text` field, e.g. *"Sep 21 to Sep 27: 15 of 22
 planned tasks completed (68%), 18h 45m logged, score 71/100, 4 overdue."*, plus
 the numbers behind it.
+
+## Marking tasks complete (the `complete` scope)
+
+A token with the `complete` permission can mark **its owner's** open tasks
+complete, by exact title (case and outer spaces don't matter) or by id. It
+can't read, add, edit or delete anything. It calls the database function
+directly through Supabase's REST API with the site's public key, so no server
+is needed:
+
+```bash
+LOCKEDIN_TASK_TOKEN=lki_... node scripts/complete-task.mjs "Map the booking flow and choose a state library"
+LOCKEDIN_TASK_TOKEN=lki_... node scripts/complete-task.mjs --id 6f1c...
+```
+
+* Two open tasks with the same title: it refuses and asks for the id.
+* Already complete: reported, nothing changes. Cancelled: refused.
+* A task someone assigned you still needs a file attached first, as in the app.
+* Needs the migration `20261009000000_api_complete_task.sql`.
+
+For Claude Code on the web, put the token in the cloud environment's
+settings as the variable `LOCKEDIN_TASK_TOKEN` (never in chat or the repo),
+and allow the host `uzbgbtzcnufaebifkeab.supabase.co` in its network access.
 
 ## Connecting Claude later
 
