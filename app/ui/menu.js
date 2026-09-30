@@ -1,4 +1,4 @@
-// The ☰ menu (top left): Profile, Projects (owner), Settings, Light / Dark mode, and Log out (the
+// The ☰ menu (top left): Profile, Daily report, Projects (owner), Settings, Light / Dark mode, and Log out (the
 // front-page Log out button is hidden; the menu presses it).
 import { state } from "../state.js";
 import { esc } from "./dom.js";
@@ -53,6 +53,7 @@ export function setupMenu({ onLogout } = {}) {
     const t = e.target.closest("[data-theme]");
     if (t) { applyTheme(t.dataset.theme); renderMenu(); }
     if (e.target.closest("[data-logout]")) onLogout?.();
+    if (e.target.closest("[data-open-report]")) { closeMenu(); openDailyReport(); }
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) closeMenu(); });
 }
@@ -69,6 +70,7 @@ function renderMenu() {
       <button type="button" class="modal-close" data-close aria-label="Close menu">&#10005;</button>
     </div>
     ${link("profile", "Profile", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>`)}
+    <button type="button" class="li-menu-link" data-open-report><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Daily report</span></button>
     ${state.isManager && state.projects !== undefined ? link("projects", "Projects", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`) : ""}
     ${!state.isColleague ? link("portfolio", "Portfolio", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>`) : ""}
     ${!state.isColleague ? link("resume", "Resume", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>`) : ""}
@@ -77,6 +79,25 @@ function renderMenu() {
       ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Light mode</span>`
       : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Dark mode</span>`}</button>
     ${logoutShown() ? `<button type="button" class="li-menu-link li-menu-logout" data-logout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Log out</span></button>` : ""}`;
+}
+
+/**
+ * Open today's Daily report (the Overview's report card), going to the
+ * Overview first when you're on another page, and bring it into view.
+ */
+export function openDailyReport() {
+  const show = () => {
+    const card = document.getElementById("report-card");
+    if (!card) return;
+    if (card.hidden) document.getElementById("report-btn")?.click();
+    card.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    card.setAttribute("tabindex", "-1");
+    card.focus({ preventScroll: true });
+  };
+  if (location.hash.replace(/^#\/?/, "").split(/[/?]/)[0]) {
+    addEventListener("hashchange", () => requestAnimationFrame(() => requestAnimationFrame(show)), { once: true });
+    location.hash = "#/";
+  } else show();
 }
 
 export function openMenu() {

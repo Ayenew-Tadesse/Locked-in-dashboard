@@ -353,7 +353,7 @@ test("tablets and computers: the ☰ sits at the right of the tab row and opens 
   assert.equal(await page.locator("#li-nav-extra .li-nav-link").count(), 0, "no inline menu links");
   await desk.click();
   assert.equal(await desk.getAttribute("aria-expanded"), "true");
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
   const panel = await page.locator("#li-menu .li-menu").boundingBox();
   assert.ok(panel.x + panel.width >= 1279 && panel.x > 640, "slides in on the right");
   await page.click('#li-menu a[href="#/settings"]');
@@ -1074,7 +1074,7 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
       assert.ok(hugs, `Tasks card hugs its content (${period}, ${width}px)`);
       assert.deepEqual(await overlaps(), [], `no overlapping cards (${period}, ${width}px)`);
     }
-    await page.click("#li-tasks-card [data-report]");
+    await (await menuItem(page, "[data-open-report]")).click();
     await page.waitForSelector("#report-card:not([hidden])");
     assert.deepEqual(await overlaps(), [], `no overlapping cards with the report open (${width}px)`);
     await page.evaluate(() => localStorage.removeItem("li_tasks_period"));
@@ -1194,11 +1194,17 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
     assert.match(await card.locator(".li-tc-progress").innerText(), /% complete/);
   }
   assert.equal(await card.locator('a[href="#/quarter"]').count(), 1, "quarter view link");
-  // Week, month and quarter download their report; Day opens the daily report card.
+  // Week, month and quarter download their report; the daily report moved to the ☰ menu.
   assert.equal((await card.locator("[data-report-pdf]").innerText()).trim(), "Quarterly report ⤓");
   await card.locator("[data-period=day]").click();
-  await card.locator("[data-report]").click();
-  assert.ok(await page.locator("#report-card").isVisible());
+  assert.equal(await card.locator("[data-report], [data-report-pdf], .li-tc-foot").count(), 0, "no report button (or empty footer) on Today");
+  await page.evaluate(() => { location.hash = "#/tasks"; });
+  await page.waitForFunction(() => location.hash === "#/tasks");
+  await (await menuItem(page, "[data-open-report]")).click();
+  await page.waitForSelector("#report-card:not([hidden])");
+  assert.equal(await page.evaluate(() => location.hash), "#/", "it goes to the Overview");
+  assert.equal(await page.locator("#li-menu").isHidden(), true, "and closes the menu");
+  await page.waitForFunction(() => { const b = document.getElementById("report-card").getBoundingClientRect(); return b.top < innerHeight && b.bottom > 0; });
   // Settings lives in the ☰ menu (no longer in the footer).
   assert.equal(await page.locator('#li-footer-links a[href="#/settings"]').count(), 0);
   await (await menuItem(page, 'a[href="#/settings"]')).click();
@@ -1253,10 +1259,9 @@ test("report PDFs: completed work with learning logs and files, open work, miles
   await page.fill("#li-modal [name=learning_solved]", "Inputs were hidden behind the keyboard on iOS");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });
-  // Daily: open the report from the Overview's Tasks card (Day), then download.
+  // Daily: open the report from the ☰ menu, then download.
   await page.click('#li-nav a[href="#/"]');
-  await page.click("#li-tasks-card [data-period=day]");
-  await page.click("#li-tasks-card [data-report]");
+  await (await menuItem(page, "[data-open-report]")).click();
   await page.waitForSelector("#li-report-pdf");
   const [daily] = await Promise.all([page.waitForEvent("download"), page.click("#li-report-pdf")]);
   assert.match(daily.suggestedFilename(), /^locked-in-daily-report-\d{4}-\d{2}-\d{2}\.pdf$/);
@@ -1552,7 +1557,7 @@ test("colleagues get a read-only Tasks card (Available / Completed) on their Ove
   await page.close();
 });
 
-test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", async () => {
+test("☰ menu: Profile, Daily report, Settings, Light / Dark mode (remembered) and Log out", async () => {
   const page = await open("", { width: 390, height: 800 });
   const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const dark = await bg();
@@ -1561,7 +1566,7 @@ test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", 
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
   // Light background: the row switches it and then offers Dark mode.
   await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
