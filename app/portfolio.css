@@ -199,7 +199,7 @@
 
 /* Small screens: tighter tiles so nothing sits one-per-row with empty space. */
 @container pf (max-width:480px){
-  .pf-s-stats{gap:8px;} .pf-s-stats div{padding:12px;} .pf-s-stats b{font-size:24px;} .pf-s-stats span{font-size:12px;}
+  .pf-s-stats{grid-template-columns:1fr;gap:10px;} /* phones: one full-width card per row */
   .pf-stats{grid-template-columns:repeat(2, minmax(0,1fr));} .pf-stats .pf-stat:last-child:nth-child(odd){grid-column:1 / -1;}
   .pf-s-about{padding:16px 16px 4px;}
   .pf-meta{grid-template-columns:repeat(2, minmax(0,1fr));}
