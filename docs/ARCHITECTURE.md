@@ -304,11 +304,10 @@ removed inside `portfolio_view`, so they never reach a visitor.
 `preferences.portfolio.site` holds a full portfolio website: hero, portrait,
 social links, resume, stats, About paragraphs, skill groups, contact rows and
 case studies (overview, process, problem, personas, competitive table,
-insight, IA, user flow, solution, UI style guide, outcome, screenshots). On
-☰ → Portfolio, **Import from GitHub** (`app/portfolio/import.js`) reads the
-`index.html` of a GitHub portfolio repo, parses it with DOMParser and uploads
-its embedded images to the public `portfolio-media` bucket (own folder only,
-migration `20261008000000_portfolio_site.sql`). Everything is editable in
+insight, IA, user flow, solution, UI style guide, outcome, screenshots). It
+was imported once from the GitHub portfolio site (that one-time import has
+since been removed); images live in the public `portfolio-media` bucket (own
+folder only, migration `20261008000000_portfolio_site.sql`). Everything is editable in
 `app/views/portfolio-site.js`. When a site exists, `app/portfolio/site.js`
 draws it (home page plus one page per case, `#t=…&case=<id>`) and mixes in
 the live dashboard sections; case studies linked to a project show its live
