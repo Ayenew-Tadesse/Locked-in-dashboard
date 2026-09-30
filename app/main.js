@@ -31,7 +31,7 @@ import { renderResumeEditor } from "./views/resume.js";
 import { startGithub, syncPortfolioGithub } from "./github.js";
 import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu, renderMenuBar } from "./ui/menu.js";
-import { setupChat } from "./ui/chat.js";
+import { renderMessages, startMessages, unreadTotal } from "./views/messages.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { renderTeamCard } from "./views/team-card.js";
@@ -49,6 +49,7 @@ const VIEWS = {
   settings: { label: "Settings", render: renderSettings },
   profile: { label: "Profile", render: renderProfile },
   projects: { label: "Projects", render: renderProjects },
+  messages: { label: "Messages", render: renderMessages },
   portfolio: { label: "Portfolio", render: renderPortfolioPage },
   resume: { label: "Resume", render: renderResumeEditor },
   team: { label: "Team", render: renderTeam },
@@ -79,8 +80,22 @@ function route() {
 // it back to the start), and the chosen tab slides to the middle so its
 // neighbours are visible. Fades on the edges show there's more to scroll.
 let navActive = null;
+// Unread messages on the Messages tab (live, from views/messages.js).
+function updateMessagesBadge() {
+  const tab = document.querySelector('#li-nav [data-view="messages"]');
+  if (!tab) return;
+  const n = unreadTotal();
+  let dot = tab.querySelector(".li-nav-dot");
+  if (!dot) { dot = document.createElement("span"); dot.className = "li-nav-dot"; tab.append(dot); }
+  dot.hidden = !n;
+  dot.textContent = n > 99 ? "99+" : String(n);
+  tab.setAttribute("aria-label", n ? `Messages, ${n} unread` : "Messages");
+}
+
 function renderNav(active) {
-  const tabs = state.isManager ? [...NAV, "team"] : NAV; // Team: owner and admins
+  // Messages (the team chat) sits right after Tasks for everyone on a team; Team is for the owner and admins.
+  const tabs = NAV.flatMap((k) => (k === "tasks" && state.team ? [k, "messages"] : [k]));
+  if (state.isManager) tabs.push("team");
   let sc = $("#li-nav .li-nav-scroll");
   const fresh = !sc || sc.dataset.tabs !== tabs.join();
   if (fresh) {
@@ -104,6 +119,7 @@ function renderNav(active) {
     dot.classList.toggle("late", late);
     tasksTab.setAttribute("aria-label", open.length ? `Tasks, ${open.length} unfinished${late ? ", some overdue" : ""}` : "Tasks");
   }
+  updateMessagesBadge();
   sc.querySelectorAll(".li-nav-link").forEach((a) => {
     const on = a.dataset.view === active;
     a.classList.toggle("active", on);
@@ -426,7 +442,7 @@ async function start(store) {
   let day = state.today;
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);
   render();
-  try { setupChat(); } catch (e) { console.error(e); }
+  try { startMessages(updateMessagesBadge); } catch (e) { console.error(e); }
   // GitHub commits turn Activity days green (fetched now and every 10 minutes).
   startGithub(() => { feedLegacy(); window.dispatchEvent(new Event("li:github")); });
   syncPortfolioGithub().catch((e) => console.warn("portfolio GitHub:", e.message));

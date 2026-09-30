@@ -260,13 +260,14 @@ own team (and only to someone on it), and delete only their own messages.
 The table is added to the `supabase_realtime` publication so new messages
 arrive live (Realtime applies the same policies).
 
-`app/ui/chat.js` pins a **Team chat** bar to the bottom of the screen (on
-wider screens, docked bottom right). Tap it or drag it up for the tray;
-drag down or Esc closes it. Group first, then a chip per person, each with
-its unread count; the bar shows the total. What you've read is remembered
-per device (localStorage). Messages don't redraw the page: state emits
-`li:messages` and only the chat repaints. Hidden until there's a colleague,
-and before the migration is run.
+**Messages** (`app/views/messages.js`) is a tab right after Tasks for everyone
+on a team (the old bottom bar is gone). Conversations on the left (Team, then
+each person, with the last message and an unread count), the open one on the
+right; on phones the list first, then the conversation full width with
+Back. The tab's badge is the unread total (`unreadTotal()`); what you've read
+is remembered per device (localStorage). Messages don't redraw the page:
+state emits `li:messages` and only the Messages page and the badge repaint.
+With no colleagues the page says to invite someone from the Team page.
 
 ## Portfolio for hiring managers (added later)
 
