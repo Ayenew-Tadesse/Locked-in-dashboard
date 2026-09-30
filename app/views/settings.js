@@ -199,10 +199,11 @@ export function renderSettings(el) {
     body: `<label class="li-field full">Name<input name="name" required maxlength="80" value="Claude"></label>
       <fieldset class="full"><legend>Permissions</legend>
         <label class="li-check-label"><input type="checkbox" name="scopes[]" value="read" checked disabled> Read tasks, milestones, goals and scores</label>
-        <label class="li-check-label"><input type="checkbox" name="scopes[]" value="write"> Also create tasks (e.g. "plan tomorrow")</label></fieldset>
+        <label class="li-check-label"><input type="checkbox" name="scopes[]" value="write"> Also create tasks (e.g. "plan tomorrow")</label>
+        <label class="li-check-label"><input type="checkbox" name="scopes[]" value="complete"> Also mark my tasks complete (only that: no editing or deleting)</label></fieldset>
       <label class="li-field">Expires<select name="expires"><option value="90">In 90 days</option><option value="30">In 30 days</option><option value="365">In 1 year</option><option value="">Never</option></select></label>`,
     async onSubmit(v) {
-      const scopes = ["read", ...(v.scopes || []).filter((s) => s === "write")];
+      const scopes = ["read", ...(v.scopes || []).filter((s) => s === "write" || s === "complete")];
       const expires_at = v.expires ? new Date(Date.now() + Number(v.expires) * 86400000).toISOString() : null;
       const { token } = await state.store.createToken({ name: v.name.trim() || "Claude", scopes, expires_at });
       setTimeout(() => showToken(token), 50);
