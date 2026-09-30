@@ -97,9 +97,9 @@ export function closeMenu() {
 }
 
 /**
- * On laptops and desktops a ☰ button sits at the right end of the tab row
- * (the top-left one is hidden there); it opens the same menu.
- * `el` is redrawn with the tab row; CSS shows it from 1000px.
+ * On tablets, laptops and desktops a ☰ button sits at the right end of the
+ * tab row (the top-left one is hidden there); it opens the same menu.
+ * `el` is redrawn with the tab row; CSS shows it from 700px.
  */
 export function renderMenuBar(el) {
   if (!el) return;
