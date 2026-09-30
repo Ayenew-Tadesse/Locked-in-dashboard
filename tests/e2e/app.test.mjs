@@ -343,7 +343,7 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   await page.close();
 });
 
-test("laptops and desktops: the ☰ sits at the right of the tab row and opens from the right; phones keep the ☰ on the left", async () => {
+test("tablets and computers: the ☰ sits at the right of the tab row and opens from the right; phones keep the ☰ on the left", async () => {
   const page = await open("", { width: 1280, height: 800 });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "the top-left ☰ is hidden on a wide screen");
   const desk = page.locator("#li-menu-btn-desk");
@@ -359,8 +359,14 @@ test("laptops and desktops: the ☰ sits at the right of the tab row and opens f
   await page.click('#li-menu a[href="#/settings"]');
   await page.waitForSelector(".li-formula");
   assert.ok(await page.locator("#li-menu").isHidden(), "closes after choosing");
-  await page.setViewportSize({ width: 390, height: 800 });
+  // Tablets (and phones in desktop view) too.
+  await page.setViewportSize({ width: 820, height: 800 });
   await page.click("#li-back");
+  await page.waitForSelector("#li-menu-btn-desk", { state: "visible" });
+  assert.ok(await page.locator("#li-menu-btn").isHidden(), "no top-left ☰ on a tablet");
+  const t = await page.locator("#li-nav .li-nav-scroll").boundingBox(), tb = await desk.boundingBox();
+  assert.ok(Math.abs((t.y + t.height / 2) - (tb.y + tb.height / 2)) < 12 && tb.x + tb.width > 820 - 80, "tablet: on the right of the tabs");
+  await page.setViewportSize({ width: 390, height: 800 });
   await page.waitForSelector("#li-menu-btn", { state: "visible" });
   assert.ok(await desk.isHidden(), "phones use the top-left ☰");
   assert.deepEqual(page.errors, []);
