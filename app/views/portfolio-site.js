@@ -1,15 +1,25 @@
-// Portfolio page (owner): your portfolio website's structure — import it from
-// GitHub, then edit the introduction, stats, about, key skills, contact and
-// case studies. Saved in user_settings.preferences.portfolio.site.
+// Portfolio page (owner): one "Edit portfolio" card. Sections you open and
+// close (introduction, numbers, about, highlights and experience, key skills,
+// case studies, how I work, contact and social, sections to show) and one
+// Save. Your portfolio site (preferences.portfolio.site) is the source; every
+// save also keeps the older profile fields in step so everything that reads
+// them still works. Case studies save on their own (drag to swap, tap to edit).
 import { state, toast } from "../state.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
+import { categoriesOf } from "../core/tasks.js";
+import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { fetchGitHubPortfolio, parsePortfolioHtml, uploadSiteImages } from "../portfolio/import.js";
 
 const DEFAULT_REPO = "Ayenew-Tadesse/portfolio";
-const SOCIAL_KEYS = [["linkedin", "LinkedIn"], ["behance", "Behance"], ["dribbble", "Dribbble"], ["instagram", "Instagram"], ["github", "GitHub"], ["website", "Website"]];
+// Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
+const EDITOR_SECTIONS = ["cases", "stats", "about", "skillgroups", "highlights", "experience", "process", "logs", "activity", "milestones", "plan", "contact"];
+const SOCIAL_HOSTS = [["linkedin", /linkedin\./i], ["behance", /behance\./i], ["dribbble", /dribbble\./i], ["instagram", /instagram\./i], ["github", /github\./i]];
+const LINK_LABELS = { email: "Email Address", linkedin: "LinkedIn", behance: "Behance", dribbble: "Dribbble", github: "GitHub", website: "Website", instagram: "Instagram" };
 const lines = (v) => String(v || "").split("\n").map((x) => x.trim()).filter(Boolean);
+const commas = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
 const clone = (x) => JSON.parse(JSON.stringify(x ?? {}));
 const imgUrl = (u) => (typeof u === "string" && /^(https?:|blob:|data:image\/)/i.test(u) ? u : "");
+const openSections = new Set(["intro"]); // which sections are open (kept while you're on the page)
 
 export function currentSite() {
   const s = state.settings.preferences?.portfolio?.site;
@@ -25,82 +35,152 @@ export async function saveSite(site) {
 
 const upload = (blob, name) => state.store.uploadPortfolioImage(blob, name);
 
-/** The "Your portfolio site" cards. onChange redraws the preview. */
-export function siteEditorHtml() {
-  const s = currentSite(), h = s.hero || {};
+/** Which social site a link is (for the buttons under your introduction). */
+function socialKey(label, href) {
+  const hit = SOCIAL_HOSTS.find(([k, re]) => re.test(href) || k === String(label).trim().toLowerCase());
+  return hit ? hit[0] : "website";
+}
+
+/** What the editor starts from: your site, with anything only the older fields had filled in. */
+export function draftSite() {
+  const p = portfolioPrefs(state.settings.preferences), d = p.details, s = currentSite(), h = s.hero || {};
+  const hero = { ...h, name: h.name || state.profile?.name || "", role: h.role || d.title, location: h.location || d.location,
+    description: h.description || p.headline, open: h.open || d.open, roles: h.roles ?? d.roles };
+  const stats = s.stats?.length ? s.stats : d.years !== "" && d.years != null ? [{ num: `${d.years}+`, label: "Years of Experience" }] : [];
+  const about = s.about?.length ? s.about : String(p.bio || "").split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+  const skills = (s.skills || []).slice();
+  const hasGroup = (t) => skills.some((g) => String(g.title).trim().toLowerCase() === t.toLowerCase());
+  if (d.skills.length && !hasGroup("Skills")) skills.push({ title: "Skills", items: d.skills });
+  if (d.tools.length && !hasGroup("Tools")) skills.push({ title: "Tools", items: d.tools });
+  // One contact list: contact rows, then social links and older contact links not already there.
+  const contact = (s.contact || []).map((c) => ({ ...c }));
+  const has = (href) => contact.some((c) => c.href && c.href.replace(/\/+$/, "").toLowerCase() === String(href).replace(/\/+$/, "").toLowerCase());
+  for (const [k, href] of Object.entries(s.social || {})) if (href && !has(href)) contact.push({ label: LINK_LABELS[k] || k, value: LINK_LABELS[k] || k, href });
+  for (const [k, v] of Object.entries(p.links || {})) {
+    if (!v) continue;
+    const href = k === "email" && !/^mailto:/i.test(v) ? "mailto:" + v : v;
+    if (!has(href)) contact.push({ label: LINK_LABELS[k] || k, value: k === "email" ? v.replace(/^mailto:/i, "") : LINK_LABELS[k] || k, href });
+  }
+  return { ...s, hero, stats, about, skills, contact };
+}
+
+function section(key, title, body, hint = "") {
+  return `<details class="li-pf-sec" data-sec="${key}"${openSections.has(key) ? " open" : ""}>
+    <summary><span>${esc(title)}</span>${hint ? `<small class="li-muted">${esc(hint)}</small>` : ""}</summary>
+    <div class="li-pf-sec-body li-form">${body}</div></details>`;
+}
+
+/** The whole "Edit portfolio" card. */
+export function editorHtml() {
+  const p = portfolioPrefs(state.settings.preferences), d = p.details, s = draftSite(), h = s.hero;
+  const cats = categoriesOf(state.tasks);
+  const stats = [0, 1, 2, 3].map((i) => s.stats[i] || {});
   return `
-    <section class="li-card" id="li-pf-site">
-      <div class="li-card-head"><span class="card-label">Your portfolio site</span></div>
-      <p class="li-sub">Laid out like your portfolio website: an introduction, stats, featured projects with full case studies, about, key skills and contact, plus live sections from this dashboard.
-        Import it from GitHub to fill everything in (images included), then adjust anything here.</p>
+    <section class="li-card li-pf-editor" id="li-pf-editor">
+      <div class="li-card-head"><span class="card-label">Edit portfolio</span></div>
+      <p class="li-sub">A private page for hiring managers, laid out like your portfolio website and kept live from this dashboard. Only people with one of your links can open it; it shows only <b>your</b> work.</p>
       <form class="li-quick-add today-add li-pf-import" id="li-pf-import" autocomplete="off">
         <input name="repo" value="${esc(DEFAULT_REPO)}" aria-label="GitHub repository (owner/name)" placeholder="owner/repository">
-        <button type="submit" class="li-btn primary">Import from GitHub</button>
+        <button type="submit" class="li-btn">Import from GitHub</button>
       </form>
       <p class="li-sub" id="li-pf-import-status" hidden></p>
 
-      <form class="li-form li-pf-form" id="li-pf-site-form" autocomplete="off">
-        <fieldset class="full li-pf-group"><legend>Introduction</legend>
-          <label class="li-field">Greeting line<input name="eyebrow" maxlength="80" value="${esc(h.eyebrow || "")}" placeholder="Hello there, I am"></label>
-          <label class="li-field">Name<input name="name" maxlength="80" value="${esc(h.name || state.profile?.name || "")}"></label>
-          <label class="li-field">Role<input name="role" maxlength="80" value="${esc(h.role || "")}" placeholder="Product Designer"></label>
-          <label class="li-field">Based in<input name="location" maxlength="80" value="${esc(h.location || "")}" placeholder="e.g. USA"></label>
-          <label class="li-field full">Short description<textarea name="description" rows="2" maxlength="600">${esc(h.description || "")}</textarea></label>
-          <label class="li-field full">Resume link <small class="li-muted">(a URL or mailto:)</small><input name="resume" maxlength="500" value="${esc(s.resume || "")}"></label>
-          <div class="li-field full"><span>Portrait</span><div class="li-pf-imgs" id="li-pf-portrait">${imgUrl(s.portrait) ? `<figure><img src="${esc(s.portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove portrait">&#10005;</button></figure>` : ""}
-            <label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" data-portrait hidden></label></div></div>
-        </fieldset>
-        <fieldset class="full li-pf-group"><legend>Social links</legend>
-          ${SOCIAL_KEYS.map(([k, l]) => `<label class="li-field">${l}<input name="social_${k}" maxlength="300" value="${esc(s.social?.[k] || "")}" placeholder="https://…"></label>`).join("")}
-        </fieldset>
-        <fieldset class="full li-pf-group"><legend>Stats</legend>
-          ${[0, 1, 2, 3].map((i) => `<label class="li-field">Number<input name="stat_num_${i}" maxlength="12" value="${esc(s.stats?.[i]?.num || "")}" placeholder="${["3+", "50+", "35+", ""][i]}"></label>
-            <label class="li-field">Label<input name="stat_label_${i}" maxlength="40" value="${esc(s.stats?.[i]?.label || "")}" placeholder="${["Years of Experience", "Projects", "Happy Clients", ""][i]}"></label>`).join("")}
-        </fieldset>
-        <fieldset class="full li-pf-group"><legend>About me</legend>
-          <label class="li-field full">Paragraphs <small class="li-muted">(leave an empty line between paragraphs)</small><textarea name="about" rows="7" maxlength="6000">${esc((s.about || []).join("\n\n"))}</textarea></label>
-        </fieldset>
-        <fieldset class="full li-pf-group"><legend>Key skills</legend>
-          <div class="li-pf-groups" id="li-pf-skill-groups">${(s.skills || []).map(skillGroupRow).join("")}</div>
-          <button type="button" class="li-btn small" id="li-pf-skill-add">+ Add a skill group</button>
-        </fieldset>
-        <fieldset class="full li-pf-group"><legend>Contact</legend>
-          <div class="li-pf-groups" id="li-pf-contacts">${(s.contact?.length ? s.contact : [{ label: "Email Address" }, { label: "Phone Number" }, { label: "LinkedIn" }]).map(contactRow).join("")}</div>
-          <button type="button" class="li-btn small" id="li-pf-contact-add">+ Add a contact</button>
-        </fieldset>
-        <div class="li-form-actions full"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save site</button></div>
+      <form class="li-pf-form li-pf-editor-form" id="li-pf-form" autocomplete="off">
+      ${section("intro", "Introduction", `
+        <label class="li-field">Greeting line<input name="eyebrow" maxlength="80" value="${esc(h.eyebrow || "")}" placeholder="Hello there, I am"></label>
+        <label class="li-field">Name<input name="name" maxlength="80" value="${esc(h.name || "")}"></label>
+        <label class="li-field">Role<input name="role" maxlength="80" value="${esc(h.role || "")}" placeholder="e.g. Senior Product Designer"></label>
+        <label class="li-field">Based in<input name="location" maxlength="80" value="${esc(h.location || "")}" placeholder="e.g. USA"></label>
+        <label class="li-field full">Short intro<textarea name="description" rows="2" maxlength="600" placeholder="One or two sentences: what you design and how.">${esc(h.description || "")}</textarea></label>
+        <div class="li-field"><span>Open to</span><div class="li-pf-checks">
+          ${[["remote", "Remote"], ["hybrid", "Hybrid"], ["relocation", "Relocation"]].map(([k, l]) => `<label class="li-check-row"><input type="checkbox" name="open_${k}"${h.open?.[k] ? " checked" : ""}> ${l}</label>`).join("")}
+        </div></div>
+        <label class="li-field">Roles I'm looking for<input name="roles" maxlength="200" value="${esc(h.roles || "")}" placeholder="e.g. Senior Product Designer, Lead UX"></label>
+        <label class="li-field full">Resume link <small class="li-muted">(a URL or mailto:)</small><input name="resume" maxlength="500" value="${esc(s.resume || "")}"></label>
+        <div class="li-field full"><span>Photo</span><div class="li-pf-imgs" id="li-pf-portrait">${imgUrl(s.portrait) ? `<figure><img src="${esc(s.portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove photo">&#10005;</button></figure>` : ""}
+          <label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" data-portrait hidden></label></div></div>`)}
+      ${section("stats", "Numbers", `<div class="li-pf-stats-edit">${stats.map((x, i) => `<div class="li-pf-stat-edit">
+          <input name="stat_num_${i}" maxlength="12" value="${esc(x.num || "")}" placeholder="${["3+", "50+", "35+", "10"][i]}" aria-label="Number ${i + 1}">
+          <input name="stat_label_${i}" maxlength="40" value="${esc(x.label || "")}" placeholder="${["Years of Experience", "Projects", "Happy Clients", "Awards"][i]}" aria-label="Label ${i + 1}">
+        </div>`).join("")}</div>`, "e.g. 3+ Years of Experience")}
+      ${section("about", "About me", `<label class="li-field full">Paragraphs <small class="li-muted">(leave an empty line between paragraphs)</small><textarea name="about" rows="8" maxlength="6000">${esc(s.about.join("\n\n"))}</textarea></label>`)}
+      ${section("experience", "Highlights and experience", `
+        <label class="li-field full">Highlights <small class="li-muted">(one per line, up to 6: results with numbers work best)</small><textarea name="highlights" rows="4" maxlength="1500" placeholder="Cut booking from 7 steps to 4&#10;Built a design system used by 3 apps">${esc(d.highlights.join("\n"))}</textarea></label>
+        <div class="li-field full"><span>Experience</span></div>
+        <div class="li-pf-exp" id="li-pf-exp">${d.experience.map(expRow).join("")}</div>
+        <button type="button" class="li-btn small" id="li-pf-exp-add">+ Add a role</button>`)}
+      ${section("skills", "Key skills", `
+        <div class="li-pf-groups" id="li-pf-skill-groups">${s.skills.map(skillGroupRow).join("")}</div>
+        <button type="button" class="li-btn small" id="li-pf-skill-add">+ Add a skill group</button>`)}
+      ${section("cases", "Case studies", `<p class="li-sub full">Drag a card onto another to swap their places (on a phone, drag it by its &#10303;). Tap a card to edit it.</p>
+        <div class="li-pf-case-grid" id="li-pf-cases">${caseCardsHtml(s.cases || [])}</div>`, "saved as you go")}
+      ${section("work", "How I work", `
+        <label class="li-field full">My approach<textarea name="approach" rows="3" maxlength="2000" placeholder="Your design philosophy in a few sentences.">${esc(p.approach)}</textarea></label>
+        <label class="li-field full">Process steps <small class="li-muted">(one per line)</small><textarea name="process" rows="4" maxlength="800" placeholder="Research&#10;Problem framing&#10;User flows&#10;Prototype&#10;Usability testing">${esc(d.process.join("\n"))}</textarea></label>
+        <label class="li-field full">Research methods <small class="li-muted">(comma-separated)</small><input name="methods" maxlength="400" value="${esc(d.methods.join(", "))}" placeholder="User interviews, Usability testing, Analytics"></label>
+        ${cats.length ? `<div class="li-field full"><span>Finished work notes come from <small class="li-muted">(none ticked: all categories)</small></span><div class="li-pf-checks">
+          ${cats.map((c) => `<label class="li-check-row"><input type="checkbox" name="cats[]" value="${esc(c)}"${p.categories.includes(c) ? " checked" : ""}> ${esc(c)}</label>`).join("")}</div></div>` : ""}`)}
+      ${section("contact", "Contact and social", `<p class="li-sub full">One list for everything: web links also show as buttons under your introduction.</p>
+        <div class="li-pf-groups" id="li-pf-contacts">${(s.contact.length ? s.contact : [{ label: "Email Address", href: "mailto:" }, { label: "Phone Number", href: "tel:" }, { label: "LinkedIn" }]).map(contactRow).join("")}</div>
+        <button type="button" class="li-btn small" id="li-pf-contact-add">+ Add a contact</button>`)}
+      ${section("show", "Sections to show", `<div class="li-pf-checks li-pf-show full">
+        ${PORTFOLIO_SECTIONS.filter(([k]) => EDITOR_SECTIONS.includes(k)).sort((a, b) => EDITOR_SECTIONS.indexOf(a[0]) - EDITOR_SECTIONS.indexOf(b[0]))
+          .map(([k, label, hint]) => `<label class="li-check-row" title="${esc(hint)}"><input type="checkbox" name="show_${k}"${p.show[k] ? " checked" : ""}> ${esc(label)}</label>`).join("")}</div>`)}
+      <div class="li-form-actions"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save</button></div>
       </form>
-    </section>
-
-    <section class="li-card" id="li-pf-cases">
-      <div class="li-card-head"><span class="card-label">Case studies</span><button type="button" class="li-btn small" id="li-pf-case-add">+ Add a case study</button></div>
-      <ul class="li-tokens li-pf-case-list">${(s.cases || []).map((c, i, a) => `<li data-case-row="${esc(c.id)}">
-        <span><b>${esc(c.title || "Untitled")}</b> <small class="li-muted">${c.status === "progress" ? "In progress" : "Live"}${c.personas?.items?.length ? ` · ${c.personas.items.length} personas` : ""}${c.shots?.length ? ` · ${c.shots.length} screenshots` : ""}</small></span>
-        <span class="li-btn-row">
-          <button type="button" class="li-icon-btn" data-case-move="-1" aria-label="Move up"${i === 0 ? " disabled" : ""}>&#8593;</button>
-          <button type="button" class="li-icon-btn" data-case-move="1" aria-label="Move down"${i === a.length - 1 ? " disabled" : ""}>&#8595;</button>
-          <button type="button" class="li-btn small" data-case-edit>Edit</button>
-          <button type="button" class="li-btn small danger-ghost" data-case-delete>Delete</button>
-        </span></li>`).join("") || `<li class="li-empty">No case studies yet. Import from GitHub, or add one.</li>`}</ul>
     </section>`;
 }
 
+function caseCardsHtml(cases) {
+  return cases.map((c) => {
+    const shot = imgUrl(c.shots?.[0]?.src);
+    return `<div class="li-pf-case-card" data-case-card="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.title || "Untitled")}: edit, or drag to swap places">
+      <div class="li-pf-case-thumb">${shot ? `<img src="${esc(shot)}" alt="" draggable="false">` : `<span>${esc(c.thumbWord || (c.title || "?").split(" ")[0])}</span>`}</div>
+      <b>${esc(c.title || "Untitled")}</b>
+      <small class="li-muted">${c.status === "progress" ? "In progress" : "Live"}</small>
+      <span class="li-pf-grip" data-grip aria-hidden="true" title="Drag to swap">&#10303;</span>
+    </div>`;
+  }).join("") + `<button type="button" class="li-pf-case-card li-pf-case-new" id="li-pf-case-add">+ Add a case study</button>`;
+}
+
+export function expRow(e = {}) {
+  return `<div class="li-pf-exp-row">
+    <input data-k="role" maxlength="80" value="${esc(e.role || "")}" placeholder="Role, e.g. Senior UI/UX Designer" aria-label="Role">
+    <input data-k="company" maxlength="80" value="${esc(e.company || "")}" placeholder="Company or client" aria-label="Company">
+    <input data-k="from" maxlength="20" value="${esc(e.from || "")}" placeholder="From, e.g. 2022" aria-label="From">
+    <input data-k="to" maxlength="20" value="${esc(e.to || "")}" placeholder="To, e.g. Present" aria-label="To">
+    <input data-k="summary" class="li-pf-exp-sum" maxlength="240" value="${esc(e.summary || "")}" placeholder="One line: what you did and the result" aria-label="Summary">
+    <span class="li-pf-exp-btns">
+      <button type="button" class="li-icon-btn" data-exp="up" aria-label="Move up" title="Move up">&#8593;</button>
+      <button type="button" class="li-icon-btn" data-exp="down" aria-label="Move down" title="Move down">&#8595;</button>
+      <button type="button" class="li-icon-btn" data-exp="remove" aria-label="Remove role" title="Remove">&#10005;</button>
+    </span>
+  </div>`;
+}
 function skillGroupRow(g = {}) {
   return `<div class="li-pf-grouprow"><input data-k="title" maxlength="60" value="${esc(g.title || "")}" placeholder="Group, e.g. UX/UI Design Skills" aria-label="Group title">
     <textarea data-k="items" rows="3" maxlength="1500" placeholder="One skill per line" aria-label="Skills">${esc((g.items || []).join("\n"))}</textarea>
     <button type="button" class="li-icon-btn" data-row-remove aria-label="Remove">&#10005;</button></div>`;
 }
 function contactRow(c = {}) {
-  return `<div class="li-pf-grouprow li-pf-contactrow"><input data-k="label" maxlength="40" value="${esc(c.label || "")}" placeholder="Label" aria-label="Label">
+  return `<div class="li-pf-grouprow li-pf-contactrow"><input data-k="label" maxlength="40" value="${esc(c.label || "")}" placeholder="Label, e.g. Email Address" aria-label="Label">
     <input data-k="value" maxlength="120" value="${esc(c.value || "")}" placeholder="Shown text" aria-label="Shown text">
     <input data-k="href" maxlength="300" value="${esc(c.href || "")}" placeholder="Link: mailto:, tel: or https://" aria-label="Link">
     <button type="button" class="li-icon-btn" data-row-remove aria-label="Remove">&#10005;</button></div>`;
 }
 
-/** Wires the site cards; onChange() is called after every save so the preview follows. */
-export function wireSiteEditor(el, onChange) {
-  let portrait = currentSite().portrait || "";
-  const redraw = () => onChange(true);
+/**
+ * Wires the editor. hooks.saved(): after any save (preview and the web preview follow);
+ * hooks.reload(): redraw the whole page (after an import); hooks.dirty(bool): unsaved changes.
+ */
+export function wireEditor(el, hooks) {
+  let portrait = currentSite().portrait ?? draftSite().portrait ?? "";
+  const form = el.querySelector("#li-pf-form");
+  let dirty = false;
+  const setDirty = (v) => { dirty = v; hooks.dirty?.(v); };
+  form.addEventListener("input", () => { if (!dirty) setDirty(true); });
+  form.addEventListener("change", (e) => { if (!e.target.matches("[data-portrait]") && !dirty) setDirty(true); });
+  el.querySelectorAll(".li-pf-sec").forEach((d) => d.addEventListener("toggle", () => { if (d.open) openSections.add(d.dataset.sec); else openSections.delete(d.dataset.sec); }));
 
   el.querySelector("#li-pf-import").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -120,64 +200,196 @@ export function wireSiteEditor(el, onChange) {
       for (const c of site.cases) { const p = (state.projects || []).find((x) => x.name?.toLowerCase() === c.title?.toLowerCase() || c.title?.toLowerCase().startsWith(x.name?.toLowerCase() + " ")); if (p) c.project = p.name; }
       await saveSite(site);
       toast(`Imported: ${site.cases.length} case stud${site.cases.length === 1 ? "y" : "ies"}, ${site.skills.length} skill groups`);
-      redraw();
+      hooks.saved(); setDirty(false); hooks.reload();
     } catch (err) {
       console.error(err);
-      say("");
       status.hidden = true;
       toast("Couldn't import: " + err.message, "error");
     } finally { btn.disabled = false; }
   });
 
-  const form = el.querySelector("#li-pf-site-form");
+  // Rows: remove, add; experience up/down; the photo.
   form.addEventListener("click", (e) => {
-    if (e.target.closest("[data-row-remove]")) e.target.closest(".li-pf-grouprow").remove();
-    if (e.target.closest("[data-remove-portrait]")) { portrait = ""; el.querySelector("#li-pf-portrait figure")?.remove(); }
+    const b = e.target.closest("[data-row-remove],[data-remove-portrait],[data-exp]");
+    if (!b) return;
+    if (b.matches("[data-row-remove]")) b.closest(".li-pf-grouprow").remove();
+    if (b.matches("[data-remove-portrait]")) { portrait = ""; el.querySelector("#li-pf-portrait figure")?.remove(); }
+    if (b.matches("[data-exp]")) {
+      const row = b.closest(".li-pf-exp-row");
+      if (b.dataset.exp === "remove") row.remove();
+      if (b.dataset.exp === "up" && row.previousElementSibling) row.previousElementSibling.before(row);
+      if (b.dataset.exp === "down" && row.nextElementSibling) row.nextElementSibling.after(row);
+    }
+    setDirty(true);
   });
-  el.querySelector("#li-pf-skill-add").addEventListener("click", () => el.querySelector("#li-pf-skill-groups").insertAdjacentHTML("beforeend", skillGroupRow()));
-  el.querySelector("#li-pf-contact-add").addEventListener("click", () => el.querySelector("#li-pf-contacts").insertAdjacentHTML("beforeend", contactRow()));
+  const add = (btn, box, html) => el.querySelector(btn).addEventListener("click", () => {
+    const list = el.querySelector(box);
+    list.insertAdjacentHTML("beforeend", html());
+    list.lastElementChild.querySelector("input")?.focus();
+    setDirty(true);
+  });
+  add("#li-pf-skill-add", "#li-pf-skill-groups", skillGroupRow);
+  add("#li-pf-contact-add", "#li-pf-contacts", contactRow);
+  add("#li-pf-exp-add", "#li-pf-exp", expRow);
   form.querySelector("[data-portrait]").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
       portrait = await upload(file, file.name);
       el.querySelector("#li-pf-portrait figure")?.remove();
-      el.querySelector("#li-pf-portrait").insertAdjacentHTML("afterbegin", `<figure><img src="${esc(portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove portrait">&#10005;</button></figure>`);
+      el.querySelector("#li-pf-portrait").insertAdjacentHTML("afterbegin", `<figure><img src="${esc(portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove photo">&#10005;</button></figure>`);
+      setDirty(true);
     } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
   });
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const f = form.elements, site = currentSite();
-    site.hero = { eyebrow: f.eyebrow.value.trim(), name: f.name.value.trim(), role: f.role.value.trim(), location: f.location.value.trim(), description: f.description.value.trim() };
+    const f = form.elements;
+    const rows = (box, keys) => [...form.querySelectorAll(`${box} .li-pf-grouprow`)].map((r) => Object.fromEntries(keys.map((k) => [k, r.querySelector(`[data-k="${k}"]`).value.trim()])));
+    const open = { remote: f.open_remote.checked, hybrid: f.open_hybrid.checked, relocation: f.open_relocation.checked };
+    const site = currentSite();
+    site.hero = { ...(site.hero || {}), eyebrow: f.eyebrow.value.trim(), name: f.name.value.trim(), role: f.role.value.trim(), location: f.location.value.trim(),
+      description: f.description.value.trim(), open, roles: f.roles.value.trim() };
     site.resume = f.resume.value.trim();
     site.portrait = portrait;
-    site.social = Object.fromEntries(SOCIAL_KEYS.map(([k]) => [k, f["social_" + k].value.trim()]).filter(([, v]) => v));
     site.stats = [0, 1, 2, 3].map((i) => ({ num: f["stat_num_" + i].value.trim(), label: f["stat_label_" + i].value.trim() })).filter((x) => x.num || x.label);
-    site.about = String(f.about.value).split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
-    site.skills = [...form.querySelectorAll("#li-pf-skill-groups .li-pf-grouprow")].map((r) => ({ title: r.querySelector('[data-k="title"]').value.trim(), items: lines(r.querySelector('[data-k="items"]').value) })).filter((g) => g.title || g.items.length);
-    site.contact = [...form.querySelectorAll("#li-pf-contacts .li-pf-grouprow")].map((r) => Object.fromEntries(["label", "value", "href"].map((k) => [k, r.querySelector(`[data-k="${k}"]`).value.trim()]))).filter((c) => c.value);
+    site.about = String(f.about.value).split(/\n\s*\n/).map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+    site.skills = rows("#li-pf-skill-groups", ["title", "items"]).map((g) => ({ title: g.title, items: lines(g.items) })).filter((g) => g.title || g.items.length);
+    site.contact = rows("#li-pf-contacts", ["label", "value", "href"]).map((c) => ({ ...c, href: /^(mailto|tel):$/i.test(c.href) ? "" : c.href, value: c.value || c.href.replace(/^(mailto|tel):/i, "") }))
+      .filter((c) => c.value);
+    site.social = Object.fromEntries(site.contact.filter((c) => /^https?:\/\//i.test(c.href)).map((c) => [socialKey(c.label, c.href), c.href]));
     site.cases = site.cases || [];
-    try { await saveSite(site); toast("Portfolio site saved"); onChange(false); }
-    catch (err) { toast("Couldn't save: " + err.message, "error"); }
+    // Keep the older profile fields in step (anything that still reads them).
+    const prefs = state.settings.preferences || {}, old = prefs.portfolio || {};
+    const yearsStat = site.stats.find((x) => /year/i.test(x.label));
+    const links = {};
+    for (const c of site.contact) {
+      if (/^mailto:/i.test(c.href) && !links.email) links.email = c.href.replace(/^mailto:/i, "");
+      else if (/^https?:\/\//i.test(c.href)) { const k = socialKey(c.label, c.href); if (k !== "instagram" && !links[k]) links[k] = c.href; }
+    }
+    const details = {
+      ...(old.details || {}),
+      title: site.hero.role, location: site.hero.location, open, roles: site.hero.roles,
+      years: yearsStat ? parseInt(yearsStat.num, 10) || "" : (old.details?.years ?? ""),
+      experience: [...form.querySelectorAll(".li-pf-exp-row")].map((r) => Object.fromEntries(["role", "company", "from", "to", "summary"]
+        .map((k) => [k, r.querySelector(`[data-k="${k}"]`).value.trim()]))).filter((x) => x.role || x.company),
+      highlights: lines(f.highlights.value).slice(0, 6),
+      process: lines(f.process.value).slice(0, 10),
+      methods: [...new Set(commas(f.methods.value))].slice(0, 20),
+      skills: [], tools: [], // now in Key skills
+    };
+    const portfolio = {
+      ...old, site, details,
+      headline: site.hero.description, bio: site.about.join("\n\n"), approach: f.approach.value.trim(), links,
+      show: { ...(old.show || {}), ...Object.fromEntries(EDITOR_SECTIONS.map((k) => [k, !!f["show_" + k]?.checked])) },
+      categories: [...form.querySelectorAll('[name="cats[]"]:checked')].map((c) => c.value),
+    };
+    try {
+      const s = await state.store.savePreferences({ ...prefs, portfolio });
+      state.settings = { ...state.settings, ...s };
+      setDirty(false);
+      hooks.saved();
+      toast("Portfolio saved");
+    } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 
-  const list = el.querySelector("#li-pf-cases");
-  list.querySelector("#li-pf-case-add").addEventListener("click", () => editCase(null, redraw));
-  list.addEventListener("click", async (e) => {
-    const row = e.target.closest("[data-case-row]");
-    if (!row) return;
-    const site = currentSite(), i = (site.cases || []).findIndex((c) => c.id === row.dataset.caseRow);
-    if (i < 0) return;
-    if (e.target.closest("[data-case-edit]")) return editCase(site.cases[i], redraw);
-    if (e.target.closest("[data-case-delete]")) {
-      if (!(await confirmDialog(`Delete the case study "${site.cases[i].title}"?`))) return;
-      site.cases.splice(i, 1);
-    } else if (e.target.closest("[data-case-move]")) {
-      const j = i + Number(e.target.closest("[data-case-move]").dataset.caseMove);
-      if (j < 0 || j >= site.cases.length) return;
-      [site.cases[i], site.cases[j]] = [site.cases[j], site.cases[i]];
-    } else return;
-    try { await saveSite(site); redraw(); } catch (err) { toast("Couldn't save: " + err.message, "error"); }
+  wireCaseCards(el, hooks);
+  return { save: () => form.requestSubmit(), isDirty: () => dirty };
+}
+
+// ---------------------------------------------------------------------------
+// Case study cards: tap to edit, drag onto another card to swap places
+// (with a mouse, anywhere on the card; on a phone, by the grip ⠿).
+// ---------------------------------------------------------------------------
+function wireCaseCards(el, hooks) {
+  const grid = el.querySelector("#li-pf-cases");
+  const redraw = () => { grid.innerHTML = caseCardsHtml(currentSite().cases || []); };
+  const changed = () => { redraw(); hooks.saved(); };
+  const edit = (id) => {
+    const c = (currentSite().cases || []).find((x) => x.id === id);
+    editCase(c || null, changed, c ? () => deleteCase(id) : null);
+  };
+  async function deleteCase(id) {
+    const site = currentSite();
+    const c = (site.cases || []).find((x) => x.id === id);
+    if (!c || !(await confirmDialog(`Delete the case study "${c.title}"?`))) return false;
+    site.cases = site.cases.filter((x) => x.id !== id);
+    await saveSite(site); toast("Case study deleted"); changed();
+    return true;
+  }
+  async function swap(a, b) {
+    const site = currentSite(), cases = site.cases || [];
+    const i = cases.findIndex((x) => x.id === a), j = cases.findIndex((x) => x.id === b);
+    if (i < 0 || j < 0 || i === j) return;
+    [cases[i], cases[j]] = [cases[j], cases[i]];
+    try { await saveSite(site); changed(); toast("Order saved"); } catch (err) { toast("Couldn't save: " + err.message, "error"); redraw(); }
+  }
+
+  let drag = null, suppressClick = false;
+  const cardAt = (x, y) => document.elementFromPoint(x, y)?.closest?.("#li-pf-cases [data-case-card]");
+  const end = async (commit) => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    d.ghost?.remove();
+    d.card.classList.remove("dragging");
+    grid.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target"));
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", up);
+    document.removeEventListener("pointercancel", cancel);
+    if (d.active) { suppressClick = true; setTimeout(() => { suppressClick = false; }, 0); }
+    if (commit && d.active && d.over && d.over !== d.card) await swap(d.card.dataset.caseCard, d.over.dataset.caseCard);
+  };
+  const start = (d) => {
+    d.active = true;
+    const r = d.card.getBoundingClientRect();
+    d.dx = d.x - r.left; d.dy = d.y - r.top;
+    d.ghost = d.card.cloneNode(true);
+    d.ghost.classList.add("li-pf-case-ghost");
+    Object.assign(d.ghost.style, { width: r.width + "px", height: r.height + "px", left: r.left + "px", top: r.top + "px" });
+    document.body.appendChild(d.ghost);
+    d.card.classList.add("dragging");
+  };
+  function move(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag.x = e.clientX; drag.y = e.clientY;
+    if (!drag.active) {
+      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+      if (drag.touch && !drag.grip) return end(false); // on a phone, a finger moving elsewhere on the card is a scroll
+      start(drag);
+    }
+    e.preventDefault();
+    drag.ghost.style.left = e.clientX - drag.dx + "px";
+    drag.ghost.style.top = e.clientY - drag.dy + "px";
+    const over = cardAt(e.clientX, e.clientY);
+    if (over !== drag.over) { drag.over?.classList.remove("drop-target"); drag.over = over && over !== drag.card ? over : null; drag.over?.classList.add("drop-target"); }
+  }
+  grid.addEventListener("pointerdown", (e) => {
+    const card = e.target.closest("[data-case-card]");
+    if (!card || e.button > 0) return;
+    const touch = e.pointerType !== "mouse";
+    drag = { id: e.pointerId, card, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, touch, grip: !!e.target.closest("[data-grip]"), active: false, over: null };
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
+  });
+  function up(e) { if (drag && e.pointerId === drag.id) end(true); }
+  function cancel(e) { if (drag && e.pointerId === drag.id) end(false); }
+  grid.addEventListener("click", (e) => {
+    if (suppressClick) return;
+    if (e.target.closest("#li-pf-case-add")) return editCase(null, changed, null);
+    const card = e.target.closest("[data-case-card]");
+    if (card) edit(card.dataset.caseCard);
+  });
+  // Keyboard: Enter opens; Ctrl/⌘ + arrow keys swap with the neighbour.
+  grid.addEventListener("keydown", (e) => {
+    const card = e.target.closest("[data-case-card]");
+    if (!card) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); edit(card.dataset.caseCard); return; }
+    const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (!step || !(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const cards = [...grid.querySelectorAll("[data-case-card]")], i = cards.indexOf(card), other = cards[i + step];
+    if (other) swap(card.dataset.caseCard, other.dataset.caseCard).then(() => grid.querySelector(`[data-case-card="${CSS.escape(card.dataset.caseCard)}"]`)?.focus());
   });
 }
 
@@ -186,7 +398,7 @@ export function wireSiteEditor(el, onChange) {
 // ---------------------------------------------------------------------------
 const META = ["Role", "Type", "Platform", "Tools"];
 
-function editCase(original, done) {
+function editCase(original, done, onDelete) {
   const c = clone(original || { id: "", title: "", status: "live", shots: [], meta: META.map((label) => ({ label, value: "" })) });
   let shots = (c.shots || []).map((s) => ({ ...s }));
   let flow = (c.flow?.steps || []).map((s) => ({ ...s }));
@@ -212,6 +424,7 @@ function editCase(original, done) {
   let readPersonas = () => {}, readFlow = () => {};
   openModal({
     eyebrow: original ? "Edit case study" : "New case study", title: c.title || "Case study", submitLabel: "Save case study", wide: true,
+    extraButtons: onDelete ? `<button type="button" class="li-btn danger-ghost" data-case-delete>Delete</button>` : "",
     body: `
       <fieldset class="full li-pf-group"><legend>Card on your home page</legend>
         <label class="li-field">Title<input name="title" required maxlength="100" value="${esc(c.title || "")}" placeholder="Hid-Go Flight Booking App"></label>
@@ -263,6 +476,10 @@ function editCase(original, done) {
         <label class="li-field">Sample text<input name="styleBody" maxlength="200" value="${esc(c.style?.sampleBody || "")}"></label>
       </fieldset>`,
     onReady(f) {
+      f.querySelector("[data-case-delete]")?.addEventListener("click", async () => {
+        // The confirm replaces this dialog; if you don't delete, the editor opens again.
+        if (!(await onDelete())) editCase(original, done, onDelete);
+      });
       const draw = () => { f.querySelector("#li-pf-shots").innerHTML = shotsHtml() + `<label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" multiple data-shots hidden></label>`; };
       readPersonas = () => { personas = [...f.querySelectorAll("[data-persona]")].map((row) => ({
         name: row.querySelector('[data-p="name"]').value.trim(), summary: row.querySelector('[data-p="summary"]').value.trim(),
