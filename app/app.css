@@ -534,6 +534,24 @@ html.app-mode.li-has-projects #app-chips, html.app-mode.li-has-projects #app-pan
 .li-pt-pct{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:26px;line-height:1;margin-top:4px;font-variant-numeric:tabular-nums;}
 .li-pt-pct small{font-size:14px;margin-left:1px;}
 .li-pt-pct.red{color:var(--red);} .li-pt-pct.orange{color:var(--orange);} .li-pt-pct.green{color:var(--good);}
+.li-pt-pct.idle{color:var(--ink-3);}
+.li-bar b.idle{background:var(--idle, var(--ink-3));}
+/* Going as planned: green on plan, red behind, grey not started */
+.li-pt-plan{font-size:11px;font-weight:600;letter-spacing:.02em;margin-top:2px;}
+.li-pt-plan.green{color:var(--good);} .li-pt-plan.red{color:var(--red);} .li-pt-plan.idle{color:var(--ink-3);}
+.li-project-tile.plan-green{border-color:color-mix(in srgb, var(--good) 45%, var(--line));}
+.li-project-tile.plan-red{border-color:color-mix(in srgb, var(--red) 45%, var(--line));}
+.li-pill.plan-green{background:var(--good-soft);color:var(--good);} .li-pill.plan-red{background:var(--red-soft, color-mix(in srgb, var(--red) 15%, transparent));color:var(--red);}
+.li-pill.plan-idle{background:var(--idle-soft);color:var(--idle);}
+.li-project-plan{margin:10px 0 4px;display:flex;flex-direction:column;gap:6px;}
+.li-plan-reason{margin:0;font-weight:600;font-size:13.5px;}
+.li-plan-reason.green, .li-plan-pace.green, .li-plan-goal.green{color:var(--good);}
+.li-plan-reason.red, .li-plan-pace.red, .li-plan-goal.red{color:var(--red);}
+.li-plan-reason.idle, .li-plan-pace.idle{color:var(--ink-3);}
+.li-plan-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px;}
+.li-plan-list li{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line);}
+.li-plan-pace{font-size:12px;font-weight:600;white-space:nowrap;}
+.li-plan-goal{margin:2px 0 0;font-size:12.5px;}
 .li-project-tile .li-bar{flex:none;width:100%;height:5px;min-width:0;}
 @media (max-width:520px){
   .li-project-grid{gap:8px;}
