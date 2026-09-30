@@ -8,10 +8,8 @@ import { state, toast } from "../state.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
-import { fetchGitHubPortfolio, parsePortfolioHtml, uploadSiteImages } from "../portfolio/import.js";
 import { portfolioGithub } from "../github.js";
 
-const DEFAULT_REPO = "Ayenew-Tadesse/portfolio";
 // Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
 const EDITOR_SECTIONS = ["cases", "stats", "about", "skillgroups", "highlights", "experience", "process", "logs", "activity", "milestones", "plan", "contact"];
 const SOCIAL_HOSTS = [["linkedin", /linkedin\./i], ["behance", /behance\./i], ["dribbble", /dribbble\./i], ["instagram", /instagram\./i], ["github", /github\./i]];
@@ -80,12 +78,6 @@ export function editorHtml() {
     <section class="li-card li-pf-editor" id="li-pf-editor">
       <div class="li-card-head"><span class="card-label">Edit portfolio</span></div>
       <p class="li-sub">A private page for hiring managers, laid out like your portfolio website and kept live from this dashboard. Only people with one of your links can open it; it shows only <b>your</b> work.</p>
-      <form class="li-quick-add today-add li-pf-import" id="li-pf-import" autocomplete="off">
-        <input name="repo" value="${esc(DEFAULT_REPO)}" aria-label="GitHub repository (owner/name)" placeholder="owner/repository">
-        <button type="submit" class="li-btn">Import from GitHub</button>
-      </form>
-      <p class="li-sub" id="li-pf-import-status" hidden></p>
-
       <form class="li-pf-form li-pf-editor-form" id="li-pf-form" autocomplete="off">
       ${section("intro", "Introduction", `
         <label class="li-field">Greeting line<input name="eyebrow" maxlength="80" value="${esc(h.eyebrow || "")}" placeholder="Hello there, I am"></label>
@@ -182,32 +174,6 @@ export function wireEditor(el, hooks) {
   form.addEventListener("input", () => { if (!dirty) setDirty(true); });
   form.addEventListener("change", (e) => { if (!e.target.matches("[data-portrait]") && !dirty) setDirty(true); });
   el.querySelectorAll(".li-pf-sec").forEach((d) => d.addEventListener("toggle", () => { if (d.open) openSections.add(d.dataset.sec); else openSections.delete(d.dataset.sec); }));
-
-  el.querySelector("#li-pf-import").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const repo = e.target.elements.repo.value.trim();
-    const had = currentSite();
-    if ((had.cases?.length || had.hero?.name) && !(await confirmDialog("Replace your portfolio site with the one on GitHub? Your edits here will be overwritten.", "Import"))) return;
-    const status = el.querySelector("#li-pf-import-status"), btn = e.target.querySelector("button");
-    const say = (t) => { status.hidden = false; status.textContent = t; };
-    btn.disabled = true;
-    try {
-      say("Reading your portfolio from GitHub…");
-      const site = parsePortfolioHtml(await fetchGitHubPortfolio(repo));
-      if (!site.hero.name && !site.cases.length) throw new Error("That page doesn't look like a portfolio (no introduction or projects found).");
-      say("Uploading images…");
-      await uploadSiteImages(site, upload, (n, total) => say(`Uploading images… ${n} of ${total}`));
-      // Link case studies to dashboard projects with the same name, for live progress.
-      for (const c of site.cases) { const p = (state.projects || []).find((x) => x.name?.toLowerCase() === c.title?.toLowerCase() || c.title?.toLowerCase().startsWith(x.name?.toLowerCase() + " ")); if (p) c.project = p.name; }
-      await saveSite(site);
-      toast(`Imported: ${site.cases.length} case stud${site.cases.length === 1 ? "y" : "ies"}, ${site.skills.length} skill groups`);
-      hooks.saved(); setDirty(false); hooks.reload();
-    } catch (err) {
-      console.error(err);
-      status.hidden = true;
-      toast("Couldn't import: " + err.message, "error");
-    } finally { btn.disabled = false; }
-  });
 
   // Rows: remove, add; experience up/down; the photo.
   form.addEventListener("click", (e) => {

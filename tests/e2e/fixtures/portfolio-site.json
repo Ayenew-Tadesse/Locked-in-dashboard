@@ -1,0 +1,701 @@
+{
+ "hero": {
+  "eyebrow": "Hello there, I am",
+  "name": "Ayenew Shiferaw",
+  "role": "Product Designer",
+  "location": "USA",
+  "description": "UX/UI designer focused on creating simple, user-centered digital experiences through research, wireframing, and prototyping."
+ },
+ "portrait": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+ "social": {
+  "instagram": "https://instagram.com/",
+  "linkedin": "https://linkedin.com/in/ayenew-shiferaw",
+  "behance": "https://behance.net/"
+ },
+ "resume": "mailto:shiferawayenew0@gmail.com?subject=Resume%20request&body=Hi%20Ayenew%2C%0A%0ACould%20you%20send%20over%20your%20resume%3F",
+ "stats": [
+  {
+   "num": "3+",
+   "label": "Years of Experience"
+  },
+  {
+   "num": "50+",
+   "label": "Projects"
+  },
+  {
+   "num": "35+",
+   "label": "Happy Clients"
+  }
+ ],
+ "about": [
+  "I'm Ayenew Shiferaw, a UX/UI designer with a multidisciplinary foundation in architecture, mobile app design, and human centered problem solving. I design with intention: every screen, flow, and interaction is shaped by clarity, structure, and empathy.",
+  "My journey began in architecture, where I learned how systems, space, and human behavior intersect. Today, I bring that same analytical mindset into digital design creating intuitive interfaces, scalable design systems, and thoughtful user experiences for real-world products. I've designed for fintech, travel, and education platforms, including mobile apps with complex user flows and transaction heavy interactions. Whether I'm conducting research, mapping journeys, wireframing, or prototyping in Figma, I focus on making products feel effortless and meaningful for the people who use them.",
+  "I thrive in collaborative, fast-moving environments and love transforming ideas into clean, functional, and visually engaging solutions. My goal is simple: design experiences that solve problems, reduce friction, and make life easier for users."
+ ],
+ "skills": [
+  {
+   "title": "UX/UI Design Skills",
+   "items": [
+    "User-centered design",
+    "Wireframing & prototyping",
+    "User flows & journey mapping",
+    "Information architecture",
+    "Interaction design",
+    "Visual design & layout",
+    "Responsive design",
+    "Design systems & component libraries",
+    "Accessibility (WCAG awareness)"
+   ]
+  },
+  {
+   "title": "Tools & Technical Skills",
+   "items": [
+    "Figma (auto-layout, components, prototyping)",
+    "FigJam (workshops, flows, documentation)",
+    "Adobe Photoshop",
+    "Adobe Illustrator",
+    "Adobe InDesign",
+    "HTML, CSS, JavaScript",
+    "Basic Python",
+    "GitHub workflow"
+   ]
+  },
+  {
+   "title": "Research & Strategy",
+   "items": [
+    "User interviews",
+    "Competitive analysis",
+    "Persona creation",
+    "Usability testing",
+    "Problem framing & insights synthesis",
+    "Requirements gathering",
+    "Task analysis"
+   ]
+  },
+  {
+   "title": "Graphic & Visual Design",
+   "items": [
+    "Branding & identity design",
+    "Typography & color theory",
+    "Iconography",
+    "Illustration basics",
+    "Marketing & social media graphics",
+    "Print design & pre-press"
+   ]
+  },
+  {
+   "title": "Collaboration Skills",
+   "items": [
+    "Creative problem-solving",
+    "Attention to detail",
+    "Cross-functional collaboration",
+    "Communication & presentation",
+    "Remote teamwork",
+    "Time & project management"
+   ]
+  }
+ ],
+ "contact": [
+  {
+   "label": "Phone Number",
+   "value": "202-603-9760",
+   "href": "tel:+12026039760"
+  },
+  {
+   "label": "Email Address",
+   "value": "shiferawayenew0@gmail.com",
+   "href": "mailto:shiferawayenew0@gmail.com"
+  },
+  {
+   "label": "LinkedIn",
+   "value": "Ayenew Shiferaw",
+   "href": "https://linkedin.com/in/ayenew-shiferaw"
+  }
+ ],
+ "cases": [
+  {
+   "id": "hidgo",
+   "title": "Hid-Go Flight Booking App",
+   "tag": "Mobile App UI/UX",
+   "cardDesc": "A redesigned booking flow that simplifies flight search and cuts task completion time for travelers.",
+   "liveUrl": "https://ayenew-tadesse.github.io/hid-go/",
+   "status": "live",
+   "thumbWord": "Hid-Go",
+   "pill": "Live case study",
+   "subtitle": "A redesigned mobile booking flow for domestic flights in Ethiopia — search, compare, and book in a few clear steps.",
+   "shots": [
+    {
+     "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+     "alt": "Hid-Go home screen"
+    },
+    {
+     "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+     "alt": "Hid-Go fare and seat selection screen"
+    },
+    {
+     "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+     "alt": "Hid-Go booking confirmation screen"
+    }
+   ],
+   "meta": [
+    {
+     "label": "Role",
+     "value": "UI/UX Designer (solo)"
+    },
+    {
+     "label": "Type",
+     "value": "Self-directed practice project"
+    },
+    {
+     "label": "Platform",
+     "value": "Mobile web app"
+    },
+    {
+     "label": "Tools",
+     "value": "Figma, HTML/CSS/JS prototype"
+    }
+   ],
+   "extra": [],
+   "overview": "Hid-Go needed a mobile booking experience that could stand up to established travel apps. The existing flow asked too much of users too early, and the search-to-booking path had too many steps for what should be a quick task on a small screen.",
+   "process": {
+    "intro": "A standard double-diamond approach, scaled for a solo practice project: understand the problem and the traveler, define what actually matters, explore options, design the screens, then test the flow against the personas below.",
+    "steps": [
+     "Research",
+     "Define",
+     "Ideate",
+     "Design",
+     "Test"
+    ]
+   },
+   "problem": "Travelers were dropping off midway through booking. Flight search results were dense and hard to scan, filters were buried, and the checkout flow mixed low-priority details in with the steps that actually mattered — picking a flight and paying. On mobile, this meant a lot of scrolling, backtracking, and abandoned sessions.",
+   "personas": {
+    "intro": "Before sketching any screens, I defined four traveler personas based on common patterns in how people search for and book domestic flights. Each one pushed different priorities into the design.",
+    "items": [
+     {
+      "name": "The Frequent Flyer",
+      "summary": "Books often, wants speed and consistency.",
+      "needs": [
+       "Fast rebooking",
+       "Flexible fares",
+       "Mileage tracking"
+      ],
+      "frustrations": [
+       "Re-entering traveler info every trip",
+       "Slow seat selection"
+      ],
+      "goals": [
+       "Book in under 2 minutes",
+       "Keep a saved traveler profile"
+      ]
+     },
+     {
+      "name": "The Budget Hunter",
+      "summary": "Price-driven, compares every option before paying.",
+      "needs": [
+       "Clear price comparison",
+       "Fare breakdown",
+       "No hidden fees"
+      ],
+      "frustrations": [
+       "Surprise fees at checkout",
+       "Hard-to-compare fare tiers"
+      ],
+      "goals": [
+       "Find the cheapest nonstop option",
+       "Know exactly what's included"
+      ]
+     },
+     {
+      "name": "The Family Planner",
+      "summary": "Books for several people at once.",
+      "needs": [
+       "Multi-passenger booking",
+       "Seat map for groups",
+       "One clear total"
+      ],
+      "frustrations": [
+       "Re-entering the same details per passenger",
+       "Seats split apart"
+      ],
+      "goals": [
+       "Keep the family seated together",
+       "See one total for everyone"
+      ]
+     },
+     {
+      "name": "The First-Time Flyer",
+      "summary": "Unfamiliar with booking and airport terms.",
+      "needs": [
+       "Simple, guided steps",
+       "Reassurance at checkout",
+       "Clear confirmation details"
+      ],
+      "frustrations": [
+       "Unfamiliar booking terms",
+       "Uncertainty about what happens next"
+      ],
+      "goals": [
+       "Book without confusion",
+       "Know exactly what to do on travel day"
+      ]
+     }
+    ]
+   },
+   "competitive": {
+    "intro": "A quick feature comparison against the two categories of apps travelers already use, to find where Hid-Go could genuinely be faster or clearer rather than just different.",
+    "columns": [
+     "Feature",
+     "Hid-Go",
+     "Typical airline app",
+     "Generic OTA app"
+    ],
+    "rows": [
+     {
+      "feature": "Live seat map at booking",
+      "values": [
+       "yes",
+       "yes",
+       "no"
+      ]
+     },
+     {
+      "feature": "Fare tiers shown before payment",
+      "values": [
+       "yes",
+       "partial",
+       "no"
+      ]
+     },
+     {
+      "feature": "Fare + seats on one screen",
+      "values": [
+       "yes",
+       "no",
+       "no"
+      ]
+     },
+     {
+      "feature": "Saved traveler details",
+      "values": [
+       "yes",
+       "yes",
+       "partial"
+      ]
+     },
+     {
+      "feature": "No desktop-only steps",
+      "values": [
+       "yes",
+       "partial",
+       "yes"
+      ]
+     }
+    ]
+   },
+   "insight": "Across all four personas, the common thread was trust in the price shown. Whether someone was chasing the cheapest fare or just wanted to get through checkout without surprises, the fare tiers needed to be transparent and the total needed to stop changing after it was first shown. That single insight drove the fare and payment screens more than anything else.",
+   "ia": {
+    "intro": "The app is organized around four tabs, with the booking flow itself living as a linear path from search to confirmation.",
+    "root": "Hid-Go",
+    "sections": [
+     {
+      "title": "Onboarding",
+      "items": [
+       "Splash",
+       "Sign up",
+       "Log in"
+      ]
+     },
+     {
+      "title": "Home",
+      "items": [
+       "Welcome & quick search",
+       "Notifications",
+       "Profile shortcut"
+      ]
+     },
+     {
+      "title": "Book a flight",
+      "items": [
+       "Search → Results",
+       "Fare & seats",
+       "Payment",
+       "Confirmation"
+      ]
+     },
+     {
+      "title": "My Trips",
+      "items": [
+       "Trip list",
+       "Trip detail",
+       "Check-in",
+       "Boarding pass"
+      ]
+     },
+     {
+      "title": "Profile",
+      "items": [
+       "Traveler details",
+       "Notifications"
+      ]
+     }
+    ]
+   },
+   "flow": {
+    "title": "User flow — booking a flight",
+    "intro": "The core path a traveler follows from opening the app to holding a confirmed booking, shown on the real screens.",
+    "steps": [
+     {
+      "label": "Search",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     },
+     {
+      "label": "Results",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     },
+     {
+      "label": "Fare & seats",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     },
+     {
+      "label": "Confirmation",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     }
+    ]
+   },
+   "solution": "The redesigned flow simplifies flight search into a cleaner, scannable results list, surfaces filters that travelers actually use, and streamlines checkout into a shorter, clearer sequence. Fare tiers and seat selection live on one screen so the price never shifts after that point, and the confirmation screen doubles as a boarding-pass-style record of the trip.",
+   "style": {
+    "intro": "Hid-Go's real design tokens — the same colors, type, and components used in the working prototype.",
+    "colors": [
+     {
+      "name": "Primary",
+      "hex": "#1B2CC1"
+     },
+     {
+      "name": "Primary (soft)",
+      "hex": "#7692FF"
+     },
+     {
+      "name": "Ink",
+      "hex": "#091540"
+     },
+     {
+      "name": "Background",
+      "hex": "#EAF2FE"
+     },
+     {
+      "name": "Success",
+      "hex": "#2E8B57"
+     },
+     {
+      "name": "Error",
+      "hex": "#C24545"
+     }
+    ],
+    "font": "Poppins",
+    "sampleHead": "Board with Hid-Go",
+    "sampleBody": "A redesigned booking flow that simplifies flight search and cuts task completion time for travelers.",
+    "button": "#1B2CC1"
+   },
+   "outcome": "The redesign delivered a noticeably improved mobile experience with faster task completion through the booking flow, giving Hid-Go a foundation that's easier to extend as the product grows."
+  },
+  {
+   "id": "guxo",
+   "title": "Guxo Bus Booking App",
+   "tag": "Mobile App UI/UX",
+   "cardDesc": "A sibling app to Hid-Go, retheming the same booking patterns for intercity bus travel under a fictional operator brand.",
+   "liveUrl": "https://ayenew-tadesse.github.io/Guxo/",
+   "status": "live",
+   "thumbWord": "Guxo",
+   "pill": "Live case study",
+   "subtitle": "A sibling app to Hid-Go, extending the same booking patterns to intercity bus travel in Ethiopia.",
+   "shots": [
+    {
+     "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+     "alt": "Guxo home screen"
+    },
+    {
+     "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+     "alt": "Guxo fare and seat selection screen"
+    },
+    {
+     "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+     "alt": "Guxo booking confirmation screen"
+    }
+   ],
+   "meta": [
+    {
+     "label": "Role",
+     "value": "UI/UX Designer (solo)"
+    },
+    {
+     "label": "Type",
+     "value": "Self-directed practice project"
+    },
+    {
+     "label": "Platform",
+     "value": "Mobile web app"
+    },
+    {
+     "label": "Tools",
+     "value": "Figma, HTML/CSS/JS prototype"
+    }
+   ],
+   "extra": [],
+   "overview": "Once Hid-Go's booking flow was working well, the natural next step was testing whether that same foundation could carry a different mode of travel. Guxo takes the flight-booking patterns from Hid-Go and rebuilds them for intercity bus travel, under its own visual identity and a fictional operator, \"Guxo Line.\"",
+   "process": {
+    "intro": "The same double-diamond approach as Hid-Go, run a second time to make sure the patterns held up for a genuinely different mode of travel rather than just a reskin.",
+    "steps": [
+     "Research",
+     "Define",
+     "Ideate",
+     "Design",
+     "Test"
+    ]
+   },
+   "problem": "A straight reskin wouldn't hold up. Bus travel has a different seat layout (2+2, not 3+3), a different route network built around major Ethiopian cities rather than airports, and different fare tiers that needed to make sense for a multi-hour road trip rather than a flight. It also needed to look and feel like its own product, not \"Hid-Go in green.\" And unlike flights, most riders were booking through a walk-up counter or a phone call to an agent — not an app at all.",
+   "personas": {
+    "intro": "Bus travelers in Ethiopia skew broader than flyers — more price-sensitive, more likely booking in person today. I defined four rider personas to keep the redesign honest about that gap.",
+    "items": [
+     {
+      "name": "The Daily Commuter",
+      "summary": "Rides the same route often, wants speed.",
+      "needs": [
+       "Quick repeat booking",
+       "Reliable schedules",
+       "Seat availability at a glance"
+      ],
+      "frustrations": [
+       "Long queues at the counter",
+       "No way to check seats before arriving"
+      ],
+      "goals": [
+       "Book a seat in minutes from a phone",
+       "Avoid the counter entirely"
+      ]
+     },
+     {
+      "name": "The Budget Traveler",
+      "summary": "Price-sensitive, wary of inconsistent fares.",
+      "needs": [
+       "Lowest-fare visibility",
+       "Clear fare tiers",
+       "No agent markups"
+      ],
+      "frustrations": [
+       "Inconsistent pricing between agents",
+       "Unclear what Comfort vs. Standard includes"
+      ],
+      "goals": [
+       "Pay a fair, transparent price",
+       "Compare fare tiers before choosing"
+      ]
+     },
+     {
+      "name": "The Family Traveler",
+      "summary": "Books several seats for a multi-hour trip.",
+      "needs": [
+       "Group seating",
+       "Multi-passenger checkout",
+       "Clear luggage info"
+      ],
+      "frustrations": [
+       "Being split across rows",
+       "Booking each family member separately"
+      ],
+      "goals": [
+       "Sit together for the trip",
+       "One simple checkout for everyone"
+      ]
+     },
+     {
+      "name": "The First-Time Rider",
+      "summary": "Unfamiliar with routes and stations.",
+      "needs": [
+       "Clear route & station info",
+       "Simple seat picker",
+       "Straightforward confirmation"
+      ],
+      "frustrations": [
+       "Not knowing which station to use",
+       "Unfamiliar booking process"
+      ],
+      "goals": [
+       "Book confidently without asking around",
+       "Know exactly where to go"
+      ]
+     }
+    ]
+   },
+   "competitive": {
+    "intro": "Guxo isn't competing with other apps so much as with how bus tickets are actually bought today in Ethiopia.",
+    "columns": [
+     "Feature",
+     "Guxo",
+     "Walk-up counter",
+     "Phone / agent booking"
+    ],
+    "rows": [
+     {
+      "feature": "Book without visiting a station",
+      "values": [
+       "yes",
+       "no",
+       "partial"
+      ]
+     },
+     {
+      "feature": "See seat availability before paying",
+      "values": [
+       "yes",
+       "no",
+       "no"
+      ]
+     },
+     {
+      "feature": "Transparent, fixed pricing",
+      "values": [
+       "yes",
+       "partial",
+       "partial"
+      ]
+     },
+     {
+      "feature": "Digital ticket / confirmation",
+      "values": [
+       "yes",
+       "no",
+       "partial"
+      ]
+     },
+     {
+      "feature": "Choose your own seat",
+      "values": [
+       "yes",
+       "no",
+       "no"
+      ]
+     }
+    ]
+   },
+   "insight": "The personas and the competitive picture pointed to the same gap: riders don't currently get to see a seat before they own it. Whether it's a commuter checking availability or a family trying to sit together, being able to see and pick real seats — not just \"a ticket\" — was the one thing no existing option offered.",
+   "ia": {
+    "intro": "Rebuilt from Hid-Go's structure, with the same four-tab shape adapted to bus travel.",
+    "root": "Guxo",
+    "sections": [
+     {
+      "title": "Onboarding",
+      "items": [
+       "Splash",
+       "Sign up",
+       "Log in"
+      ]
+     },
+     {
+      "title": "Home",
+      "items": [
+       "Welcome & quick search",
+       "Notifications",
+       "Profile shortcut"
+      ]
+     },
+     {
+      "title": "Book a bus",
+      "items": [
+       "Search → Results",
+       "Fare & seats",
+       "Payment",
+       "Confirmation"
+      ]
+     },
+     {
+      "title": "My Trips",
+      "items": [
+       "Ticket list",
+       "Ticket detail",
+       "Check-in",
+       "Digital ticket"
+      ]
+     },
+     {
+      "title": "Profile",
+      "items": [
+       "Traveler details",
+       "Notifications"
+      ]
+     }
+    ]
+   },
+   "flow": {
+    "title": "User flow — booking a bus",
+    "intro": "The same core path as Hid-Go, adapted to a 2+2 cabin and Guxo's own fare tiers, shown on the real screens.",
+    "steps": [
+     {
+      "label": "Search",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     },
+     {
+      "label": "Results",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     },
+     {
+      "label": "Fare & seats",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     },
+     {
+      "label": "Confirmation",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+     }
+    ]
+   },
+   "solution": "The result is a fully separate booking flow with its own brand: a fictional operator and an original bus glyph, rather than any real carrier's name or logo, plus an original illustrated hero scene in place of a stock photo. The seat map was rebuilt from 3+3 to a genuine 2+2 layout, fare tiers were renamed and re-priced for a road trip (Standard, Comfort, VIP), and every \"flight\" concept in the original code was traced through and replaced with its bus equivalent, down to the icon set and copy.",
+   "style": {
+    "intro": "Guxo's real design tokens — a teal-and-gold system built to feel distinct from Hid-Go's blue, even while sharing its structure.",
+    "colors": [
+     {
+      "name": "Primary",
+      "hex": "#0E6B5C"
+     },
+     {
+      "name": "Primary (soft)",
+      "hex": "#3FAE8E"
+     },
+     {
+      "name": "Accent",
+      "hex": "#E8A33D"
+     },
+     {
+      "name": "Ink",
+      "hex": "#122420"
+     },
+     {
+      "name": "Background",
+      "hex": "#EFF4EE"
+     },
+     {
+      "name": "Success",
+      "hex": "#2E8B57"
+     }
+    ],
+    "font": "Plus Jakarta Sans",
+    "sampleHead": "Board with Guxo",
+    "sampleBody": "A sibling app to Hid-Go, retheming the same booking patterns for intercity bus travel under a fictional operator brand.",
+    "button": "#0E6B5C"
+   },
+   "outcome": "Guxo proved the underlying system could extend to a new transportation mode without rebuilding from scratch, and set the pattern for how future apps in this lineup will share the same foundation while still feeling distinct."
+  },
+  {
+   "id": "hotel",
+   "title": "Modern Hotel Booking App",
+   "tag": "Mobile App UI/UX",
+   "cardDesc": "A ground-up hotel booking app covering search, booking, and edge cases like failed payments and empty states.",
+   "liveUrl": "",
+   "status": "progress",
+   "thumbWord": "Hotel Booking",
+   "pill": "In progress",
+   "subtitle": "A ground-up hotel booking app aiming for quality comparable to Booking.com, Airbnb, and Expedia, with its own visual identity and UX.",
+   "shots": [],
+   "meta": [],
+   "extra": []
+  }
+ ]
+}

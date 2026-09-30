@@ -719,7 +719,6 @@ html:not(.app-mode) .li-team-card{display:none;}
 .li-pf-exp-btns{display:inline-flex;gap:2px;grid-row:1 / 3;grid-column:5;align-self:center;flex-direction:column;}
 .li-pf-group > .li-btn{grid-column:1 / -1;justify-self:start;}
 /* Portfolio site editor: import, images, repeatable rows, personas, flow steps. */
-.li-pf-import input{flex:1;}
 .li-pf-imgs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:4px;}
 .li-pf-imgs figure{position:relative;margin:0;}
 .li-pf-imgs img{height:88px;width:auto;border-radius:8px;border:1px solid var(--line);display:block;}

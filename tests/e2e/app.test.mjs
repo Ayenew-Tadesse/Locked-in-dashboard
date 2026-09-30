@@ -867,15 +867,11 @@ test("admins: they manage the team but not its settings", async () => {
   await page.close();
 });
 
-test("portfolio site: import from GitHub, then the preview and share page follow your portfolio's structure", async () => {
-  const fixture = readFileSync(new URL("./fixtures/portfolio-site.html", import.meta.url), "utf8");
+test("portfolio site: the editor, preview and share page follow your portfolio's structure", async () => {
   const page = await open("portfolio", { width: 1280, height: 900 });
-  const asked = [];
-  await page.route("https://raw.githubusercontent.com/**", (r) => { asked.push(r.request().url()); r.fulfill({ contentType: "text/html", body: fixture }); });
-  await page.click("#li-pf-import button[type=submit]");
-  await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
+  assert.equal(await page.locator("#li-pf-import, [name=repo]").count(), 0, "no Import from GitHub (done once, removed)");
+  await seedPortfolio(page);
   await openAllSections(page);
-  assert.equal(asked[0], "https://raw.githubusercontent.com/Ayenew-Tadesse/portfolio/main/index.html");
   const caseTitles = () => page.locator("#li-pf-cases [data-case-card] b").allInnerTexts();
   assert.deepEqual(await caseTitles(), ["Hid-Go Flight Booking App", "Guxo Bus Booking App", "Modern Hotel Booking App"]);
   // The form is filled in, with one contact list (social links merged in, no duplicates).
@@ -953,12 +949,9 @@ test("portfolio site: import from GitHub, then the preview and share page follow
 });
 
 test("portfolio: Try the app opens the live app in a phone frame on computers", async () => {
-  const fixture = readFileSync(new URL("./fixtures/portfolio-site.html", import.meta.url), "utf8");
   const page = await open("portfolio", { width: 1280, height: 800 });
-  await page.route("https://raw.githubusercontent.com/**", (r) => r.fulfill({ contentType: "text/html", body: fixture }));
   await page.route("https://ayenew-tadesse.github.io/**", (r) => r.fulfill({ contentType: "text/html", body: "<!doctype html><title>App</title><h1>Hid-Go app</h1>" }));
-  await page.click("#li-pf-import button[type=submit]");
-  await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
+  await seedPortfolio(page);
   const tryLink = page.locator("#li-pf-preview a[data-try]").first();
   assert.equal(await tryLink.getAttribute("data-try"), "Hid-Go Flight Booking App");
   await tryLink.click();
@@ -992,8 +985,7 @@ test("portfolio: Try the app opens the live app in a phone frame on computers", 
   await page.close();
   // On a phone the link opens the app itself (no phone inside a phone).
   const small = await open("portfolio", { width: 390, height: 844 });
-  await small.route("https://raw.githubusercontent.com/**", (r) => r.fulfill({ contentType: "text/html", body: fixture }));
-  await small.click("#li-pf-import button[type=submit]");
+  await seedPortfolio(small);
   await small.waitForSelector("#li-pf-preview a[data-try]", { state: "attached" });
   const popup = small.waitForEvent("popup");
   await small.locator("#li-pf-preview a[data-try]").first().click();
@@ -1449,6 +1441,25 @@ export function createClient() {
 }
 
 // The Portfolio editor's sections open and close; open them all to fill fields in.
+// The sample portfolio site (tests/e2e/fixtures/portfolio-site.json, as it
+// was once imported from GitHub): saved with the editor's own saveSite, case
+// studies linked to projects of the same name, then the Portfolio page reopened.
+const PORTFOLIO_SITE = JSON.parse(readFileSync(new URL("./fixtures/portfolio-site.json", import.meta.url), "utf8"));
+async function seedPortfolio(page) {
+  await page.evaluate(async (site) => {
+    const { saveSite } = await import(new URL("app/views/portfolio-site.js", location.href).href);
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    for (const c of site.cases) {
+      const t = c.title.toLowerCase(), p = (state.projects || []).find((x) => x.name && (x.name.toLowerCase() === t || t.startsWith(x.name.toLowerCase() + " ")));
+      if (p) c.project = p.name;
+    }
+    await saveSite(site);
+    location.hash = "#/";
+  }, PORTFOLIO_SITE);
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
+}
 const openAllSections = (page) => page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
 
 async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
