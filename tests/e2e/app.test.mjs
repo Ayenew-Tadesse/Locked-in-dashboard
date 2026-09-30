@@ -952,6 +952,56 @@ test("portfolio site: import from GitHub, then the preview and share page follow
   await page.close();
 });
 
+test("portfolio: Try the app opens the live app in a phone frame on computers", async () => {
+  const fixture = readFileSync(new URL("./fixtures/portfolio-site.html", import.meta.url), "utf8");
+  const page = await open("portfolio", { width: 1280, height: 800 });
+  await page.route("https://raw.githubusercontent.com/**", (r) => r.fulfill({ contentType: "text/html", body: fixture }));
+  await page.route("https://ayenew-tadesse.github.io/**", (r) => r.fulfill({ contentType: "text/html", body: "<!doctype html><title>App</title><h1>Hid-Go app</h1>" }));
+  await page.click("#li-pf-import button[type=submit]");
+  await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
+  const tryLink = page.locator("#li-pf-preview a[data-try]").first();
+  assert.equal(await tryLink.getAttribute("data-try"), "Hid-Go Flight Booking App");
+  await tryLink.click();
+  const phone = page.locator(".pf-phone-overlay");
+  await phone.waitFor();
+  assert.equal(await phone.getAttribute("role"), "dialog");
+  assert.equal(await phone.locator("iframe").getAttribute("src"), "https://ayenew-tadesse.github.io/hid-go/");
+  assert.equal(await page.frameLocator(".pf-phone-overlay iframe").locator("h1").innerText(), "Hid-Go app", "the app runs inside");
+  const size = await phone.locator(".pf-phone__screen").boundingBox();
+  assert.ok(Math.abs(size.width / size.height - 390 / 844) < 0.01, "a phone-shaped screen");
+  assert.ok(size.height + 40 < 800, "scaled to fit the window");
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), "hidden", "the page behind doesn't scroll");
+  assert.equal(await phone.locator("a", { hasText: "Open full screen" }).getAttribute("target"), "_blank");
+  await page.keyboard.press("Escape");
+  await phone.waitFor({ state: "detached" });
+  // Case study page: same phone; the backdrop closes it.
+  await page.locator('#li-pf-preview [data-case="hidgo"]').first().click();
+  await page.locator("#li-pf-preview .pf-case a[data-try]").click();
+  await phone.waitFor();
+  await phone.click({ position: { x: 5, y: 5 } });
+  await phone.waitFor({ state: "detached" });
+  // Turned off for a case study: a plain link to a new tab.
+  await openAllSections(page);
+  await page.locator('#li-pf-cases [data-case-card="hidgo"]').click();
+  await page.uncheck("#li-modal [name=phone]");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.waitForFunction(() => !document.querySelector('#li-pf-preview .pf-case a[data-try]'));
+  assert.equal(await page.locator("#li-pf-preview .pf-case a", { hasText: "Try the live prototype" }).getAttribute("target"), "_blank");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+  // On a phone the link opens the app itself (no phone inside a phone).
+  const small = await open("portfolio", { width: 390, height: 844 });
+  await small.route("https://raw.githubusercontent.com/**", (r) => r.fulfill({ contentType: "text/html", body: fixture }));
+  await small.click("#li-pf-import button[type=submit]");
+  await small.waitForSelector("#li-pf-preview a[data-try]", { state: "attached" });
+  const popup = small.waitForEvent("popup");
+  await small.locator("#li-pf-preview a[data-try]").first().click();
+  await (await popup).close();
+  assert.equal(await small.locator(".pf-phone-overlay").count(), 0);
+  await small.close();
+});
+
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
   const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio", "resume"];

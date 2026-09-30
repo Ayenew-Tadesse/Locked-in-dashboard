@@ -4,6 +4,7 @@
 import { renderPortfolio } from "./portfolio/render.js";
 import { buildPortfolioData } from "./core/portfolio.js";
 import { printResume } from "./portfolio/resume.js";
+import { tryInPhone } from "./portfolio/phone.js";
 import { mergeCommits } from "./core/portfolio.js";
 import { fetchCommits, commitsByDay, githubUser } from "./core/github.js";
 
@@ -132,6 +133,7 @@ function render(data, keepScroll = false) {
 }
 window.addEventListener("hashchange", () => { if (current) { render(current); window.scrollTo(0, 0); } });
 root.addEventListener("click", (e) => {
+  if (tryInPhone(e)) return;
   const a = e.target.closest("[data-case],[data-home],[data-scroll],[data-resume],[data-print-resume]");
   if (!a) return;
   e.preventDefault();

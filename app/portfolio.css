@@ -243,3 +243,36 @@
   html.cv-print, html.cv-print body{background:#fff !important;}
   .cv{box-shadow:none !important;border-radius:0;padding:0 !important;max-width:none;margin:0;}
 }
+
+/* "Try the app" in a phone (portfolio/phone.js) */
+html.pf-phone-open{overflow:hidden;}
+.pf-phone-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(8,14,28,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-family:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;animation:pf-phone-in .18s ease-out;}
+@keyframes pf-phone-in{from{opacity:0;}to{opacity:1;}}
+.pf-phone-stage{display:flex;flex-direction:column;align-items:center;gap:16px;max-height:100%;}
+.pf-phone-fit{position:relative;flex:none;}
+.pf-phone{position:absolute;left:0;top:0;transform:scale(var(--s,1));transform-origin:0 0;box-sizing:border-box;padding:14px;border-radius:62px;background:linear-gradient(145deg,#2b2f36,#0d0f13 55%,#23262c);box-shadow:0 0 0 2px #3a3f47,0 0 0 4px #121418,0 30px 80px rgba(0,0,0,.55);}
+.pf-phone__btn{position:absolute;width:4px;border-radius:2px;background:#2a2d33;}
+.pf-phone__btn--power{right:-4px;top:210px;height:96px;}
+.pf-phone__btn--vol1{left:-4px;top:180px;height:62px;}
+.pf-phone__btn--vol2{left:-4px;top:256px;height:62px;}
+.pf-phone__screen{position:relative;display:flex;flex-direction:column;overflow:hidden;border-radius:48px;background:#fff;}
+.pf-phone__status{flex:none;position:relative;display:flex;align-items:center;justify-content:space-between;height:47px;padding:0 30px 0 38px;color:#0b1220;background:#fff;font:600 16px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'IBM Plex Sans', sans-serif;}
+.pf-phone__time{font-weight:600;letter-spacing:-.01em;}
+.pf-phone__island{position:absolute;left:50%;top:11px;width:122px;height:35px;margin-left:-61px;border-radius:20px;background:#000;}
+.pf-phone__icons{display:flex;align-items:center;gap:5px;}
+.pf-phone__icons svg{fill:currentColor;}
+.pf-phone__app{flex:1;width:100%;border:0;display:block;background:#fff;}
+.pf-phone__home{position:absolute;left:0;right:0;bottom:0;height:22px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;pointer-events:none;}
+.pf-phone__home i{display:block;width:134px;height:5px;border-radius:3px;background:rgba(11,18,32,.85);}
+.pf-phone__loading{position:absolute;inset:47px 0 0;display:flex;align-items:center;justify-content:center;background:#fff;transition:opacity .25s;}
+.pf-phone__loading span{width:28px;height:28px;border-radius:50%;border:3px solid #dfe5ef;border-top-color:#2B67CC;animation:pf-spin .8s linear infinite;}
+.pf-phone-overlay.is-loaded .pf-phone__loading{opacity:0;pointer-events:none;}
+@keyframes pf-spin{to{transform:rotate(360deg);}}
+.pf-phone__bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px;max-width:560px;text-align:center;}
+.pf-phone__cap{margin:0;color:#dbe3f0;font-size:13.5px;}
+.pf-phone__cap b{color:#fff;}
+.pf-phone__actions{display:flex;gap:8px;}
+.pf-phone__actions .pf-btn{padding:8px 16px;font-size:13px;}
+.pf-phone__actions .pf-btn--outline{color:#fff;border-color:rgba(255,255,255,.55);}
+.pf-phone__actions .pf-btn--outline:hover{border-color:#fff;}
+@media (prefers-reduced-motion: reduce){.pf-phone-overlay{animation:none;}.pf-phone__loading span{animation-duration:2s;}}
