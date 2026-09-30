@@ -11,8 +11,9 @@ import { showToast, esc, $, openModal } from "./ui/dom.js";
 import { displayName, needsProfile, greetingOptions } from "./core/people.js";
 import { openTaskForm, completeTask } from "./ui/task-ui.js";
 import { buildWarnings } from "./core/insights.js";
-import { scoreDay, scorePeriod, scoreQuarter } from "./core/scoring.js";
-import { weekRange, monthRange, quarterOf, dayOf, formatRange, formatDay } from "./core/dates.js";
+import { scoreDay, scorePeriod, scoreQuarterOf } from "./core/scoring.js";
+import { weekRange, monthRange, dayOf, formatRange, formatDay, MONTHS } from "./core/dates.js";
+import { quarterBy, goalInQuarter } from "./core/quarters.js";
 import { isOverdue } from "./core/tasks.js";
 import { renderOverview } from "./views/overview.js";
 import { renderToday } from "./views/today.js";
@@ -134,7 +135,7 @@ function renderWarnings(active) {
   const box = $("#li-warnings");
   if (active !== "overview") { box.innerHTML = ""; return; }
   const gone = dismissed();
-  const list = buildWarnings({ tasks: state.tasks, milestones: state.milestones, goals: state.goals, today: state.today, cfg: state.cfg, timeZone: state.timeZone })
+  const list = buildWarnings({ tasks: state.tasks, milestones: state.milestones, goals: state.goals, today: state.today, cfg: state.cfg, timeZone: state.timeZone, year: state.year })
     .filter((w) => !gone[w.id])
     .sort((a, b) => LEVELS[a.level] - LEVELS[b.level])
     .slice(0, 3);
@@ -235,6 +236,29 @@ window.addEventListener("li:rerender", () => render());
 // Feed the original dashboard cards (checklist, heatmap, rings, daily report)
 // from the database, through the small bridge exposed by index.html.
 // ---------------------------------------------------------------------------
+// The Objective card: the four quarters of your plan year, each with its
+// goal(s) and their milestones (ticked when completed).
+function objectiveData() {
+  const cfg = state.year, now = state.quarterAt();
+  const months = (q) => {
+    const [ys, ms] = q.start.split("-").map(Number), [ye, me] = q.end.split("-").map(Number);
+    return ys === ye ? `${MONTHS[ms - 1]}–${MONTHS[me - 1]} ${ye}` : `${MONTHS[ms - 1]} ${ys} – ${MONTHS[me - 1]} ${ye}`;
+  };
+  const phases = [1, 2, 3, 4].map((n) => {
+    const q = quarterBy(n, now.year, cfg);
+    const goals = state.goals.filter((g) => goalInQuarter(g, q) && g.status !== "cancelled");
+    const ids = new Set(goals.map((g) => g.id));
+    const ms = state.milestones.filter((m) => ids.has(m.goal_id) && m.status !== "cancelled")
+      .sort((a, b) => String(a.deadline || "9").localeCompare(String(b.deadline || "9")));
+    return {
+      id: "q" + n, tag: `Q${n} · ${months(q)}`, range: [q.start, q.end],
+      text: goals.length ? goals.map((g) => g.description ? `${g.title}: ${g.description}` : g.title).join("\n") : `No goal for Q${n} yet: add one on the Quarter page.`,
+      items: ms.map((m) => ({ id: m.id, text: m.title, done: m.status === "completed", deadline: m.deadline ? formatDay(m.deadline, { month: "short", day: "numeric" }) : "", href: `#/milestones/${m.id}` })),
+    };
+  });
+  return { objective: "Your plan year", phases };
+}
+
 function feedLegacy() {
   const L = window.LockedInLegacy;
   if (!L) return;
@@ -267,10 +291,10 @@ function feedLegacy() {
 
   const today = state.today, opts = { today, timeZone: state.timeZone };
   const day = scoreDay(state.tasks, today, state.cfg, opts);
-  const wk = weekRange(today), mo = monthRange(today), q = quarterOf(today);
+  const wk = weekRange(today), mo = monthRange(today), q = state.quarterAt(today);
   const week = scorePeriod(state.tasks, wk.start, wk.end, state.cfg, opts);
   const month = scorePeriod(state.tasks, mo.start, mo.end, state.cfg, opts);
-  const quarter = scoreQuarter(state.tasks, state.goals, q.quarter, q.year, state.cfg, opts);
+  const quarter = scoreQuarterOf(state.tasks, state.goals, q, state.cfg, opts);
   const left = day.counts.total - day.counts.completed;
   const scores = {
     day: { pct: day.score, title: "Today", short: "Today",
@@ -284,10 +308,11 @@ function feedLegacy() {
       range: [formatRange(mo.start, mo.end), formatRange(mo.start, mo.end)] },
     quarter: { pct: quarter.score, title: "This quarter", short: "Quarter",
       left: [quarter.goal_progress == null ? "No goals yet" : `Goals ${Math.round(quarter.goal_progress)}% done`, quarter.goal_progress == null ? "No goals" : `Goals ${Math.round(quarter.goal_progress)}%`],
-      range: [`Q${q.quarter} · ${formatRange(quarter.start, quarter.end)}`, `Q${q.quarter} ${q.year}`] },
+      range: [q.long, q.title] },
   };
   const unit = Object.keys(commitDays).length ? ["task or commit", "tasks and commits"] : ["task completed", "tasks completed"];
   L.update({ daily, contributions, reports, scores, commitDays, unit });
+  if (L.objective && !state.isColleague) L.objective(objectiveData());
 }
 
 // ---------------------------------------------------------------------------

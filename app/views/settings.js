@@ -8,6 +8,7 @@ import { buildYearSetup, buildMissingHistory } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
 import { githubUsername, refreshGithub } from "../github.js";
 import { githubUser } from "../core/github.js";
+import { quarterBy, yearConfig } from "../core/quarters.js";
 
 // "Set up my year" has been done: afterwards only missing history is offered.
 const setUp = () => !!(state.settings.plan_loaded_at || state.settings.legacy_imported_at);
@@ -53,6 +54,18 @@ export function renderSettings(el) {
     </section>
 
 
+    <section class="li-card" id="my-year">
+      <div class="li-card-head"><span class="card-label">My year</span></div>
+      <p class="li-sub">Your quarters follow your plan year: the Quarter page, the Tasks card's Quarter tab, the quarter score, the Objective card and your portfolio's plan. Q1 runs from the start to the end of that calendar quarter, then Q2–Q4 follow, and Q4 ends on your last day.</p>
+      <form class="li-form" id="li-year-form" autocomplete="off">
+        <label class="li-field">Starts<input type="date" name="start" value="${esc(state.year?.start || "")}"></label>
+        <label class="li-field">Ends (launch day)<input type="date" name="end" value="${esc(state.year?.end || "")}"></label>
+        <label class="li-check-row full"><input type="checkbox" name="calendar"${state.year ? "" : " checked"}> Use calendar quarters instead (Jan–Mar, Apr–Jun, …)</label>
+        <p class="li-sub full" id="li-year-quarters">${yearQuartersText(state.year)}</p>
+        <div class="li-form-actions"><span class="li-spacer"></span><button type="submit" class="li-btn primary">Save</button></div>
+      </form>
+    </section>
+
     <section class="li-card" id="github">
       <div class="li-card-head"><span class="card-label">GitHub</span></div>
       <p class="li-sub">Days you commit to GitHub turn green on your Activity map, and the commits show in that day's list and daily report. Public repos only: nothing secret is stored here.</p>
@@ -84,6 +97,28 @@ export function renderSettings(el) {
       ${state.settings.plan_loaded_at ? `<p class="li-sub">Year plan loaded on ${esc(formatDay(dayOf(state.settings.plan_loaded_at, state.timeZone)))}.
         "Add missing history" adds any of the original dashboard's days that aren't here yet (like Sep 20–21) without duplicating anything.</p>` : ""}
     </section>`;
+
+  // My year
+  const yf = el.querySelector("#li-year-form");
+  const readYear = () => (yf.elements.calendar.checked ? null : yearConfig({ start: yf.elements.start.value, end: yf.elements.end.value }));
+  yf.addEventListener("input", (e) => {
+    if (e.target.type === "date") yf.elements.calendar.checked = false; // picking dates means a plan year
+    el.querySelector("#li-year-quarters").innerHTML = yearQuartersText(readYear());
+  });
+  yf.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const cfg = readYear();
+    if (!yf.elements.calendar.checked && !cfg) { toast("Pick a start date before the end date", "error"); return; }
+    try {
+      const prefs = state.settings.preferences || {};
+      const portfolio = prefs.portfolio?.site ? { ...prefs.portfolio, site: { ...prefs.portfolio.site, ...(cfg ? { year: cfg } : {}) } } : prefs.portfolio;
+      if (portfolio?.site && !cfg) delete portfolio.site.year;
+      const s = await state.store.savePreferences({ ...prefs, year: cfg || "calendar", ...(portfolio ? { portfolio } : {}) });
+      state.settings = { ...state.settings, ...s };
+      toast(cfg ? `Saved: this is ${state.quarterAt().title}` : "Saved: calendar quarters");
+      window.dispatchEvent(new Event("li:rerender"));
+    } catch (err) { toast("Couldn't save: " + err.message, "error"); }
+  });
 
   // GitHub
   const ghStatus = () => {
@@ -231,3 +266,10 @@ function showToken(token) {
   });
 }
 
+
+// "Q1 Sep 22 – Dec 31, 2026 · Q2 Jan 1 – Mar 31, 2027 · …" for a plan year.
+function yearQuartersText(cfg) {
+  if (!cfg) return "Calendar quarters: Q1 Jan–Mar, Q2 Apr–Jun, Q3 Jul–Sep, Q4 Oct–Dec.";
+  const y = Number(cfg.start.slice(0, 4));
+  return [1, 2, 3, 4].map((n) => `<b>Q${n}</b> ${esc(quarterBy(n, y, cfg).long.split(" · ")[1])}`).join(" · ");
+}

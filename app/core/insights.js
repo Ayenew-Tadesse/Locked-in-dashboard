@@ -1,6 +1,7 @@
 // Milestone/goal progress, warnings and planning. Pure functions shared by
 // the app and the API.
-import { addDays, diffDays, dayOf, quarterOf, quarterRange, formatDay, relativeDay } from "./dates.js";
+import { addDays, diffDays, dayOf, formatDay, relativeDay } from "./dates.js";
+import { quarterAt, goalInQuarter } from "./quarters.js";
 import { isOverdue, isClosed, sortTasks, PRIORITIES } from "./tasks.js";
 
 const round = (n) => Math.round(n * 100) / 100;
@@ -84,7 +85,7 @@ export const PACE_LABELS = {
  * Useful, low-noise warnings. Each: { id, level: danger|warn|info, text, route }.
  * One warning per kind (never one per task) to avoid alert fatigue.
  */
-export function buildWarnings({ tasks, milestones, goals, today, cfg }) {
+export function buildWarnings({ tasks, milestones, goals, today, cfg, year = null }) {
   const w = [];
   const overdue = tasks.filter((t) => isOverdue(t, today));
   if (overdue.length) {
@@ -108,12 +109,12 @@ export function buildWarnings({ tasks, milestones, goals, today, cfg }) {
       text: m.deadline < today ? `Milestone "${m.title}" passed its deadline at ${pct}%.`
         : `Milestone "${m.title}" is due ${relativeDay(m.deadline, today)} and is ${pct}% complete.` });
   }
-  const q = quarterOf(today);
-  const qEnd = quarterRange(q.quarter, q.year).end;
-  const left = diffDays(today, qEnd);
-  const openGoals = goals.filter((g) => g.quarter === q.quarter && g.year === q.year && !["completed", "cancelled"].includes(g.status));
+  // Quarters of your plan year (or the calendar's).
+  const q = quarterAt(today, year);
+  const left = diffDays(today, q.end);
+  const openGoals = goals.filter((g) => goalInQuarter(g, q) && !["completed", "cancelled"].includes(g.status));
   if (left <= cfg.warnings.quarterEndDays && openGoals.length) {
-    w.push({ id: `qend:${q.year}Q${q.quarter}`, level: "info", route: "quarter",
+    w.push({ id: `qend:${q.start}Q${q.quarter}`, level: "info", route: "quarter",
       text: `Q${q.quarter} ends in ${left} day${left === 1 ? "" : "s"} with ${openGoals.length} goal${openGoals.length === 1 ? "" : "s"} still open.` });
   }
   const recent = tasks.filter((t) => t.date >= addDays(today, -7) && t.date < today && t.status !== "cancelled");

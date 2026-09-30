@@ -13,6 +13,8 @@
 import { addDays, weekdayIndex } from "../core/dates.js";
 
 export const PLAN_VERSION = "2026-27.1";
+// The plan year: from the day tracking started to launch day (quarters follow it).
+export const PLAN_YEAR = { start: "2026-09-22", end: "2027-09-23" };
 
 // Quarterly goals: one per roadmap phase.
 const GOALS = [

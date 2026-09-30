@@ -5,6 +5,8 @@ import { normalizeTask } from "./core/tasks.js";
 import { resolveScoring, scoreDay, scorePeriod } from "./core/scoring.js";
 import { displayName } from "./core/people.js";
 import { projectsFromLegacy } from "./core/projects.js";
+import { yearConfig, quarterAt } from "./core/quarters.js";
+import { PLAN_YEAR } from "./plan/year-plan.js";
 
 export const state = {
   store: null,
@@ -34,6 +36,15 @@ export const state = {
   cfg: resolveScoring({}),
   timeZone: undefined,
   get today() { return todayKey(this.timeZone); },
+  // Your plan year (Settings → My year): quarters follow it. "calendar" (or
+  // nothing, without a year plan) means calendar quarters.
+  get year() {
+    const y = this.settings?.preferences?.year;
+    if (y === "calendar") return null;
+    return yearConfig(y) || (this.settings?.plan_loaded_at || this.settings?.legacy_imported_at ? PLAN_YEAR : null);
+  },
+  /** The quarter a day is in (today by default). */
+  quarterAt(day) { return quarterAt(day || this.today, this.year); },
 };
 
 const listeners = new Set();

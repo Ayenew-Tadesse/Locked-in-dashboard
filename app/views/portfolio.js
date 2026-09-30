@@ -82,7 +82,7 @@ function previewData() {
     preferences: draft ? { ...(state.settings.preferences || {}), portfolio: draft } : state.settings.preferences,
     tasks: state.tasks, projects: state.projects || [],
     milestones: state.milestones.filter(own), goals: state.goals.filter(own),
-    weekly: Object.values(state.weekly || {}), today: state.today, timeZone: state.timeZone,
+    weekly: Object.values(state.weekly || {}), today: state.today, timeZone: state.timeZone, year: state.year,
   });
 }
 

@@ -1,7 +1,8 @@
 // Analytics: trends over a chosen range. A few charts, each answering one
 // question: how are my days going, how are my weeks going, where does time go.
 import { state } from "../state.js";
-import { scorePeriod, scoreQuarter } from "../core/scoring.js";
+import { scorePeriod, scoreQuarterOf } from "../core/scoring.js";
+import { goalInQuarter } from "../core/quarters.js";
 import { addDays, weekRange, formatDay, formatMinutes, quarterOf, dayOf } from "../core/dates.js";
 import { isOverdue } from "../core/tasks.js";
 import { esc, tile, scoreTone } from "../ui/dom.js";
@@ -40,9 +41,9 @@ export function renderAnalytics(el, params) {
     byCat.set(k, c);
   }
   const cats = [...byCat].sort((a, b) => b[1].minutes - a[1].minutes || b[1].total - a[1].total).slice(0, 8);
-  const q = quarterOf(today);
-  const qs = scoreQuarter(state.tasks, state.goals, q.quarter, q.year, state.cfg, opts);
-  const goals = state.goals.filter((g) => g.quarter === q.quarter && g.year === q.year);
+  const q = state.quarterAt(today);
+  const qs = scoreQuarterOf(state.tasks, state.goals, q, state.cfg, opts);
+  const goals = state.goals.filter((g) => goalInQuarter(g, q));
   const msAll = state.milestones.filter((m) => m.status !== "cancelled");
   const msDone = msAll.filter((m) => m.status === "completed");
   const msInRange = msDone.filter((m) => { const d = dayOf(m.completed_at, state.timeZone); return d && d >= start; }).length;
@@ -76,7 +77,7 @@ export function renderAnalytics(el, params) {
           detail: `${c.done}/${c.total} done · ${formatMinutes(c.minutes)}` })), { aria: "Completion by category" }) : `<p class="li-empty">No tasks in this range.</p>`}
       </section>
       <section class="li-card">
-        <div class="li-card-head"><span class="card-label">Q${q.quarter} ${q.year} goals</span><a class="li-link" href="#/quarter">Quarter</a></div>
+        <div class="li-card-head"><span class="card-label">${esc(q.title)} goals</span><a class="li-link" href="#/quarter">Quarter</a></div>
         ${goals.length ? hBars(goals.map((g) => ({ label: g.title, value: Number(g.percentage_complete) })), { aria: "Goal progress" })
           : `<p class="li-empty">No goals this quarter.</p>`}
         <p class="li-sub">Quarterly score ${qs.score ?? "—"} · ${qs.time_elapsed_pct}% of the quarter elapsed</p>
