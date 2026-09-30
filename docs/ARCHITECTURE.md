@@ -313,7 +313,19 @@ draws it (home page plus one page per case, `#t=…&case=<id>`) and mixes in
 the live dashboard sections; case studies linked to a project show its live
 progress. `portfolio_view` removes site sections that are switched off.
 
-**Edit | Preview on web** sit in the Portfolio page's top bar
+**One editor card.** `app/views/portfolio-site.js` draws "Edit portfolio":
+sections you open and close (introduction with open-to and roles wanted,
+numbers, about, highlights and experience, key skills, case studies, how I
+work, contact and social, sections to show) and one Save (also in the top
+bar, marked "Save •" while there are unsaved changes). `site` is the source;
+`draftSite()` fills it from the older fields the first time (title → role,
+headline → intro, bio → about, years → a stat, skills/tools → skill groups,
+links and social → one contact list), and every save writes those older
+fields back in step. Case studies are cards: tap to edit (delete is in the
+editor), drag onto another to swap (mouse anywhere on the card, touch by the
+grip, Ctrl/⌘ + arrow keys); they save straight away.
+
+**Edit | Save | Preview on web** sit in the Portfolio page's top bar
 (`#li-pagebar-actions`). Preview on web opens `portfolio.html` in a named tab
 through a private link of your own ("My preview (you)", one hour, kept in
 `localStorage`, reused while valid and left out of the share-link list), so it

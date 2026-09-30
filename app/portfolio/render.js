@@ -76,11 +76,11 @@ export function renderPortfolio(data, opts = {}) {
         <div><b>${esc(e.role)}</b>${e.company ? `<span class="pf-at"> · ${esc(e.company)}</span>` : ""}${e.summary ? `<p>${esc(e.summary)}</p>` : ""}</div>
       </li>`).join("")}</ol></section>`;
   }
-  if (d.skills?.length || d.tools?.length || d.industries?.length) {
+  if (d.skills?.length || d.tools?.length) {
     sections.skills = `<section class="pf-section" id="pf-skills"><h2>Skills &amp; tools</h2>
       ${d.skills?.length ? `<h3 class="pf-h3">Skills</h3>${tags(d.skills)}` : ""}
       ${d.tools?.length ? `<h3 class="pf-h3">Tools</h3>${tags(d.tools)}` : ""}
-      ${d.industries?.length ? `<h3 class="pf-h3">Industries</h3>${tags(d.industries)}` : ""}</section>`;
+</section>`;
   }
 
   if (act) {
@@ -120,14 +120,12 @@ export function renderPortfolio(data, opts = {}) {
         <div class="pf-bar"><i style="width:${g.pct}%"></i></div><span class="pf-plan-meta">${esc(STATUS[g.status] || "")} · ${g.pct}%</span></li>`).join("")}</ol>
     </section>`);
   }
-  const hasProcess = d.process?.length || d.methods?.length || d.collaboration || d.different;
+  const hasProcess = d.process?.length || d.methods?.length;
   if (data.work?.length || a.approach || hasProcess) {
     sections.work = (`<section class="pf-section" id="pf-work"><h2>How I work</h2>
       ${a.approach ? `<p class="pf-approach">${esc(a.approach)}</p>` : ""}
       ${d.process?.length ? `<ol class="pf-process" id="pf-process">${d.process.map((p, i) => `<li><span>${i + 1}</span>${esc(p)}</li>`).join("")}</ol>` : ""}
       ${d.methods?.length ? `<h3 class="pf-h3">Research methods</h3>${tags(d.methods)}` : ""}
-      ${d.collaboration ? `<h3 class="pf-h3">Working with developers and product</h3><p class="pf-approach">${esc(d.collaboration)}</p>` : ""}
-      ${d.different ? `<h3 class="pf-h3">What I bring</h3><p class="pf-approach">${esc(d.different)}</p>` : ""}
       ${data.work?.length ? `<p class="pf-note">Recent finished work, in my own words: what changed, how, and the problem it solved.</p>
         <div class="pf-work">${data.work.map((w) => `<article>
           <header><h3>${esc(w.title)}</h3><span>${esc(formatDay(w.day, { month: "short", day: "numeric", year: "numeric" }))}${w.milestone ? ` · ${esc(w.milestone)}` : w.category ? ` · ${esc(w.category)}` : ""}${w.minutes ? ` · ${esc(formatMinutes(w.minutes))}` : ""}</span></header>

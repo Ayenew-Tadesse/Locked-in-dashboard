@@ -13,12 +13,12 @@ export const PORTFOLIO_SECTIONS = [
   ["highlights", "Highlights", "Your best results, near the top"],
   ["experience", "Experience", "Roles and companies, as a timeline"],
   ["skills", "Skills & tools", "Skills, tools and industries"],
-  ["process", "Process", "Your process steps, research methods and how you work with others"],
+  ["process", "Process", "Your process steps and research methods"],
   ["activity", "Activity", "Tasks finished, streak, hours and a 6-month activity map"],
   ["projects", "Projects", "Ongoing and finished projects with progress and links"],
   ["milestones", "Milestones", "Completed and in-progress milestones"],
   ["plan", "Plan", "The yearly objective's quarterly goals"],
-  ["logs", "How I work", "Recent finished tasks with what changed, how, and the problem solved"],
+  ["logs", "Finished work notes", "Recent finished tasks with what changed, how, and the problem solved"],
 ];
 export const PORTFOLIO_LINKS = [["email", "Email"], ["linkedin", "LinkedIn"], ["behance", "Behance"], ["dribbble", "Dribbble"], ["github", "GitHub"], ["website", "Website"]];
 export const INDUSTRIES = ["Travel", "E-commerce", "Fintech", "Health", "SaaS", "Education", "Logistics", "Media"];

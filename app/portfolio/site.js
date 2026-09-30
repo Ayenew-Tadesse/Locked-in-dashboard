@@ -50,6 +50,13 @@ function caseCard(c, projects) {
   </article>`;
 }
 
+// "Open to remote · relocation · Looking for: Senior Product Designer"
+function openLine(h) {
+  const open = [["remote", "remote"], ["hybrid", "hybrid"], ["relocation", "relocation"]].filter(([k]) => h.open?.[k]).map(([, l]) => l);
+  const parts = [open.length ? `Open to ${open.join(" · ")}` : "", h.roles ? `Looking for: ${h.roles}` : ""].filter(Boolean);
+  return parts.length ? `<p class="pf-s-open">${parts.map((x) => `<span>${esc(x)}</span>`).join("")}</p>` : "";
+}
+
 function home(data, live) {
   const s = data.site, h = s.hero || {}, name = h.name || data.about?.name || "";
   const social = Object.entries(s.social || {}).map(([k, v]) => link(v, esc(SOCIAL[k] || k), "pf-social")).filter(Boolean).join("");
@@ -60,6 +67,7 @@ function home(data, live) {
       <h1>${esc(name)}</h1>
       ${h.role || h.location ? `<p class="pf-s-role"><b>${esc(h.role || "")}</b>${h.location ? `${h.role ? "," : ""} based in ${esc(h.location)}` : ""}</p>` : ""}
       ${h.description ? `<p class="pf-s-desc">${esc(h.description)}</p>` : ""}
+      ${openLine(h)}
       <div class="pf-s-actions">
         ${s.cases?.length ? `<a class="pf-btn pf-btn--solid" href="#pf-cases" data-scroll="pf-cases">View projects</a>` : ""}
         ${s.contact?.length ? `<a class="pf-btn pf-btn--outline" href="#pf-contact" data-scroll="pf-contact">Contact me</a>` : ""}

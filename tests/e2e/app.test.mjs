@@ -446,33 +446,43 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.click("#li-modal [data-close]:has-text('Done')");
   const row = page.locator("#li-pf-list li", { hasText: "Acme Corp" });
   assert.match(await row.innerText(), /0 views · expires/);
-  // Your profile: basics, a role, highlights, skills; the preview follows.
-  await page.fill("#li-pf-form [name=d_title]", "Senior UI/UX Designer");
-  await page.fill("#li-pf-form [name=d_years]", "5");
-  await page.check("#li-pf-form [name=d_open_remote]");
+  // One "Edit portfolio" card: no duplicate or unused fields.
+  for (const gone of ["d_title", "d_years", "headline", "bio", "d_tools", "d_skills", "d_ind[]", "d_collaboration", "d_different", "link_email"])
+    assert.equal(await page.locator(`#li-pf-form [name="${gone}"]`).count(), 0, `${gone} is gone`);
+  assert.equal(await page.locator("#li-pf-site-form, #li-pf-site").count(), 0, "one editor card");
+  await openAllSections(page);
+  // Introduction, numbers, experience, key skills; Save in the top bar; the preview follows.
+  await page.fill("#li-pf-form [name=role]", "Senior UI/UX Designer");
+  await page.check("#li-pf-form [name=open_remote]");
+  await page.fill("#li-pf-form [name=roles]", "Lead UX Designer");
+  await page.fill("#li-pf-form [name=stat_num_0]", "5+");
+  await page.fill("#li-pf-form [name=stat_label_0]", "Years of Experience");
   await page.click("#li-pf-exp-add");
   await page.fill('#li-pf-exp .li-pf-exp-row:last-child [data-k=role]', "Lead designer");
   await page.fill('#li-pf-exp .li-pf-exp-row:last-child [data-k=company]', "Guxo");
-  await page.fill("#li-pf-form [name=d_highlights]", "Cut booking from 7 steps to 4\nBuilt a design system");
-  await page.check('#li-pf-form [name="d_ind[]"][value=Travel]');
-  await page.fill("#li-pf-form [name=d_tools]", "Figma, Framer");
-  await page.click("#li-pf-form button[type=submit]");
-  await page.waitForSelector("#li-pf-preview #pf-highlights");
-  assert.match(await preview.locator(".pf-headline").innerText(), /Senior UI\/UX Designer · 5 years of experience/);
-  assert.match(await preview.innerText(), /Open to remote[\s\S]*Cut booking from 7 steps to 4[\s\S]*Lead designer · Guxo/);
-  assert.deepEqual(await preview.locator("#pf-skills .pf-tags li").allInnerTexts(), ["Figma", "Framer", "Travel"]);
+  await page.fill("#li-pf-form [name=highlights]", "Cut booking from 7 steps to 4\nBuilt a design system");
+  await page.click("#li-pf-skill-add");
+  await page.fill("#li-pf-skill-groups .li-pf-grouprow:last-child [data-k=title]", "Tools");
+  await page.fill("#li-pf-skill-groups .li-pf-grouprow:last-child [data-k=items]", "Figma\nFramer");
+  assert.equal(await page.textContent("#li-pf-save"), "Save •", "unsaved changes show on Save");
+  await page.click("#li-pf-save");
+  await page.waitForSelector("#li-pf-preview .pf-s-hero");
+  assert.equal(await page.textContent("#li-pf-save"), "Save");
+  assert.match(await preview.innerText(), /Senior UI\/UX Designer[\s\S]*Open to remote[\s\S]*Looking for: Lead UX Designer[\s\S]*5\+\s*Years of Experience[\s\S]*Cut booking from 7 steps to 4[\s\S]*Lead designer · Guxo/);
+  assert.match(await preview.locator("#pf-keyskills").innerText(), /Tools[\s\S]*Figma[\s\S]*Framer/);
   // Saved: it's all there after reopening the page.
   await page.evaluate(() => { location.hash = "#/settings"; });
   await page.waitForSelector(".li-formula");
   await page.evaluate(() => { location.hash = "#/portfolio"; });
   await page.waitForSelector("#li-pf-form");
   assert.equal(await page.inputValue('#li-pf-exp .li-pf-exp-row [data-k=role]'), "Lead designer");
-  // Edit what's on it: the preview follows.
-  await page.fill("#li-pf-form [name=headline]", "Mobile & web developer");
-  await page.uncheck("#li-pf-form [name=show_logs]");
+  assert.equal(await page.inputValue("#li-pf-form [name=stat_num_0]"), "5+");
+  assert.equal(await page.inputValue("#li-pf-form [name=roles]"), "Lead UX Designer");
+  // Switch a section off: the preview follows.
+  await openAllSections(page);
+  await page.uncheck("#li-pf-form [name=show_stats]");
   await page.click("#li-pf-form button[type=submit]");
-  await page.waitForFunction(() => document.querySelector("#li-pf-preview .pf-headline")?.textContent === "Mobile & web developer");
-  assert.equal(await preview.locator("#pf-work").count(), 0, "How I work hidden");
+  await page.waitForFunction(() => !document.querySelector("#li-pf-preview .pf-s-stats"));
   // Switch the link off.
   await row.locator("[data-revoke-link]").click();
   await page.click("#li-modal button[type=submit]");
@@ -489,8 +499,8 @@ test("portfolio: Edit and Preview on web (demo): opens a new tab that follows yo
   await tab.waitForURL(/portfolio\.html\?demo=1&live=1/);
   await tab.waitForSelector(".pf-hero h1, .pf-s-hero h1");
   // Save a change in the dashboard: the tab shows it without reloading.
-  await page.fill("#li-pf-form [name=headline]", "Designer of calm booking flows");
-  await page.click("#li-pf-form button[type=submit]");
+  await page.fill("#li-pf-form [name=description]", "Designer of calm booking flows");
+  await page.click("#li-pf-save");
   await tab.waitForFunction(() => /Designer of calm booking flows/.test(document.body?.textContent || ""));
   // Tapping again reuses the same tab.
   await bar.locator("#li-pf-web").click();
@@ -528,8 +538,8 @@ test("portfolio: Preview on web (database) uses your own private link, reused an
   assert.deepEqual(await tab.evaluate(() => window.__rpc.filter((c) => c[0] === "portfolio_view").map((c) => c[1])), [{ p_token: token }]);
   assert.match(await page.locator("#li-pf-list").innerText(), /No links yet/, "your preview link isn't in the list");
   // Save: the open tab asks for the latest version.
-  await page.fill("#li-pf-form [name=headline]", "New headline");
-  await page.click("#li-pf-form button[type=submit]");
+  await page.fill("#li-pf-form [name=description]", "New intro");
+  await page.click("#li-pf-save");
   await tab.waitForFunction(() => /Version 2/.test(document.body?.textContent || ""));
   // Again: the same link, no new one.
   await page.click("#li-pf-web");
@@ -644,13 +654,18 @@ test("portfolio site: import from GitHub, then the preview and share page follow
   const asked = [];
   await page.route("https://raw.githubusercontent.com/**", (r) => { asked.push(r.request().url()); r.fulfill({ contentType: "text/html", body: fixture }); });
   await page.click("#li-pf-import button[type=submit]");
-  await page.waitForSelector("#li-pf-cases [data-case-row]");
+  await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
+  await openAllSections(page);
   assert.equal(asked[0], "https://raw.githubusercontent.com/Ayenew-Tadesse/portfolio/main/index.html");
-  assert.deepEqual(await page.locator("#li-pf-cases [data-case-row] b").allInnerTexts(), ["Hid-Go Flight Booking App", "Guxo Bus Booking App", "Modern Hotel Booking App"]);
-  // The form is filled in.
-  assert.equal(await page.inputValue("#li-pf-site-form [name=role]"), "Product Designer");
-  assert.equal(await page.inputValue("#li-pf-site-form [name=stat_num_1]"), "50+");
+  const caseTitles = () => page.locator("#li-pf-cases [data-case-card] b").allInnerTexts();
+  assert.deepEqual(await caseTitles(), ["Hid-Go Flight Booking App", "Guxo Bus Booking App", "Modern Hotel Booking App"]);
+  // The form is filled in, with one contact list (social links merged in, no duplicates).
+  assert.equal(await page.inputValue("#li-pf-form [name=role]"), "Product Designer");
+  assert.equal(await page.inputValue("#li-pf-form [name=stat_num_1]"), "50+");
   assert.equal(await page.locator("#li-pf-skill-groups .li-pf-grouprow").count(), 5);
+  const contactLabels = await page.locator("#li-pf-contacts [data-k=label]").evaluateAll((els) => els.map((e) => e.value));
+  assert.deepEqual(contactLabels.filter((l) => /linkedin/i.test(l)).length, 1, "LinkedIn once");
+  assert.ok(contactLabels.some((l) => /instagram/i.test(l)) && contactLabels.some((l) => /behance/i.test(l)), "social links are in the contact list");
   // The preview: introduction, stats, projects, about, key skills, contact.
   const preview = page.locator("#li-pf-preview");
   const home = await preview.innerText();
@@ -665,13 +680,32 @@ test("portfolio site: import from GitHub, then the preview and share page follow
   assert.equal(await preview.locator(".pf-flow img").count(), 4);
   await preview.locator("[data-home]").first().click();
   await preview.locator(".pf-s-hero").waitFor();
-  // Edit a case study: the change shows in the preview.
-  await page.locator('#li-pf-cases [data-case-row="guxo"] [data-case-edit]').click();
+  // Drag a case study card onto another: they swap places, and the preview follows.
+  await page.locator("#li-pf-cases").scrollIntoViewIfNeeded();
+  const from = await page.locator("#li-pf-cases [data-case-card]").nth(0).boundingBox();
+  const to = await page.locator("#li-pf-cases [data-case-card]").nth(2).boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2, { steps: 3 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  assert.equal(await page.locator("#li-pf-cases .drop-target").count(), 1, "the card under it is highlighted");
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector("#li-pf-cases [data-case-card]")?.textContent.includes("Hotel"));
+  assert.deepEqual(await caseTitles(), ["Modern Hotel Booking App", "Guxo Bus Booking App", "Hid-Go Flight Booking App"]);
+  assert.deepEqual(await preview.locator(".pf-card h3").allInnerTexts(), ["Modern Hotel Booking App", "Guxo Bus Booking App", "Hid-Go Flight Booking App"]);
+  assert.equal(await page.locator("#li-modal").count(), 0, "dragging doesn't open the editor");
+  // Edit a case study (tap its card): the change shows in the preview.
+  await page.locator('#li-pf-cases [data-case-card="guxo"]').click();
   await page.fill("#li-modal [name=insight]", "Riders trust a seat map more than a list.");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.locator('#li-pf-preview [data-case="guxo"]').first().click();
   await page.waitForFunction(() => /Riders trust a seat map/.test(document.querySelector("#li-pf-preview").textContent));
+  // Delete one from its editor.
+  await page.locator("#li-pf-cases [data-case-card]").first().click();
+  await page.click("#li-modal [data-case-delete]");
+  await page.click("#li-modal button[type=submit]"); // confirm
+  await page.waitForFunction(() => document.querySelectorAll("#li-pf-cases [data-case-card]").length === 2);
   // Hide a section: it leaves the preview.
   await page.uncheck("#li-pf-form [name=show_about]");
   await page.click("#li-pf-form button[type=submit]");
@@ -1106,6 +1140,9 @@ export function createClient() {
   };
 }`;
 }
+
+// The Portfolio editor's sections open and close; open them all to fill fields in.
+const openAllSections = (page) => page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
 
 async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
