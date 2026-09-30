@@ -325,6 +325,16 @@ fields back in step. Case studies are cards: tap to edit (delete is in the
 editor), drag onto another to swap (mouse anywhere on the card, touch by the
 grip, Ctrl/⌘ + arrow keys); they save straight away.
 
+**Projects on plan.** `projectPlan()` (core/insights.js) links a project to
+the milestones whose category is its name or code, and through them to this
+quarter's goals. Behind (red) if a started milestone is behind schedule or
+past its deadline, or the goal's progress is more than 10 points under the
+share of the quarter gone; on plan (green) otherwise once something has
+started; not started (grey) before its first milestone starts; projects
+with no linked milestones keep their own status. The Overview tiles (%,
+bar, status line) and the project details (status, reason, each milestone's
+pace, the goal) use it (`planOf()` in views/project-cards.js).
+
 **Plan-year quarters.** `app/core/quarters.js`: with a plan year
 (`preferences.year` = { start, end }, set in Settings → My year; owners who
 loaded the year plan default to `PLAN_YEAR`, Sep 22, 2026 → Sep 23, 2027) Q1

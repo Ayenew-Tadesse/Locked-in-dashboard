@@ -1074,6 +1074,16 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.goto(BASE + "?demo=history#/quarter?q=4&y=2026");
   await page.waitForFunction(() => /Ship Gexi; connect the network/.test(document.querySelector(".li-goals")?.textContent || ""));
   assert.match(await page.textContent(".li-view-head .card-label"), /^Q4 · Jul 1 – Sep 23, 2027/);
+  // Projects are coloured by plan: green on plan, grey before their milestones start.
+  await page.goto(BASE + "?demo=history#/");
+  await page.waitForSelector(".li-project-tile");
+  const tiles = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll(".li-project-tile")].map((t) => [t.querySelector(".li-pt-name").textContent, [t.dataset.plan, t.querySelector(".li-pt-pct").className, t.querySelector(".li-pt-plan").textContent]])));
+  if (new Date() < new Date("2026-12-14")) assert.deepEqual(tiles["Guxo Flights"], ["on_plan", "li-pt-pct green", "On plan"]);
+  if (new Date() < new Date("2027-02-22")) assert.deepEqual(tiles.Guxo, ["not_started", "li-pt-pct idle", "Not started yet"]);
+  await page.click('.li-project-tile[data-plan="on_plan"], .li-project-tile >> nth=0');
+  await page.waitForSelector("#li-modal .li-project-plan");
+  assert.match(await page.locator("#li-modal .li-project-plan").innerText(), /This quarter's goal: Build the shared foundation/);
+  await page.click("#li-modal [data-close]");
   await page.goto(BASE + "?demo=history#/calendar?month=2026-09&day=2026-09-24");
   await page.waitForSelector("#li-cal-day");
   assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);
@@ -1600,13 +1610,15 @@ test("projects: small cards (3 a row) under Activity; details on tap; the owner 
   assert.ok(boxes[0].y > heat.y + heat.height - 1, "cards sit under the Activity card");
   assert.ok(boxes.every((b) => Math.abs(b.y - boxes[0].y) < 1), "three in a row, even on a phone");
   assert.ok(boxes[2].x + boxes[2].width <= 390, "all fit on screen");
-  // Only the name, a description and progress.
+  // The name, a description, progress and whether it's going as planned (the demo's booking-flow milestone is behind).
   const flightsTile = page.locator('#li-projects .li-project-tile[aria-label^="Guxo Flights"]');
-  assert.deepEqual((await flightsTile.innerText()).split("\n").map((t) => t.trim()).filter(Boolean), ["Guxo Flights", "Flight booking", "33%"]);
+  assert.deepEqual((await flightsTile.innerText()).split("\n").map((t) => t.trim()).filter(Boolean), ["Guxo Flights", "Flight booking", "33%", "Behind plan"]);
+  assert.match(await flightsTile.locator(".li-pt-pct").getAttribute("class"), /\bred\b/, "red when behind plan");
+  assert.match(await flightsTile.getAttribute("title"), /^Behind: /);
   // Tap for the details; tick a checklist item there.
   await flightsTile.click();
   const detail = page.locator("#li-modal .li-project-detail");
-  assert.match(await page.locator("#li-modal").innerText(), /FLT[\s\S]*ON TRACK[\s\S]*Web app[\s\S]*2 of 6 done/i);
+  assert.match(await page.locator("#li-modal").innerText(), /FLT[\s\S]*BEHIND PLAN[\s\S]*Behind: [\s\S]*Web app[\s\S]*2 of 6 done/i);
   const item = await detail.locator("input[type=checkbox]:not(:checked)").first().getAttribute("data-item");
   await detail.locator(`input[data-item="${item}"]`).click();
   await page.waitForFunction(() => /3 of 6 done/.test(document.querySelector("#li-modal .li-project-detail")?.textContent || ""));

@@ -156,3 +156,47 @@ export function planForDay(tasks, day, cfg, today) {
   return { date: day, label: formatDay(day, { weekday: "long", month: "long", day: "numeric" }),
     planned_minutes: used, budget_minutes: budget, tasks: plan, deferred: later };
 }
+
+/**
+ * Is a project going as planned? Its milestones are the ones whose category
+ * is the project's name (or code); their goals are its quarterly goals.
+ *  - "behind": a started milestone is behind schedule or past its deadline,
+ *    or this quarter's goal is behind the time elapsed (10-point cushion);
+ *  - "on_plan": otherwise, once something has started or finished;
+ *  - "not_started": its milestones haven't started yet (nothing is late);
+ *  - "manual": no milestones linked, so the project's own status stands.
+ * quarter is the current quarter ({ start, end }); inQuarter picks its goals.
+ */
+export function projectPlan(project, { milestones = [], goals = [], tasks = [], today, timeZone, quarter = null, inQuarter = goalInQuarter } = {}) {
+  const keys = [project.name, project.code].filter(Boolean).map((s) => String(s).trim().toLowerCase());
+  const ms = milestones.filter((m) => m.status !== "cancelled" && keys.includes(String(m.category || "").trim().toLowerCase()));
+  if (!ms.length) return { state: "manual", reason: "", milestones: [], goals: [] };
+  const rows = ms.map((m) => ({ m, info: milestoneInfo(m, tasks, today, timeZone), started: (m.start_date || "") <= today }))
+    .sort((a, b) => String(a.m.deadline || "9").localeCompare(String(b.m.deadline || "9")));
+  const late = rows.filter((r) => r.started && ["behind", "overdue"].includes(r.info.pace));
+  // This quarter's goals for these milestones, and whether each keeps pace with the time gone.
+  const goalIds = new Set(ms.map((m) => m.goal_id).filter(Boolean));
+  const elapsed = quarter ? Math.round(Math.max(0, Math.min(1, (diffDays(quarter.start, today) + 1) / (diffDays(quarter.start, quarter.end) + 1))) * 100) : null;
+  const qGoals = goals.filter((g) => goalIds.has(g.id) && g.status !== "cancelled" && (!quarter || inQuarter(g, quarter)))
+    .map((g) => { const pct = Math.round(Number(g.percentage_complete) || 0); return { g, pct, expected: elapsed, behind: g.status !== "completed" && elapsed != null && pct + 10 < elapsed }; });
+  const lateGoals = qGoals.filter((x) => x.behind);
+  const active = rows.some((r) => r.started || r.info.pace === "done");
+  let state, reason;
+  if (late.length || lateGoals.length) {
+    state = "behind";
+    const r = late[0];
+    reason = r ? (r.info.pace === "overdue" ? `Behind: "${r.m.title}" passed its deadline at ${Math.round(Number(r.m.percentage_complete) || 0)}%`
+      : `Behind: "${r.m.title}" is at ${Math.round(Number(r.m.percentage_complete) || 0)}% of ${r.info.expected_pct}% expected`)
+      : `Behind: goal "${lateGoals[0].g.title}" is at ${lateGoals[0].pct}% with ${lateGoals[0].expected}% of the quarter gone`;
+  } else if (active) {
+    state = "on_plan";
+    reason = "On plan";
+  } else {
+    state = "not_started";
+    const first = rows.map((r) => r.m.start_date).filter(Boolean).sort()[0];
+    reason = first ? `Starts ${formatDay(first, { month: "short", day: "numeric", year: "numeric" })}` : "Not started yet";
+  }
+  return { state, reason, milestones: rows, goals: qGoals };
+}
+
+export const PLAN_LABELS = { on_plan: "On plan", behind: "Behind plan", not_started: "Not started yet" };
