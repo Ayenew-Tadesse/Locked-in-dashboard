@@ -61,7 +61,9 @@ git-ignored).
    [`supabase/migrations/20261006000000_portfolio_details.sql`](../supabase/migrations/20261006000000_portfolio_details.sql)
    (profile details on the portfolio), then
    [`supabase/migrations/20261007000000_team_admins.sql`](../supabase/migrations/20261007000000_team_admins.sql)
-   (team admins). Run the files in this order.
+   (team admins), then
+   [`supabase/migrations/20261008000000_portfolio_site.sql`](../supabase/migrations/20261008000000_portfolio_site.sql)
+   (portfolio site layout and the public `portfolio-media` image bucket). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.

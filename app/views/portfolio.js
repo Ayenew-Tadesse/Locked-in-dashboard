@@ -6,6 +6,9 @@ import { formatDay, dayOf } from "../core/dates.js";
 import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, PORTFOLIO_LINKS, INDUSTRIES, RESEARCH_METHODS, portfolioPrefs, buildPortfolioData } from "../core/portfolio.js";
 import { renderPortfolio } from "../portfolio/render.js";
+import { siteEditorHtml, wireSiteEditor } from "./portfolio-site.js";
+
+let previewView = null; // the case study open in the preview
 
 let links; // undefined: not loaded yet; null: the table isn't set up yet
 
@@ -36,6 +39,8 @@ export function renderPortfolioPage(el) {
         Only people with one of your links can open it, it shows only <b>your</b> work (nothing about colleagues, no files or private notes), and you can switch a link off at any time.</p>
     </section>
 
+    ${siteEditorHtml()}
+
     <section class="li-card" id="li-pf-links">
       <div class="li-card-head"><span class="card-label">Share links</span></div>
       <form class="li-quick-add today-add li-pf-new" id="li-pf-new" autocomplete="off">
@@ -47,7 +52,7 @@ export function renderPortfolioPage(el) {
     </section>
 
     <section class="li-card">
-      <div class="li-card-head"><span class="card-label">What's on it</span></div>
+      <div class="li-card-head"><span class="card-label">Profile details and sections</span></div>
       <form class="li-form li-pf-form" id="li-pf-form" autocomplete="off">
         <fieldset class="full li-pf-group"><legend>The basics</legend>
           <label class="li-field">Title<input name="d_title" maxlength="80" value="${esc(d.title)}" placeholder="e.g. Senior UI/UX Designer"></label>
@@ -106,8 +111,22 @@ export function renderPortfolioPage(el) {
 
     <section class="li-card li-pf-preview-card">
       <div class="li-card-head"><span class="card-label">Preview: what hiring managers see</span></div>
-      <div class="li-pf-preview" id="li-pf-preview">${renderPortfolio(previewData())}</div>
+      <div class="li-pf-preview" id="li-pf-preview">${renderPortfolio(previewData(), { view: previewView })}</div>
     </section>`;
+
+  const drawPreview = () => { el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView }); };
+  // Links inside the preview: open a case study, go back home, or scroll to a section.
+  el.querySelector("#li-pf-preview").addEventListener("click", (e) => {
+    const a = e.target.closest("[data-case],[data-home],[data-scroll]");
+    if (!a) return;
+    e.preventDefault();
+    if (a.dataset.scroll) { el.querySelector("#" + a.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    previewView = a.hasAttribute("data-case") ? a.dataset.case : null;
+    drawPreview();
+    el.querySelector(".li-pf-preview-card").scrollIntoView({ block: "start" });
+  });
+  // Site saved: redraw the preview (or the whole page after an import or a case-study change).
+  wireSiteEditor(el, (full) => (full ? renderPortfolioPage(el) : drawPreview()));
 
   el.querySelector("#li-pf-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -129,6 +148,7 @@ export function renderPortfolioPage(el) {
       skills: commas(f.d_skills.value).slice(0, 30), tools: commas(f.d_tools.value).slice(0, 30),
     };
     const portfolio = {
+      ...(state.settings.preferences?.portfolio || {}), // keeps your portfolio site
       headline: f.headline.value.trim(), bio: f.bio.value.trim(), approach: f.approach.value.trim(), details,
       links: Object.fromEntries(PORTFOLIO_LINKS.map(([k]) => [k, f["link_" + k].value.trim()]).filter(([, v]) => v)),
       show: Object.fromEntries(PORTFOLIO_SECTIONS.map(([k]) => [k, f["show_" + k].checked])),
@@ -137,7 +157,7 @@ export function renderPortfolioPage(el) {
     try {
       const s = await state.store.savePreferences({ ...(state.settings.preferences || {}), portfolio });
       state.settings = { ...state.settings, ...s };
-      el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData());
+      drawPreview();
       toast("Portfolio saved");
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });

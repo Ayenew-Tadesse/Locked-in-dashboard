@@ -5,6 +5,7 @@ import { esc } from "../ui/dom.js";
 import { addDays, formatDay, formatMinutes } from "../core/dates.js";
 import { projectProgress, safeUrl, LINK_LABELS } from "../core/projects.js";
 import { activityStats, PORTFOLIO_LINKS } from "../core/portfolio.js";
+import { hasSite, renderSite } from "./site.js";
 
 const STATUS = { not_started: "Not started", in_progress: "In progress", completed: "Completed", on_hold: "On hold" };
 const PROJECT_STATE = { good: "On track", warn: "Needs attention", idle: "Not started" };
@@ -50,8 +51,8 @@ function projectCard(p) {
   </article>`;
 }
 
-/** The whole portfolio as HTML. */
-export function renderPortfolio(data) {
+/** The whole portfolio as HTML. opts.view: a case study's id to show that case study. */
+export function renderPortfolio(data, opts = {}) {
   const a = data.about || {};
   const act = data.activity;
   const projects = data.projects || [];
@@ -134,6 +135,9 @@ export function renderPortfolio(data) {
         </article>`).join("")}</div>` : ""}
     </section>`);
   }
+
+  // Laid out like your portfolio website when you've set one up (or imported it).
+  if (hasSite(data.site)) return renderSite(data, sections, opts.view);
 
   const headline = a.headline || [d.title, d.years ? `${d.years} years of experience` : ""].filter(Boolean).join(" · ");
   const open = Object.entries(d.open || {}).filter(([, v]) => v).map(([k]) => ({ remote: "remote", hybrid: "hybrid", relocation: "relocation" })[k]);
