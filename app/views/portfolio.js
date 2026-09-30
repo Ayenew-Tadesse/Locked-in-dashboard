@@ -7,6 +7,7 @@ import { buildPortfolioData } from "../core/portfolio.js";
 import { renderPortfolio } from "../portfolio/render.js";
 import { editorHtml, wireEditor } from "./portfolio-site.js";
 import { printResume } from "../portfolio/resume.js";
+import { tryInPhone } from "../portfolio/phone.js";
 
 let previewView = null; // the case study open in the preview
 
@@ -113,6 +114,7 @@ export function renderPortfolioPage(el) {
   const drawPreview = () => { el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView }); };
   // Links inside the preview: open a case study, go back home, or scroll to a section.
   el.querySelector("#li-pf-preview").addEventListener("click", (e) => {
+    if (tryInPhone(e)) return;
     const a = e.target.closest("[data-case],[data-home],[data-scroll],[data-resume],[data-print-resume]");
     if (!a) return;
     e.preventDefault();

@@ -464,6 +464,7 @@ function editCase(original, done, onDelete) {
         <label class="li-field full">Card description<textarea name="cardDesc" rows="2" maxlength="300">${esc(c.cardDesc || "")}</textarea></label>
         <label class="li-field">Status<select name="status"><option value="live"${c.status !== "progress" ? " selected" : ""}>Live case study</option><option value="progress"${c.status === "progress" ? " selected" : ""}>In progress (card only)</option></select></label>
         <label class="li-field">Live app link<input name="liveUrl" maxlength="300" value="${esc(c.liveUrl || "")}" placeholder="https://…"></label>
+        <label class="li-check-row full"><input type="checkbox" name="phone"${c.phone !== false ? " checked" : ""}> Show "Try the app" in a phone frame on computers <small class="li-muted">(turn off for desktop websites)</small></label>
         <label class="li-field full">Dashboard project <small class="li-muted">(shows its live progress)</small><select name="project"><option value="">None</option>${(state.projects || []).map((p) => `<option${c.project === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
       </fieldset>
       <fieldset class="full li-pf-group"><legend>Top of the case study</legend>
@@ -551,7 +552,7 @@ function editCase(original, done, onDelete) {
         ...c,
         id: c.id || v.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "case-" + Date.now().toString(36),
         title: v.title.trim(), tag: v.tag.trim(), cardDesc: v.cardDesc.trim(), status: v.status === "progress" ? "progress" : "live",
-        liveUrl: v.liveUrl.trim(), project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
+        liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
         shots, meta: [...META.map((l) => ({ label: l, value: v["meta_" + l].trim() })), ...(c.meta || []).filter((m) => !META.includes(m.label))].filter((m) => m.value),
         overview: v.overview.trim(), problem: v.problem.trim(), insight: v.insight.trim(), solution: v.solution.trim(), outcome: v.outcome.trim(),
         process: { intro: v.processIntro.trim(), steps: lines(v.processSteps) },

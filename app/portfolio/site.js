@@ -22,6 +22,12 @@ const link = (href, label, cls = "pf-btn pf-btn--outline") => {
   const url = safeUrl(href) || (/^mailto:|^tel:/i.test(href || "") ? href : null);
   return url ? `<a class="${cls}" href="${esc(url)}"${/^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : ""}>${label}</a>` : "";
 };
+// "Try the app": opens in a phone frame on computers (phone.js) unless the
+// case study turns that off.
+const tryLink = (c, label, cls) => {
+  const a = link(c.liveUrl, label, cls);
+  return a && c.phone !== false ? a.replace("<a ", `<a data-try="${esc(c.title || "")}" `) : a;
+};
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
 const SOCIAL = { linkedin: "LinkedIn", behance: "Behance", dribbble: "Dribbble", instagram: "Instagram", github: "GitHub", website: "Website" };
 
@@ -45,7 +51,7 @@ function caseCard(c, projects) {
       ${prog && prog.total ? `<div class="pf-card__prog"><div class="pf-bar"><i style="width:${prog.pct}%"></i></div><span>${prog.pct}% · live from my dashboard</span></div>` : ""}
       <div class="pf-card__cta">
         ${c.status === "progress" ? `<span class="pf-btn pf-btn--disabled">In progress</span>` : `<a class="pf-btn pf-btn--solid" href="#case=${esc(c.id)}" data-case="${esc(c.id)}">View case study</a>`}
-        ${c.status !== "progress" ? link(c.liveUrl, "Try the app &#8599;") : ""}
+        ${c.status !== "progress" ? tryLink(c, "Try the app &#8599;") : ""}
       </div>
     </div>
   </article>`;
@@ -122,7 +128,7 @@ function casePage(data, c) {
     <h1 class="pf-case__title">${esc(c.title)}</h1>
     ${c.subtitle ? `<p class="pf-s-desc">${esc(c.subtitle)}</p>` : ""}
     ${c.shots?.length ? `<div class="pf-shots">${c.shots.map((s) => img(s.src, s.alt || c.title)).join("")}</div>` : ""}
-    ${c.liveUrl ? `<p class="pf-center">${link(c.liveUrl, "Try the live prototype &#8599;")}</p>` : ""}
+    ${c.liveUrl ? `<p class="pf-center">${tryLink(c, "Try the live prototype &#8599;")}</p>` : ""}
     ${c.meta?.length ? `<dl class="pf-meta">${c.meta.map((m) => `<div><dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd></div>`).join("")}</dl>` : ""}
     ${prog && prog.total ? `<p class="pf-live-prog"><b>Live from my dashboard:</b> ${prog.pct}% done · ${prog.done} of ${prog.total} steps${p.stage ? ` · ${esc(p.stage)}` : ""}</p>` : ""}
     ${block("Overview", paras(c.overview))}
