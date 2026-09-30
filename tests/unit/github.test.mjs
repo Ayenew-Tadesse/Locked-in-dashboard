@@ -16,6 +16,8 @@ test("github: whose commits by default", () => {
   assert.equal(defaultGithubUser({}, "ayenew-tadesse.github.io"), "ayenew-tadesse", "this site's GitHub account");
   assert.equal(defaultGithubUser({ portfolio: { site: { cv: { contacts: [{ href: "https://github.com/Ayenew-Tadesse" }] } } } }, "localhost"), "Ayenew-Tadesse", "from your resume links");
   assert.equal(defaultGithubUser({}, "localhost"), "");
+  assert.equal(defaultGithubUser({}, "ayenew-tadesse.github.io", { owner: false }), "", "an admin doesn't get the site owner's account");
+  assert.equal(defaultGithubUser({ portfolio: { links: { github: "https://github.com/their-own" } } }, "ayenew-tadesse.github.io", { owner: false }), "their-own", "but their own links count");
 });
 
 test("github: commits grouped by day in your time zone, no duplicates", () => {

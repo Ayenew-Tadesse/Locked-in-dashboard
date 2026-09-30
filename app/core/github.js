@@ -14,10 +14,11 @@ export function githubUser(v) {
 }
 
 /** The username to use: yours in Settings, else from this site's address (<you>.github.io) or your links. */
-export function defaultGithubUser(preferences, hostname = "") {
+export function defaultGithubUser(preferences, hostname = "", { owner = true } = {}) {
   const saved = preferences?.github?.username;
   if (typeof saved === "string") return saved.trim(); // "" means switched off
-  const host = String(hostname).match(/^([a-z0-9-]+)\.github\.io$/i);
+  // The site's GitHub account (from its address) is the owner's, not an admin's.
+  const host = owner && String(hostname).match(/^([a-z0-9-]+)\.github\.io$/i);
   if (host) return host[1];
   const site = preferences?.portfolio?.site || {};
   const links = [site.social?.github, ...(site.cv?.contacts || []).map((c) => c.href), ...(site.contact || []).map((c) => c.href), preferences?.portfolio?.links?.github];
