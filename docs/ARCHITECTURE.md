@@ -313,6 +313,14 @@ draws it (home page plus one page per case, `#t=…&case=<id>`) and mixes in
 the live dashboard sections; case studies linked to a project show its live
 progress. `portfolio_view` removes site sections that are switched off.
 
+**Edit | Preview on web** sit in the Portfolio page's top bar
+(`#li-pagebar-actions`). Preview on web opens `portfolio.html` in a named tab
+through a private link of your own ("My preview (you)", one hour, kept in
+`localStorage`, reused while valid and left out of the share-link list), so it
+is exactly what a hiring manager sees. Every portfolio save posts on the
+`lockedin-portfolio` BroadcastChannel and the preview tab reloads
+`portfolio_view`; in demo mode the tab asks the dashboard for the data instead.
+
 ## Team admins (added later)
 
 Migration `20261007000000_team_admins.sql` adds a third role, `admin`.

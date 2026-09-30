@@ -12,6 +12,62 @@ let previewView = null; // the case study open in the preview
 
 let links; // undefined: not loaded yet; null: the table isn't set up yet
 
+// "Preview on web": your portfolio in its own tab, exactly as a hiring manager
+// sees it (the real page and private-link route). It uses a private link of
+// your own that lasts an hour, kept in this browser and left out of the list.
+const PREVIEW_NAME = "My preview (you)";
+const PREVIEW_KEY = "lockedin_pf_preview";
+const PREVIEW_TAB = "lockedin-portfolio-preview";
+const HOUR = 3600000;
+let channel; // tells the preview tab when you save
+function previewChannel() {
+  if (channel !== undefined) return channel;
+  channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("lockedin-portfolio");
+  // Demo mode has no database: the preview tab asks this page for the data.
+  if (channel) channel.onmessage = (e) => { if (e.data?.type === "hello" && state.store?.mode === "demo") channel.postMessage({ type: "data", data: previewData() }); };
+  return channel;
+}
+/** After every portfolio save: the preview tab reloads what hiring managers see. */
+function announceSaved() {
+  try { previewChannel()?.postMessage({ type: "saved", data: state.store?.mode === "demo" ? previewData() : undefined }); } catch { /* the tab refreshes on its next open */ }
+}
+const readPreview = () => { try { return JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null"); } catch { return null; } };
+async function previewToken() {
+  const s = readPreview();
+  const row = s && Array.isArray(links) ? links.find((l) => l.id === s.id) : null;
+  if (s?.token && s.user === state.me && new Date(s.expires_at) - Date.now() > 5 * 60000 && (!Array.isArray(links) || (row && !row.revoked_at))) return s.token;
+  if (s?.id && s.user === state.me && row && !row.revoked_at) await state.store.revokePortfolioLink(s.id).catch(() => {});
+  const expires_at = new Date(Date.now() + HOUR).toISOString();
+  const { token, row: made } = await state.store.createPortfolioLink({ name: PREVIEW_NAME, expires_at });
+  try { localStorage.setItem(PREVIEW_KEY, JSON.stringify({ id: made.id, token, expires_at, user: state.me })); } catch { /* a new link next time */ }
+  if (Array.isArray(links)) links = [made, ...links];
+  return token;
+}
+function pageUrl(query, hash) {
+  return new URL("portfolio.html", location.href.split("#")[0].replace(/[^/]*$/, "")).href.split("?")[0] + "?" + query + "#" + hash;
+}
+async function openWebPreview() {
+  // Open (or reuse) the tab straight away, so pop-up blockers allow it.
+  const w = window.open("", PREVIEW_TAB);
+  if (!w) { toast("Allow pop-ups for this site to open the preview", "error"); return; }
+  const caseHash = previewView ? "case=" + encodeURIComponent(previewView) : "";
+  try {
+    let url;
+    if (state.store.mode === "demo") url = pageUrl("demo=1&live=1", caseHash);
+    else {
+      if (!Array.isArray(links)) links = await state.store.listPortfolioLinks().catch(() => null);
+      if (links === null) throw new Error("run the portfolio SQL update in Supabase first (20261005000000_portfolio.sql)");
+      const token = await previewToken();
+      url = pageUrl("preview=" + Date.now(), "t=" + encodeURIComponent(token) + (caseHash ? "&" + caseHash : ""));
+    }
+    w.location.href = url;
+    w.focus();
+  } catch (err) {
+    try { if (w.location.href === "about:blank") w.close(); } catch { /* another page is open there */ }
+    toast("Couldn't open the preview: " + err.message, "error");
+  }
+}
+
 /** The address a hiring manager opens (the secret stays after # so it never reaches a server log). */
 export function portfolioUrl(token) {
   return new URL("portfolio.html", location.href.split("#")[0].replace(/[^/]*$/, "")).href + "#t=" + encodeURIComponent(token);
@@ -33,6 +89,16 @@ export function renderPortfolioPage(el) {
   const p = portfolioPrefs(state.settings.preferences);
   const d = p.details;
   const cats = categoriesOf(state.tasks);
+  previewChannel();
+  const bar = document.getElementById("li-pagebar-actions");
+  if (bar) {
+    bar.innerHTML = `<div class="li-pf-modes" role="group" aria-label="Portfolio">
+      <button type="button" class="li-btn small primary" id="li-pf-edit" aria-current="page"><span class="li-ico" aria-hidden="true">&#9998;</span> Edit</button>
+      <button type="button" class="li-btn small" id="li-pf-web" title="Open your portfolio in a new tab, as a hiring manager sees it. It updates when you save."><span class="li-ico" aria-hidden="true">&#8599;</span> Preview on web</button>
+    </div>`;
+    bar.querySelector("#li-pf-edit").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    bar.querySelector("#li-pf-web").addEventListener("click", openWebPreview);
+  }
   el.innerHTML = `
     <section class="li-card li-pf-intro">
       <p class="li-sub">A private page for hiring managers, built live from your dashboard: your activity, projects, milestones, plan and how you work.
@@ -126,7 +192,7 @@ export function renderPortfolioPage(el) {
     el.querySelector(".li-pf-preview-card").scrollIntoView({ block: "start" });
   });
   // Site saved: redraw the preview (or the whole page after an import or a case-study change).
-  wireSiteEditor(el, (full) => (full ? renderPortfolioPage(el) : drawPreview()));
+  wireSiteEditor(el, (full) => { announceSaved(); if (full) renderPortfolioPage(el); else drawPreview(); });
 
   el.querySelector("#li-pf-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -158,6 +224,7 @@ export function renderPortfolioPage(el) {
       const s = await state.store.savePreferences({ ...(state.settings.preferences || {}), portfolio });
       state.settings = { ...state.settings, ...s };
       drawPreview();
+      announceSaved();
       toast("Portfolio saved");
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
@@ -212,9 +279,10 @@ function drawLinks(el) { const box = el.querySelector("#li-pf-list"); if (box) b
 function linksHtml() {
   if (links === undefined) return `<p class="li-sub">Loading links…</p>`;
   if (links === null) return `<p class="li-sub">Share links need a small database update: run <code>20261005000000_portfolio.sql</code> in the Supabase SQL editor.</p>`;
-  if (!links.length) return `<p class="li-empty">No links yet. Create one for each company you apply to, so you can switch it off later.</p>`;
+  const shown = links.filter((l) => l.name !== PREVIEW_NAME);
+  if (!shown.length) return `<p class="li-empty">No links yet. Create one for each company you apply to, so you can switch it off later.</p>`;
   const day = (ts) => formatDay(dayOf(ts, state.timeZone) || String(ts).slice(0, 10), { month: "short", day: "numeric", year: "numeric" });
-  return `<ul class="li-tokens li-pf-links">${links.map((l) => {
+  return `<ul class="li-tokens li-pf-links">${shown.map((l) => {
     const off = !!l.revoked_at, expired = !off && l.expires_at && new Date(l.expires_at) < new Date();
     return `<li class="${off || expired ? "off" : ""}">
       <span><b>${esc(l.name)}</b> <small class="li-muted li-mono">${esc(l.token_prefix)}…</small><br>

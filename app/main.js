@@ -165,6 +165,7 @@ function syncPageMode(r) {
   if (page && !was) { mainScroll = window.scrollY; fromMain = !!started && navReady; }
   document.documentElement.classList.toggle("li-page", page);
   $("#li-pagebar").hidden = !page;
+  $("#li-pagebar-actions").innerHTML = ""; // a page adds its own buttons when it draws
   if (page) {
     $("#li-page-title").textContent = VIEWS[r.name].label;
     $("#li-back").setAttribute("href", mainHash);

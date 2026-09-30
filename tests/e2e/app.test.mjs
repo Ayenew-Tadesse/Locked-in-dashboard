@@ -481,6 +481,64 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.close();
 });
 
+test("portfolio: Edit and Preview on web (demo): opens a new tab that follows your saves", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  const bar = page.locator("#li-pagebar-actions");
+  assert.equal(await bar.locator("#li-pf-edit").getAttribute("aria-current"), "page", "Edit is where you are");
+  const [tab] = await Promise.all([page.context().waitForEvent("page"), bar.locator("#li-pf-web").click()]);
+  await tab.waitForURL(/portfolio\.html\?demo=1&live=1/);
+  await tab.waitForSelector(".pf-hero h1, .pf-s-hero h1");
+  // Save a change in the dashboard: the tab shows it without reloading.
+  await page.fill("#li-pf-form [name=headline]", "Designer of calm booking flows");
+  await page.click("#li-pf-form button[type=submit]");
+  await tab.waitForFunction(() => /Designer of calm booking flows/.test(document.body?.textContent || ""));
+  // Tapping again reuses the same tab.
+  await bar.locator("#li-pf-web").click();
+  await tab.waitForURL(/portfolio\.html\?demo=1&live=1/);
+  await page.waitForTimeout(300);
+  assert.equal(page.context().pages().length, 2, "no second preview tab");
+  // Leaving the page removes the buttons from the top bar.
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.waitForSelector(".li-formula");
+  assert.equal(await bar.innerHTML(), "");
+  assert.deepEqual(page.errors, []);
+  await tab.close(); await page.close();
+});
+
+test("portfolio: Preview on web (database) uses your own private link, reused and left out of the list", async () => {
+  const page = await dbPage({ signedIn: true });
+  page.on("dialog", (d) => d.accept());
+  // First sign-in asks how to greet you.
+  await page.waitForSelector("#li-modal", { state: "visible" });
+  await page.fill('#li-modal input[name="name"]', "Aye");
+  await page.selectOption('#li-modal select[name="greeting"]', "mr");
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-list .li-empty");
+  const [tab] = await Promise.all([page.context().waitForEvent("page"), page.click("#li-pf-web")]);
+  await tab.waitForURL(/portfolio\.html\?preview=\d+#t=lip_/);
+  await tab.waitForFunction(() => /Version 1/.test(document.body?.textContent || ""));
+  const links = await page.evaluate(() => window.__pfLinks);
+  assert.equal(links.length, 1);
+  assert.equal(links[0].name, "My preview (you)");
+  assert.ok(new Date(links[0].expires_at) - Date.now() <= 3600000 && new Date(links[0].expires_at) - Date.now() > 3500000, "lasts an hour");
+  const token = new URLSearchParams(new URL(tab.url()).hash.slice(1)).get("t");
+  assert.deepEqual(await tab.evaluate(() => window.__rpc.filter((c) => c[0] === "portfolio_view").map((c) => c[1])), [{ p_token: token }]);
+  assert.match(await page.locator("#li-pf-list").innerText(), /No links yet/, "your preview link isn't in the list");
+  // Save: the open tab asks for the latest version.
+  await page.fill("#li-pf-form [name=headline]", "New headline");
+  await page.click("#li-pf-form button[type=submit]");
+  await tab.waitForFunction(() => /Version 2/.test(document.body?.textContent || ""));
+  // Again: the same link, no new one.
+  await page.click("#li-pf-web");
+  await tab.waitForFunction((t) => location.hash.includes(t) && /Version 1/.test(document.body?.textContent || ""), token);
+  assert.equal((await page.evaluate(() => window.__pfLinks)).length, 1, "the preview link is reused");
+  assert.deepEqual(page.errors, []);
+  await tab.close(); await page.close();
+});
+
 test("portfolio page (hiring managers): opens from a link, refuses bad links, fits a phone", async () => {
   const calls = [];
   const page = await browser.newPage({ viewport: { width: 375, height: 800 } });
@@ -986,14 +1044,19 @@ const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toIS
 const tasks = ${assigned} ? [{ id: "t-assigned", user_id: "u1", assigned_by: "o1", title: "Design the payment screen", date: today,
   status: "not_started", priority: "high", completion_percentage: 0, due_date: today, created_at: today + "T08:00:00Z" }] : [];
 const files = [];
+const pfLinks = [];
 window.__uploads = [];
+window.__rpc = [];
 const profile = { id: "u1", name: "aye", email: "aye@example.com", timezone: "UTC" };
 if (!oldDb) profile.greeting = null;
 window.__fakeSignUps = [];
 function builder(table) {
-  const q = { table, op: "select", cols: "", values: null, single: false };
+  const q = { table, op: "select", cols: "", values: null, single: false, eq: null };
   const run = () => {
     if (table === "profiles" && q.op === "update") Object.assign(profile, q.values);
+    if (table === "portfolio_links" && q.op === "insert") { const l = { id: "pl" + (pfLinks.length + 1), created_at: today, revoked_at: null, views: 0, last_viewed_at: null, ...q.values }; pfLinks.push(l); window.__pfLinks = pfLinks; return { ...l }; }
+    if (table === "portfolio_links" && q.op === "update") { pfLinks.filter((l) => !q.eq || l[q.eq[0]] === q.eq[1]).forEach((l) => Object.assign(l, q.values)); return null; }
+    if (table === "portfolio_links") return pfLinks.map((l) => ({ ...l }));
     if (table === "tasks" && q.op === "update") { const t = tasks[0]; Object.assign(t, q.values); return q.single ? { ...t } : [{ ...t }]; }
     if (table === "tasks") return q.single ? null : tasks.map((t) => ({ ...t }));
     if (table === "task_files" && q.op === "insert") { const f = { id: "f" + (files.length + 1), user_id: "u1", created_at: today, ...q.values }; files.push(f); return { ...f }; }
@@ -1014,6 +1077,7 @@ function builder(table) {
       if (k === "select") q.cols = a[0] || "";
       if (k === "update" || k === "insert" || k === "upsert") { q.op = k; q.values = a[0]; }
       if (k === "single" || k === "maybeSingle") q.single = true;
+      if (k === "eq") q.eq = a;
       return b;
     };
   } });
@@ -1022,7 +1086,13 @@ function builder(table) {
 export function createClient() {
   return {
     from: builder,
-    rpc: async () => ({ data: null, error: null }),
+    // portfolio_view: what a hiring manager's page gets (the headline counts the calls).
+    rpc: async (name, args) => {
+      window.__rpc.push([name, args]);
+      if (name !== "portfolio_view") return { data: null, error: null };
+      const n = window.__rpc.filter((c) => c[0] === name).length;
+      return { data: { generated_at: today, about: { name: "Aye", headline: "Version " + n, links: {}, details: {} }, activity: null, projects: null, milestones: null, plan: null, work: null }, error: null };
+    },
     storage: { from: () => ({
       upload: async (path, file) => { window.__uploads.push({ path, name: file.name, size: file.size }); return { data: { path }, error: null }; },
       createSignedUrl: async () => ({ data: { signedUrl: "about:blank" }, error: null }),
@@ -1043,9 +1113,10 @@ async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
   page.on("pageerror", (e) => page.errors.push(e.message));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.route("https://api.github.com/**", (r) => r.fulfill({ json: [] }));
-  await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
+  // On the context, so a tab this page opens (Preview on web) gets the same fakes.
+  await page.context().route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned }) }));
+  await page.context().route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned }) }));
   await page.goto(BASE);
   return page;
 }
