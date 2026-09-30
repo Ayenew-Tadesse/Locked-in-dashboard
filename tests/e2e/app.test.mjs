@@ -723,6 +723,10 @@ test("GitHub: days you commit turn green on the Activity map", async () => {
   await page.click("#li-gh-refresh");
   for (let i = 0; i < 60 && asked.length === before; i++) await page.waitForTimeout(50);
   assert.ok(asked.length > before, "Refresh checks GitHub now");
+  // The portfolio preview's Activity map shows them too.
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-preview #pf-activity");
+  assert.match(await page.locator("#li-pf-preview #pf-activity").innerText(), /2\s*GitHub commits \(90 days\)[\s\S]*Green days include public GitHub commits/);
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -749,15 +753,31 @@ test("portfolio page (hiring managers): opens from a link, refuses bad links, fi
       milestones: [{ title: "Booking flow", status: "in_progress", pct: 60, deadline: "2026-10-10" }, { title: "Foundations", status: "completed", pct: 100, completed_at: "2026-09-20T00:00:00Z" }],
       plan: null,
       work: [{ title: "Booking store", day: "2026-09-27", changed: "Added the booking store", how: "One slice per step", solved: "Props five levels deep", minutes: 90 }],
-      site: { cv: { name: "AYENEW SHIFERAW", location: "Silver Spring, MD", title: "UI/UX DESIGNER | FRONT-END DEVELOPER",
+      site: { github: "Ayenew-Tadesse", tz: "UTC", cv: { name: "AYENEW SHIFERAW", location: "Silver Spring, MD", title: "UI/UX DESIGNER | FRONT-END DEVELOPER",
         contacts: [{ label: "Email", value: "a@example.com", href: "mailto:a@example.com" }, { label: "LinkedIn", value: "LinkedIn", href: "javascript:alert(1)" }],
         summary: "UI/UX Designer with a background in architecture.", skills: [{ label: "Tools", items: ["Figma", "HTML"] }],
         experience: [{ title: "The Home Depot", subtitle: "Service Desk Associate", place: "Aspen Hill, MD", dates: "September 2024 – Present", bullets: ["Employee of the Month twice"] }],
         certifications: [{ title: "UI/UX Design Foundations", bullets: ["Figma"] }], show: { certifications: false } } } };
     export function createClient() { return { rpc: async (name, args) => { await window.__rpcCall(name, args);
       return args.p_token === "lip_good_secret_0123456789abcdef" ? { data: summary, error: null } : { data: null, error: { message: "invalid link", code: "28000" } }; } }; }` }));
+  // Your public GitHub commits (asked of GitHub by the visitor's browser, no key).
+  const githubAsked = [];
+  await page.route("https://api.github.com/**", (r) => {
+    githubAsked.push(r.request().url());
+    r.fulfill({ json: { items: [
+      { sha: "c1", commit: { author: { date: "2026-09-26T10:00:00Z" }, message: "Add guest sign-in" }, repository: { name: "guxo-flights-app" } },
+      { sha: "c2", commit: { author: { date: "2026-09-26T16:00:00Z" }, message: "Seat map" }, repository: { name: "guxo-flights-app" } },
+    ] } });
+  });
   await page.goto(BASE.replace(/\/?$/, "/") + "portfolio.html#t=lip_good_secret_0123456789abcdef");
   await page.waitForSelector(".pf-hero h1");
+  // The Activity map adds the commits: Sep 26 had no finished tasks, now it's green.
+  await page.waitForSelector('#pf-activity .pf-cell[title*="GitHub commit"]');
+  assert.match(decodeURIComponent(githubAsked[0]), /search\/commits\?q=author:Ayenew-Tadesse/);
+  const sep26 = page.locator('#pf-activity .pf-cell[title^="Sat, Sep 26"]');
+  assert.match(await sep26.getAttribute("title"), /0 tasks finished, 2 GitHub commits/);
+  assert.match(await sep26.getAttribute("class"), /\bl2\b/);
+  assert.match(await page.locator("#pf-activity").innerText(), /2\s*GitHub commits \(90 days\)[\s\S]*Green days include public GitHub commits/);
   assert.deepEqual(calls[0], ["portfolio_view", { p_token: "lip_good_secret_0123456789abcdef" }]);
   const text = await page.locator("#pf-root").innerText();
   // Highlights and experience first, then projects, how I work, skills, activity and milestones.

@@ -353,6 +353,14 @@ Activity map treats a day with commits as active (green, streak, daily
 report status), like a finished checklist. Private repos would need a
 server-side token.
 
+The portfolio's Activity map shows them too: `site.github` and `site.tz` (kept
+in step by `syncPortfolioGithub()` when the dashboard opens, on Settings →
+GitHub and on every portfolio save) tell `portfolio.html` whose commits to
+ask GitHub for (the visitor's browser, keyless, cached 10 minutes);
+`mergeCommits()` adds them to the days (`{ date, done, commits }`), the
+streak and a "GitHub commits (90 days)" stat. The dashboard's preview uses the
+commits it already has.
+
 **Resume.** ☰ → Resume (`app/views/resume.js`) edits
 `preferences.portfolio.site.cv` section by section (header and contact links,
 summary, core skills, selected projects, front-end development, experience,

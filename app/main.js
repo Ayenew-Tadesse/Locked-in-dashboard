@@ -28,7 +28,7 @@ import { renderProfile } from "./views/profile.js";
 import { renderProjects } from "./views/projects.js";
 import { renderPortfolioPage } from "./views/portfolio.js";
 import { renderResumeEditor } from "./views/resume.js";
-import { startGithub } from "./github.js";
+import { startGithub, syncPortfolioGithub } from "./github.js";
 import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { setupChat } from "./ui/chat.js";
@@ -429,6 +429,7 @@ async function start(store) {
   try { setupChat(); } catch (e) { console.error(e); }
   // GitHub commits turn Activity days green (fetched now and every 10 minutes).
   startGithub(() => { feedLegacy(); window.dispatchEvent(new Event("li:github")); });
+  syncPortfolioGithub().catch((e) => console.warn("portfolio GitHub:", e.message));
   // Reveal only now that the new design is drawn (no flash of the original page).
   document.documentElement.classList.remove("app-booting");
 }
