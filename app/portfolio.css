@@ -124,13 +124,12 @@
 .pf-s-about{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px 8px;}
 .pf-s-about p{margin:0 0 12px;color:var(--ink-2);font-size:15px;}
 @container pf (min-width:760px){ .pf-s-about{padding:24px 28px 12px;} }
-.pf-s-skills{display:flex;flex-wrap:wrap;gap:12px;}
-.pf-s-skill{flex:1 1 100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+.pf-s-skills{display:grid;grid-template-columns:1fr;gap:12px;}
+.pf-s-skill{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
 .pf-s-skill h3{margin:0 0 8px;font-size:15px;}
 .pf-s-skill ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:3px;}
-/* Key skills: one card per row on phones, two on tablets, three on computers. */
-@container pf (min-width:560px){ .pf-s-skill{flex-basis:calc(50% - 6px);} }
-@container pf (min-width:860px){ .pf-s-skill{flex-basis:calc(33.333% - 8px);} }
+/* Key skills: three cards per row, one on phones. */
+@container pf (min-width:600px){ .pf-s-skills{grid-template-columns:repeat(3, minmax(0, 1fr));} }
 .pf-s-contact{display:flex;flex-wrap:wrap;gap:12px;}
 .pf-s-contact div{flex:1 1 200px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;}
 .pf-s-contact span{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;}
