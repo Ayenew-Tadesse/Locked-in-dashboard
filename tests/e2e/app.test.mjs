@@ -144,6 +144,7 @@ test("a task with a past deadline becomes overdue automatically, and can be move
   await page.click('#li-nav [data-view=tasks]');
   await page.click('.li-status-tabs a:has-text("Overdue")');
   await page.waitForFunction(() => location.hash === "#/tasks?status=overdue");
+  await page.waitForSelector('.li-status-tabs a[href="#/tasks?status=overdue"].on');
   assert.equal(await row(page, "E2E: late thing").count(), 1, "shows under Overdue");
   assert.ok((await page.locator("#li-view .li-task:not(.st-overdue)").count()) === 0, "shows only overdue tasks");
   await page.click('.li-status-tabs a[href="#/tasks"]');
@@ -433,7 +434,8 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.waitForSelector("#li-pf-preview .pf-hero");
   assert.equal(await page.textContent("#li-page-title"), "Portfolio");
   const preview = page.locator("#li-pf-preview");
-  for (const id of ["#pf-activity", "#pf-projects", "#pf-milestones", "#pf-work"]) assert.equal(await preview.locator(id).count(), 1, `${id} in the preview`);
+  for (const id of ["#pf-activity", "#pf-projects", "#pf-milestones"]) assert.equal(await preview.locator(id).count(), 1, `${id} in the preview`);
+  assert.equal(await preview.locator("#pf-work").count(), 0, "no empty How I work section while there's nothing to say");
   assert.ok(!/\(sample\)/.test(await preview.innerText()), "nothing about colleagues");
   // Create a link: shown once, with the page address and the secret after #.
   await page.waitForSelector("#li-pf-list .li-empty");
