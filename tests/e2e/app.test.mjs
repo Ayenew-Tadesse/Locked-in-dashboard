@@ -453,6 +453,8 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await openAllSections(page);
   // Introduction, numbers, experience, key skills; Save in the top bar; the preview follows.
   await page.fill("#li-pf-form [name=role]", "Senior UI/UX Designer");
+  // The preview follows as you type, before Save.
+  await page.waitForFunction(() => /Senior UI\/UX Designer/.test(document.querySelector("#li-pf-preview").textContent));
   await page.check("#li-pf-form [name=open_remote]");
   await page.fill("#li-pf-form [name=roles]", "Lead UX Designer");
   await page.fill("#li-pf-form [name=stat_num_0]", "5+");
@@ -470,6 +472,9 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   assert.equal(await page.textContent("#li-pf-save"), "Save");
   assert.match(await preview.innerText(), /Senior UI\/UX Designer[\s\S]*Open to remote[\s\S]*Looking for: Lead UX Designer[\s\S]*5\+\s*Years of Experience[\s\S]*Cut booking from 7 steps to 4[\s\S]*Lead designer · Guxo/);
   assert.match(await preview.locator("#pf-keyskills").innerText(), /Tools[\s\S]*Figma[\s\S]*Framer/);
+  // Unsaved typing is shown in the preview, and leaving without saving drops it.
+  await page.fill("#li-pf-form [name=roles]", "Design Director");
+  await page.waitForFunction(() => /Looking for: Design Director/.test(document.querySelector("#li-pf-preview").textContent));
   // Saved: it's all there after reopening the page.
   await page.evaluate(() => { location.hash = "#/settings"; });
   await page.waitForSelector(".li-formula");
