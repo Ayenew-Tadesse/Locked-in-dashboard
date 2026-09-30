@@ -18,7 +18,8 @@ html.li-authing .wrap{display:none;}
 html.li-authing .gate.li-auth{display:flex;}
 /* The quote (above the tabs) and the footer show on every page; the
    original cards only on the Overview. */
-html.li-subview .dash-grid{display:none;}
+/* Work pages (Today, Tasks, Calendar, Week, Quarter, Milestones, Analytics, Team) end with their own content: no Overview cards underneath. */
+html.li-subview .dash-grid{display:none !important;}
 /* The Tasks card replaces the original "Today's checklist" card, and the
    score tiles replace the "Your score" ring card, so the Tasks card leads
    the left column. The column no longer sticks while scrolling, so a long
@@ -639,14 +640,14 @@ html:not(.app-mode) .li-team-card{display:none;}
 .li-nav-dot[hidden]{display:none;}
 .li-nav-link.active .li-nav-dot:not(.late){background:var(--surface);color:var(--accent);}
 
-/* Laptops and desktops: the ☰ items join the tab row on the right. */
+/* Laptops and desktops: the ☰ sits at the right end of the tab row and the menu slides in from the right. */
 .li-nav-extra{display:none;}
 @media (min-width:1000px){
   html.app-mode .li-topbar{display:none;}
-  html.app-mode .li-nav-extra{display:flex;align-items:center;gap:4px;flex:none;padding-left:10px;border-left:1px solid var(--line);}
-  .li-nav-extra button.li-nav-link{background:none;border:none;cursor:pointer;font:inherit;font-size:13px;font-weight:600;}
-  .li-nav-extra .li-nav-theme{font-size:15px;padding:5px 9px;}
+  html.app-mode .li-nav-extra{display:flex;align-items:center;flex:none;margin-left:auto;padding-left:10px;}
+  .li-menu{left:auto;right:0;border-right:0;border-left:1px solid var(--line);animation-name:liMenuInRight;}
 }
+@keyframes liMenuInRight{from{transform:translateX(100%);}to{transform:none;}}
 
 /* ---- Team chat: a bar pinned to the bottom that pulls up into a tray ---- */
 html.li-has-chat body{padding-bottom:64px;}
