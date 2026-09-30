@@ -578,6 +578,49 @@ test("admins: they manage the team but not its settings", async () => {
   await page.close();
 });
 
+test("portfolio site: import from GitHub, then the preview and share page follow your portfolio's structure", async () => {
+  const fixture = readFileSync(new URL("./fixtures/portfolio-site.html", import.meta.url), "utf8");
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  const asked = [];
+  await page.route("https://raw.githubusercontent.com/**", (r) => { asked.push(r.request().url()); r.fulfill({ contentType: "text/html", body: fixture }); });
+  await page.click("#li-pf-import button[type=submit]");
+  await page.waitForSelector("#li-pf-cases [data-case-row]");
+  assert.equal(asked[0], "https://raw.githubusercontent.com/Ayenew-Tadesse/portfolio/main/index.html");
+  assert.deepEqual(await page.locator("#li-pf-cases [data-case-row] b").allInnerTexts(), ["Hid-Go Flight Booking App", "Guxo Bus Booking App", "Modern Hotel Booking App"]);
+  // The form is filled in.
+  assert.equal(await page.inputValue("#li-pf-site-form [name=role]"), "Product Designer");
+  assert.equal(await page.inputValue("#li-pf-site-form [name=stat_num_1]"), "50+");
+  assert.equal(await page.locator("#li-pf-skill-groups .li-pf-grouprow").count(), 5);
+  // The preview: introduction, stats, projects, about, key skills, contact.
+  const preview = page.locator("#li-pf-preview");
+  const home = await preview.innerText();
+  assert.match(home, /Hello there, I am[\s\S]*Ayenew Shiferaw[\s\S]*Product Designer, based in USA[\s\S]*3\+\s*Years of Experience[\s\S]*Featured projects[\s\S]*Hid-Go Flight Booking App[\s\S]*In progress[\s\S]*About me[\s\S]*architecture[\s\S]*Key skills[\s\S]*Figma \(auto-layout[\s\S]*Contact me[\s\S]*shiferawayenew0@gmail\.com/i);
+  assert.equal(await preview.locator(".pf-s-portrait").count(), 1, "the portrait came across");
+  // Open a case study, then go back.
+  await preview.locator('[data-case="hidgo"]').first().click();
+  await preview.locator(".pf-case__title").waitFor();
+  const cs = await preview.innerText();
+  assert.match(cs, /Hid-Go Flight Booking App[\s\S]*Role[\s\S]*UI\/UX Designer \(solo\)[\s\S]*Overview[\s\S]*Design process[\s\S]*Research[\s\S]*Problem statement[\s\S]*Who I designed for[\s\S]*The Frequent Flyer[\s\S]*Competitive analysis[\s\S]*Key insight[\s\S]*Information architecture[\s\S]*User flow[\s\S]*Solution[\s\S]*UI style guide[\s\S]*#1B2CC1[\s\S]*Outcome[\s\S]*Next: Guxo Bus Booking App/i);
+  assert.equal(await preview.locator(".pf-shots img").count(), 3);
+  assert.equal(await preview.locator(".pf-flow img").count(), 4);
+  await preview.locator("[data-home]").first().click();
+  await preview.locator(".pf-s-hero").waitFor();
+  // Edit a case study: the change shows in the preview.
+  await page.locator('#li-pf-cases [data-case-row="guxo"] [data-case-edit]').click();
+  await page.fill("#li-modal [name=insight]", "Riders trust a seat map more than a list.");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.locator('#li-pf-preview [data-case="guxo"]').first().click();
+  await page.waitForFunction(() => /Riders trust a seat map/.test(document.querySelector("#li-pf-preview").textContent));
+  // Hide a section: it leaves the preview.
+  await page.uncheck("#li-pf-form [name=show_about]");
+  await page.click("#li-pf-form button[type=submit]");
+  await page.locator('#li-pf-preview [data-home]').first().click();
+  await page.waitForFunction(() => !/About me/.test(document.querySelector("#li-pf-preview").textContent));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
   const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio"];

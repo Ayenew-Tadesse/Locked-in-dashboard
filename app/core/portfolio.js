@@ -5,6 +5,11 @@
 import { addDays, dayOf } from "./dates.js";
 
 export const PORTFOLIO_SECTIONS = [
+  ["cases", "Case studies", "Featured projects and their case-study pages"],
+  ["stats", "Stats", "The numbers under your introduction"],
+  ["about", "About me", "Your About me paragraphs"],
+  ["skillgroups", "Key skills", "Your skill groups"],
+  ["contact", "Contact", "Phone, email and LinkedIn cards"],
   ["highlights", "Highlights", "Your best results, near the top"],
   ["experience", "Experience", "Roles and companies, as a timeline"],
   ["skills", "Skills & tools", "Skills, tools and industries"],
@@ -40,6 +45,16 @@ export function visibleDetails(details, show) {
   return d;
 }
 
+// Which site keys belong to which switchable section.
+export const SITE_SECTIONS = { cases: "cases", stats: "stats", about: "about", skillgroups: "skills", contact: "contact" };
+/** The site a visitor may see: sections switched off are left out. */
+export function visibleSite(site, show) {
+  if (!site || typeof site !== "object") return {};
+  const out = JSON.parse(JSON.stringify(site));
+  for (const [section, key] of Object.entries(SITE_SECTIONS)) if (show[section] === false) delete out[key];
+  return out;
+}
+
 /** The saved choices, with every section shown unless switched off. */
 export function portfolioPrefs(preferences) {
   const p = (preferences && preferences.portfolio) || {};
@@ -49,6 +64,7 @@ export function portfolioPrefs(preferences) {
     links: { ...(p.links || {}) },
     show: Object.fromEntries(PORTFOLIO_SECTIONS.map(([k]) => [k, p.show?.[k] !== false])),
     categories: Array.isArray(p.categories) ? p.categories : [],
+    site: p.site && typeof p.site === "object" ? p.site : {},
   };
 }
 
@@ -63,6 +79,7 @@ export function buildPortfolioData({ name, preferences, tasks = [], projects = [
   const msTitle = (id) => milestones.find((m) => m.id === id)?.title || null;
   return {
     generated_at: new Date().toISOString(),
+    site: visibleSite(p.site, p.show),
     about: { name, headline: p.headline || null, bio: p.bio || null, approach: p.approach || null, links: p.links,
       details: visibleDetails(p.details, p.show) },
     activity: !p.show.activity ? null : {

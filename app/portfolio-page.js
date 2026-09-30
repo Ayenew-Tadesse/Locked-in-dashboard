@@ -57,10 +57,34 @@ async function main() {
   render(data);
 }
 
+// The open case study lives in the address after the link's secret: #t=…&case=hidgo,
+// so Back and the phone's back button return to the home page.
+let current = null;
+const hashParams = () => new URLSearchParams(location.hash.slice(1));
+function setCase(id) {
+  const p = hashParams();
+  if (id) p.set("case", id); else p.delete("case");
+  location.hash = p.toString();
+}
 function render(data) {
-  document.title = `${data.about?.name || "Portfolio"} · Portfolio`;
-  root.innerHTML = renderPortfolio(data);
+  current = data;
+  const view = hashParams().get("case");
+  const name = data.site?.hero?.name || data.about?.name || "Portfolio";
+  const c = view && (data.site?.cases || []).find((x) => x.id === view);
+  document.title = c ? `${c.title} · ${name}` : `${name} · Portfolio`;
+  root.innerHTML = renderPortfolio(data, { view });
   root.removeAttribute("aria-busy");
 }
+window.addEventListener("hashchange", () => { if (current) { render(current); window.scrollTo(0, 0); } });
+root.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-case],[data-home],[data-scroll]");
+  if (!a) return;
+  e.preventDefault();
+  if (a.dataset.scroll) { document.getElementById(a.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (a.hasAttribute("data-home")) {
+    setCase(null);
+    requestAnimationFrame(() => document.getElementById("pf-cases")?.scrollIntoView({ block: "start" }));
+  } else setCase(a.dataset.case);
+});
 
 main().catch((e) => { console.error(e); show(`<h1>Private portfolio</h1><p>This portfolio couldn't be loaded. Please try again in a moment.</p>`); });

@@ -460,3 +460,26 @@ exception when insufficient_privilege then raise notice 'ok - the owner stays th
 end $$;
 reset role;
 select pg_temp.check((select role from team_members where user_id = :ana) = 'member', 'the owner turns an admin back into a colleague');
+
+-- 15. Portfolio site (GitHub portfolio structure) and portfolio images ---------
+select pg_temp.act_as(:owner);
+update user_settings set preferences = '{"portfolio":{"show":{"about":false},"site":{"hero":{"role":"Product Designer"},"about":["Private about"],"cases":[{"id":"hidgo","title":"Hid-Go"}]}}}';
+insert into portfolio_links (name, token_hash, token_prefix)
+  values ('Site', encode(sha256(convert_to('lip_site_link_secret_0123456789', 'UTF8')), 'hex'), 'lip_site');
+insert into storage.objects (bucket_id, name) values ('portfolio-media', :owner || '/portrait.png');
+reset role;
+select pg_temp.act_as(:ana);
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('portfolio-media', '11111111-0000-0000-0000-000000000001/fake.png');
+  raise exception 'FAILED: uploaded into someone else''s portfolio folder';
+exception when insufficient_privilege then raise notice 'ok - portfolio images go into your own folder only';
+end $$;
+reset role;
+set role anon;
+do $$ declare r jsonb; begin
+  r := public.portfolio_view('lip_site_link_secret_0123456789');
+  if r -> 'site' -> 'hero' ->> 'role' <> 'Product Designer' or r -> 'site' -> 'cases' -> 0 ->> 'title' <> 'Hid-Go' then raise exception 'FAILED: the site structure'; end if;
+  if r::text like '%Private about%' then raise exception 'FAILED: a hidden site section left the database'; end if;
+  raise notice 'ok - the portfolio sends the site, minus hidden sections';
+end $$;
+reset role;

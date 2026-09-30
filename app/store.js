@@ -275,6 +275,15 @@ export function supabaseStoreFromClient(sb) {
       return { token, row };
     },
     async revokePortfolioLink(id) { check(await sb.from("portfolio_links").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
+    /** Uploads a portfolio image (portrait, screenshot) into your own folder; returns its public address. */
+    async uploadPortfolioImage(blob, name) {
+      const safe = String(name || "image").toLowerCase().replace(/[^a-z0-9.]+/g, "-").slice(-80);
+      const path = `${userId}/${uuid().slice(0, 8)}-${safe}`;
+      const up = await sb.storage.from("portfolio-media").upload(path, blob, { contentType: blob.type || undefined, upsert: false });
+      if (up.error && /bucket not found|not found/i.test(up.error.message)) throw new Error("run the latest SQL update in Supabase first (20261008000000_portfolio_site.sql)");
+      if (up.error) throw new Error(up.error.message);
+      return sb.storage.from("portfolio-media").getPublicUrl(path).data.publicUrl;
+    },
 
     /** Bulk import (ids generated here so rows can reference each other). */
     async importData({ goals = [], milestones = [], tasks = [], dailyNotes = [] }) {
@@ -432,6 +441,7 @@ export function createMemoryStore(seed) {
       return { token, row: { ...row } };
     },
     async revokePortfolioLink(id) { const l = portfolioLinks.find((x) => x.id === id); if (l) l.revoked_at = now(); },
+    async uploadPortfolioImage(blob) { return URL.createObjectURL(blob); },
     async importData({ goals = [], milestones = [], tasks = [], dailyNotes = [] }) {
       db.goals.push(...goals); db.milestones.push(...milestones);
       db.tasks.push(...tasks.map((t) => ({ created_at: now(), ...t })));

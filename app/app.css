@@ -689,6 +689,25 @@ html.li-modal-open .li-chat:not([data-open="true"]){display:none;}
 .li-pf-exp-row .li-pf-exp-sum{grid-column:1 / 5;}
 .li-pf-exp-btns{display:inline-flex;gap:2px;grid-row:1 / 3;grid-column:5;align-self:center;flex-direction:column;}
 .li-pf-group > .li-btn{grid-column:1 / -1;justify-self:start;}
+/* Portfolio site editor: import, images, repeatable rows, personas, flow steps. */
+.li-pf-import input{flex:1;}
+.li-pf-imgs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:4px;}
+.li-pf-imgs figure{position:relative;margin:0;}
+.li-pf-imgs img{height:88px;width:auto;border-radius:8px;border:1px solid var(--line);display:block;}
+.li-pf-imgs figure .li-icon-btn{position:absolute;top:-8px;right:-8px;background:var(--surface);border:1px solid var(--line);border-radius:50%;}
+.li-pf-upload{cursor:pointer;}
+.li-pf-groups{grid-column:1 / -1;display:flex;flex-direction:column;gap:8px;}
+.li-pf-grouprow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:6px;align-items:start;}
+.li-pf-contactrow{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.6fr) auto;}
+.li-pf-flowrow{grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;}
+.li-pf-flowrow img, .li-pf-noimg{height:56px;width:32px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
+.li-pf-noimg{display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-3);text-align:center;}
+.li-pf-personas{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:8px;}
+.li-pf-persona{position:relative;display:flex;flex-direction:column;gap:5px;padding:10px 10px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);}
+.li-pf-persona .li-icon-btn{position:absolute;top:4px;right:4px;}
+.li-pf-persona input:first-child{margin-right:26px;}
+.li-pf-case-list li{align-items:center;}
+@media (max-width:640px){ .li-pf-grouprow, .li-pf-contactrow{grid-template-columns:1fr auto;} .li-pf-grouprow > :not(.li-icon-btn){grid-column:1;} .li-pf-grouprow > .li-icon-btn{grid-column:2;grid-row:1;} }
 @media (max-width:640px){
   .li-pf-group{grid-template-columns:1fr;}
   .li-pf-exp-row{grid-template-columns:1fr 1fr auto;}

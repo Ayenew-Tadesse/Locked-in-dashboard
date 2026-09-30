@@ -298,6 +298,21 @@ them first: highlights and experience, then projects, how I work, skills,
 activity, milestones and the plan. Fields of switched-off sections are
 removed inside `portfolio_view`, so they never reach a visitor.
 
+## Portfolio site layout (added later)
+
+`preferences.portfolio.site` holds a full portfolio website: hero, portrait,
+social links, resume, stats, About paragraphs, skill groups, contact rows and
+case studies (overview, process, problem, personas, competitive table,
+insight, IA, user flow, solution, UI style guide, outcome, screenshots). On
+☰ → Portfolio, **Import from GitHub** (`app/portfolio/import.js`) reads the
+`index.html` of a GitHub portfolio repo, parses it with DOMParser and uploads
+its embedded images to the public `portfolio-media` bucket (own folder only,
+migration `20261008000000_portfolio_site.sql`). Everything is editable in
+`app/views/portfolio-site.js`. When a site exists, `app/portfolio/site.js`
+draws it (home page plus one page per case, `#t=…&case=<id>`) and mixes in
+the live dashboard sections; case studies linked to a project show its live
+progress. `portfolio_view` removes site sections that are switched off.
+
 ## Team admins (added later)
 
 Migration `20261007000000_team_admins.sql` adds a third role, `admin`.
