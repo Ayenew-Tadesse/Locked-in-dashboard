@@ -8,11 +8,11 @@ const EVERY = 10 * 60000;
 const key = (user) => `lockedin_github:${user.toLowerCase()}`;
 let timer = null, onChange = () => {}, inflight = null;
 
-/** Whose commits: yours in Settings; the owner also gets the site's GitHub account by default. */
+/** Whose commits: yours in Settings; the site's owner also gets the site's GitHub account by default (admins don't). */
 export function githubUsername() {
   const saved = state.settings?.preferences?.github?.username;
   if (typeof saved === "string") return saved.trim();
-  return state.isColleague ? "" : defaultGithubUser(state.settings?.preferences, location.hostname);
+  return state.isColleague ? "" : defaultGithubUser(state.settings?.preferences, location.hostname, { owner: state.isSiteOwner });
 }
 
 /** What the portfolio needs to show your commits: { github, tz }. */

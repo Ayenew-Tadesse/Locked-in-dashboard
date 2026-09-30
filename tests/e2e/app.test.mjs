@@ -1476,6 +1476,37 @@ async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
   return page;
 }
 
+test("admins: their resume and portfolio start blank, with the owner's structure but none of the owner's details", async () => {
+  const page = await dbPage({ signedIn: true, role: "admin" });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => { document.querySelector("#li-modal")?.remove(); location.hash = "#/resume"; });
+  await page.waitForSelector("#li-cv-form");
+  const owner = /AYENEW|Shiferaw|Silver Spring|Home Depot|Aspen Hill|Mekelle|Architecture|Ayenew-Tadesse|ayenew-tadesse|Hid-Go|1B2CC1/;
+  const resumeText = await page.locator("#li-cv-editor").evaluate((e) => e.innerText + [...e.querySelectorAll("input, textarea")].map((i) => i.value + " " + i.placeholder).join(" "));
+  assert.doesNotMatch(resumeText, owner, "no owner details in the resume editor (values or hints)");
+  assert.equal(await page.inputValue("#li-cv-form [name=name]"), "aye", "only their own name");
+  assert.equal(await page.inputValue("#li-cv-form [name=location]"), "");
+  assert.equal(await page.inputValue("#li-cv-form [name=summary]"), "");
+  assert.match(await page.locator("#li-cv-editor .li-sub").first().innerText(), /A blank resume/);
+  // Same structure: every section, with an empty entry to fill in.
+  for (const k of ["projects", "frontend", "experience", "education", "certifications"]) {
+    assert.equal(await page.locator(`#li-cv-form [data-list="${k}"] [data-row]`).count(), 1, `one blank ${k} entry`);
+  }
+  assert.deepEqual(await page.locator('#li-cv-form [data-list="contacts"] [data-k="label"]').evaluateAll((els) => els.map((e) => e.value)), ["Phone", "Email", "LinkedIn", "Portfolio", "GitHub"]);
+  assert.equal(await page.locator('#li-cv-form [data-list="contacts"] [data-k="href"]').evaluateAll((els) => els.filter((e) => e.value).length), 0, "no links filled in");
+  assert.doesNotMatch(await page.locator("#li-cv-preview").innerText(), owner, "nor in the preview");
+  // Portfolio: the same sections, nothing of the owner's.
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-form");
+  await page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
+  const pfText = await page.locator("#li-pf-editor").evaluate((e) => e.innerText + [...e.querySelectorAll("input, textarea")].map((i) => i.value + " " + i.placeholder).join(" "));
+  assert.doesNotMatch(pfText, owner, "no owner details in the portfolio editor (values or hints)");
+  assert.equal(await page.inputValue("#li-pf-form [name=name]"), "aye");
+  assert.equal(await page.locator("#li-pf-cases [data-case-card]").count(), 0, "no case studies");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {
   const page = await dbPage({ signedIn: false });
   await page.waitForSelector("#li-auth .gate-card", { state: "visible" });

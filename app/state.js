@@ -28,6 +28,8 @@ export const state = {
   // The owner and admins run the team: assign and manage colleagues' tasks, invite, manage projects.
   get isManager() { return this.isOwner || this.isAdmin; },
   get isColleague() { return !!this.team && this.team.role === "member"; },
+  /** The site's owner (the team owner, or someone without a team): only they get the built-in resume and GitHub defaults. */
+  get isSiteOwner() { return !this.team || this.team.role === "owner"; },
   get canAddTasks() { return !this.isColleague; },
   milestones: [],
   goals: [],

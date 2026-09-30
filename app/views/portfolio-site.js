@@ -93,12 +93,12 @@ export function editorHtml() {
         <div class="li-field full"><span>Photo</span><div class="li-pf-imgs" id="li-pf-portrait">${imgUrl(s.portrait) ? `<figure><img src="${esc(s.portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove photo">&#10005;</button></figure>` : ""}
           <label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" data-portrait hidden></label></div></div>`)}
       ${section("stats", "Numbers", `<div class="li-pf-stats-edit">${stats.map((x, i) => `<div class="li-pf-stat-edit">
-          <input name="stat_num_${i}" maxlength="12" value="${esc(x.num || "")}" placeholder="${["3+", "50+", "35+", "10"][i]}" aria-label="Number ${i + 1}">
-          <input name="stat_label_${i}" maxlength="40" value="${esc(x.label || "")}" placeholder="${["Years of Experience", "Projects", "Happy Clients", "Awards"][i]}" aria-label="Label ${i + 1}">
+          <input name="stat_num_${i}" maxlength="12" value="${esc(x.num || "")}" placeholder="${["e.g. 5+", "e.g. 20+", "e.g. 10+", "e.g. 3"][i]}" aria-label="Number ${i + 1}">
+          <input name="stat_label_${i}" maxlength="40" value="${esc(x.label || "")}" placeholder="${["e.g. Years of Experience", "e.g. Projects", "e.g. Happy Clients", "e.g. Awards"][i]}" aria-label="Label ${i + 1}">
         </div>`).join("")}</div>`, "e.g. 3+ Years of Experience")}
       ${section("about", "About me", `<label class="li-field full">Paragraphs <small class="li-muted">(leave an empty line between paragraphs)</small><textarea name="about" rows="8" maxlength="6000">${esc(s.about.join("\n\n"))}</textarea></label>`)}
       ${section("experience", "Highlights and experience", `
-        <label class="li-field full">Highlights <small class="li-muted">(one per line, up to 6: results with numbers work best)</small><textarea name="highlights" rows="4" maxlength="1500" placeholder="Cut booking from 7 steps to 4&#10;Built a design system used by 3 apps">${esc(d.highlights.join("\n"))}</textarea></label>
+        <label class="li-field full">Highlights <small class="li-muted">(one per line, up to 6: results with numbers work best)</small><textarea name="highlights" rows="4" maxlength="1500" placeholder="e.g. Cut checkout from 6 steps to 3&#10;Built a design system used by 2 apps">${esc(d.highlights.join("\n"))}</textarea></label>
         <div class="li-field full"><span>Experience</span></div>
         <div class="li-pf-exp" id="li-pf-exp">${d.experience.map(expRow).join("")}</div>
         <button type="button" class="li-btn small" id="li-pf-exp-add">+ Add a role</button>`)}
@@ -425,7 +425,7 @@ function editCase(original, done, onDelete) {
     extraButtons: onDelete ? `<button type="button" class="li-btn danger-ghost" data-case-delete>Delete</button>` : "",
     body: `
       <fieldset class="full li-pf-group"><legend>Card on your home page</legend>
-        <label class="li-field">Title<input name="title" required maxlength="100" value="${esc(c.title || "")}" placeholder="Hid-Go Flight Booking App"></label>
+        <label class="li-field">Title<input name="title" required maxlength="100" value="${esc(c.title || "")}" placeholder="e.g. Mobile Banking App"></label>
         <label class="li-field">Tag<input name="tag" maxlength="60" value="${esc(c.tag || "")}" placeholder="Mobile App UI/UX"></label>
         <label class="li-field full">Card description<textarea name="cardDesc" rows="2" maxlength="300">${esc(c.cardDesc || "")}</textarea></label>
         <label class="li-field">Status<select name="status"><option value="live"${c.status !== "progress" ? " selected" : ""}>Live case study</option><option value="progress"${c.status === "progress" ? " selected" : ""}>In progress (card only)</option></select></label>
@@ -470,7 +470,7 @@ function editCase(original, done, onDelete) {
         <label class="li-field full">Intro<textarea name="styleIntro" rows="2" maxlength="1000">${esc(c.style?.intro || "")}</textarea></label>
         <label class="li-field full">Colours <small class="li-muted">(one per line: Name #HEX)</small><textarea name="styleColors" rows="4" maxlength="1000">${esc(colorsText)}</textarea></label>
         <label class="li-field">Font<input name="styleFont" maxlength="60" value="${esc(c.style?.font || "")}" placeholder="Poppins"></label>
-        <label class="li-field">Button colour<input name="styleButton" maxlength="9" value="${esc(c.style?.button || "")}" placeholder="#1B2CC1"></label>
+        <label class="li-field">Button colour<input name="styleButton" maxlength="9" value="${esc(c.style?.button || "")}" placeholder="#3366FF"></label>
         <label class="li-field">Sample heading<input name="styleHead" maxlength="80" value="${esc(c.style?.sampleHead || "")}"></label>
         <label class="li-field">Sample text<input name="styleBody" maxlength="200" value="${esc(c.style?.sampleBody || "")}"></label>
       </fieldset>`,

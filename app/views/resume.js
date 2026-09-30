@@ -1,7 +1,8 @@
 // Resume (owner): edit your resume section by section, like Edit portfolio,
 // with a live preview underneath. Saved in preferences.portfolio.site.cv, so
 // the Resume button on the page hiring managers open shows it
-// (portfolio.html#t=…&page=resume). Starts from the resume you wrote.
+// (portfolio.html#t=…&page=resume). The owner starts from the resume they
+// wrote; admins start from the same sections, blank.
 import { state, toast } from "../state.js";
 import { esc } from "../ui/dom.js";
 import { sortable } from "../ui/sortable.js";
@@ -15,16 +16,38 @@ const openSections = new Set(["header"]);
 
 // Which fields each kind of entry has: [key, label, placeholder].
 const ENTRY_FIELDS = {
-  projects: [["title", "Project", "Mobile Banking Application"], ["subtitle", "Type", "UI/UX Design"]],
-  frontend: [["title", "Title", "Web Interface Development"]],
-  experience: [["title", "Company", "The Home Depot"], ["subtitle", "Role", "Service Desk Associate"], ["place", "Place", "Aspen Hill, MD"], ["dates", "Dates", "September 2024 – Present"]],
-  education: [["title", "Degree", "Bachelor of Science in Architecture"], ["subtitle", "School", "Mekelle University"], ["dates", "Years", "2016 – 2022"], ["note", "Relevant foundation", "Relevant foundation: Visual Design • …"]],
-  certifications: [["title", "Certification", "UI/UX Design Foundations"]],
+  projects: [["title", "Project", "e.g. Mobile Banking App"], ["subtitle", "Type", "e.g. UI/UX Design"]],
+  frontend: [["title", "Title", "e.g. Web Interface Development"]],
+  experience: [["title", "Company", "e.g. Acme Inc."], ["subtitle", "Role", "e.g. Product Designer"], ["place", "Place", "e.g. City, State"], ["dates", "Dates", "e.g. Jan 2024 – Present"]],
+  education: [["title", "Degree", "e.g. BSc in Design"], ["subtitle", "School", "e.g. State University"], ["dates", "Years", "e.g. 2018 – 2022"], ["note", "Relevant foundation", "e.g. Relevant coursework: Visual Design • …"]],
+  certifications: [["title", "Certification", "e.g. UX Design Certificate"]],
 };
 const ADD_LABEL = { projects: "+ Add a project", frontend: "+ Add an entry", experience: "+ Add a role", education: "+ Add education", certifications: "+ Add a certification" };
 
-/** The resume you wrote, with your contact details filled in from your portfolio. */
+/**
+ * Where an unsaved resume starts. The site's owner: the resume they wrote,
+ * with contact details from their portfolio. Everyone else (admins): the same
+ * sections, empty, with only their own name filled in.
+ */
 function starterResume() {
+  return state.isSiteOwner ? ownerResume() : blankResume();
+}
+
+function blankResume() {
+  const entry = (kind) => Object.fromEntries([...ENTRY_FIELDS[kind].map(([k]) => [k, ""]), ...(kind === "education" ? [] : [["bullets", []]])]);
+  return {
+    name: state.profile?.name || "", location: "", title: "",
+    contacts: ["Phone", "Email", "LinkedIn", "Portfolio", "GitHub"].map((label) => ({ label, value: "", href: "" })),
+    summary: "",
+    skills: [{ label: "", items: [] }],
+    projects: [entry("projects")], frontend: [entry("frontend")], experience: [entry("experience")],
+    education: [entry("education")], certifications: [entry("certifications")],
+    additional: [], show: {},
+  };
+}
+
+/** The owner's resume, with their contact details filled in from their portfolio. */
+function ownerResume() {
   const site = state.settings.preferences?.portfolio?.site || {};
   const contact = site.contact || [];
   const find = (re) => contact.find((c) => re.test(c.href || "") || re.test(c.label || ""));
@@ -152,13 +175,14 @@ function editorHtml(cv, saved) {
   <section class="li-card li-pf-editor" id="li-cv-editor">
     <div class="li-card-head"><span class="card-label">Edit resume</span></div>
     <p class="li-sub">${saved ? "Your resume. The Resume button on your portfolio opens it, and hiring managers can download it as a PDF."
-      : "<b>A starting draft from the resume you wrote.</b> Fill in anything missing and press Save: then the Resume button on your portfolio opens it."}
+      : state.isSiteOwner ? "<b>A starting draft from the resume you wrote.</b> Fill in anything missing and press Save: then the Resume button on your portfolio opens it."
+      : "<b>A blank resume, laid out section by section.</b> Fill it in and press Save: then the Resume button on your portfolio opens it."}
       Drag &#10303; to reorder entries.</p>
     <form class="li-pf-form li-pf-editor-form" id="li-cv-form" autocomplete="off">
       ${section("header", "Header", `
         <label class="li-field">Name<input name="name" maxlength="80" value="${esc(cv.name || "")}"></label>
-        <label class="li-field">Location<input name="location" maxlength="80" value="${esc(cv.location || "")}" placeholder="Silver Spring, MD"></label>
-        <label class="li-field full">Title line<input name="title" maxlength="120" value="${esc(cv.title || "")}" placeholder="UI/UX DESIGNER | FRONT-END DEVELOPER"></label>
+        <label class="li-field">Location<input name="location" maxlength="80" value="${esc(cv.location || "")}" placeholder="e.g. City, State"></label>
+        <label class="li-field full">Title line<input name="title" maxlength="120" value="${esc(cv.title || "")}" placeholder="e.g. UI/UX DESIGNER | FRONT-END DEVELOPER"></label>
         <div class="li-field full"><span>Contact links <small class="li-muted">(shown after the location, separated by |)</small></span></div>
         <div class="li-cv-list" data-list="contacts">${(cv.contacts || []).map(linkRow).join("")}</div>
         <button type="button" class="li-btn small" data-add="contacts">+ Add a contact</button>`)}
