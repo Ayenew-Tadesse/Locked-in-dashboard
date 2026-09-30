@@ -206,3 +206,40 @@
   .pf-steps{grid-template-columns:repeat(2, minmax(0,1fr));}
   .pf-swatches{grid-template-columns:repeat(3, minmax(0,1fr));}
 }
+
+/* ---- Resume (a classic one-page US resume: always white paper, black text) ---- */
+.pf--resume{max-width:900px;}
+.cv-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;}
+.cv-bar .pf-back{margin:0;}
+.cv{box-sizing:border-box;max-width:816px;margin:0 auto;padding:44px 56px 48px;background:#fff;color:#111;border-radius:4px;
+  box-shadow:0 1px 3px rgba(0,0,0,.18), 0 12px 32px rgba(0,0,0,.12);font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;font-size:12.5px;line-height:1.45;text-align:left;}
+.cv a{color:#111;text-decoration:underline;text-decoration-color:#9aa0a6;text-underline-offset:2px;}
+.cv-head{text-align:center;margin-bottom:6px;}
+.cv-head h1{margin:0;font-family:inherit;font-size:26px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.15;color:#111;}
+.cv-contacts{margin:6px 0 0;font-size:12px;color:#222;overflow-wrap:anywhere;}
+.cv-title{margin:8px 0 0;font-size:12.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#111;}
+.cv-sec{margin-top:14px;}
+.cv-sec h2{margin:0 0 7px;padding-bottom:3px;border-bottom:1.5px solid #111;font-family:inherit;font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#111;}
+.cv-sec > p{margin:0 0 6px;}
+.cv-skills, .cv-plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;}
+.cv-skills b, .cv-plain b{font-weight:700;}
+.cv-entry{margin:0 0 9px;break-inside:avoid;}
+.cv-entry:last-child{margin-bottom:0;}
+.cv-entry__title{margin:0;font-weight:700;font-size:13px;}
+.cv-entry__meta{margin:1px 0 0;color:#333;font-size:12px;}
+.cv-entry__note{margin:3px 0 0;color:#222;}
+.cv-entry ul{margin:4px 0 0;padding-left:18px;}
+.cv-entry li{margin:2px 0;}
+@media (max-width:640px){
+  .cv{padding:26px 18px 28px;font-size:12.5px;}
+  .cv-head h1{font-size:21px;}
+}
+/* Download PDF: print only the resume. */
+@media print{
+  @page{margin:0.5in;}
+  .cv-bar{display:none !important;}
+  html.cv-print body *:not(:has(.cv)):not(.cv):not(.cv *){display:none !important;}
+  html.cv-print *:has(.cv){margin:0 !important;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;position:static !important;max-width:none !important;width:auto !important;}
+  html.cv-print, html.cv-print body{background:#fff !important;}
+  .cv{box-shadow:none !important;border-radius:0;padding:0 !important;max-width:none;margin:0;}
+}

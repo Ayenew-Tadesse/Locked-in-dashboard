@@ -43,7 +43,7 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(BASE + "?demo=1" + (hash ? "#/" + hash : ""));
   // Pages from the ☰ menu open full screen (no tab row).
-  await page.waitForSelector(/^(profile|projects|portfolio|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
+  await page.waitForSelector(/^(profile|projects|portfolio|resume|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
   page.errors = errors;
   return page;
 }
@@ -64,6 +64,8 @@ async function skipLearningLog(page) {
 }
 // Visible rows only: the Overview's Tasks card stays in the page (hidden) on other tabs.
 const row = (page, title) => page.locator(".li-task:visible", { has: page.locator(".li-task-title", { hasText: title }) });
+// The same, inside the current page only (on laptops the Tasks card beside it can list the same task).
+const viewRow = (page, title) => page.locator("#li-view .li-task:visible", { has: page.locator(".li-task-title", { hasText: title }) });
 
 test("create a task with every field, then edit it", async () => {
   const page = await open("today");
@@ -106,11 +108,11 @@ test("create a task with every field, then edit it", async () => {
 test("complete, reopen and change status; scores and the original checklist update", async () => {
   const page = await open("today");
   const scoreBefore = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
-  const r = row(page, "Test keyboard handling on iOS");
+  const r = viewRow(page, "Test keyboard handling on iOS");
   await r.locator("[data-act=toggle]").click();
   await skipLearningLog(page);
   await page.waitForFunction(() => document.querySelector('.li-task.st-completed .li-task-title')?.textContent);
-  assert.match(await row(page, "Test keyboard handling on iOS").getAttribute("class"), /st-completed/);
+  assert.match(await viewRow(page, "Test keyboard handling on iOS").getAttribute("class"), /st-completed/);
   const scoreAfter = await page.locator(".li-tile", { hasText: "Daily score" }).locator(".li-tile-value").innerText();
   assert.ok(parseInt(scoreAfter) > parseInt(scoreBefore), `score rose (${scoreBefore} -> ${scoreAfter})`);
   // The Overview's Tasks card reflects it too: 3 of the team's 5 today
@@ -120,11 +122,11 @@ test("complete, reopen and change status; scores and the original checklist upda
   await page.waitForSelector("#li-tasks-card:not([hidden]) .today-progress");
   assert.equal(await page.locator("#li-tasks-card .today-progress").innerText(), `3/${5 + colleaguesToday()}`);
   await page.click('#li-nav a[href="#/today"]');
-  await row(page, "Test keyboard handling on iOS").waitFor();
+  await viewRow(page, "Test keyboard handling on iOS").waitFor();
 
-  await row(page, "Test keyboard handling on iOS").locator("select[data-act=status]").selectOption("in_progress");
+  await viewRow(page, "Test keyboard handling on iOS").locator("select[data-act=status]").selectOption("in_progress");
   await page.waitForFunction(() => [...document.querySelectorAll(".li-task.st-in_progress .li-task-title")].some((e) => e.textContent.includes("keyboard")));
-  await row(page, "Test keyboard handling on iOS").locator("select[data-act=status]").selectOption("not_started");
+  await viewRow(page, "Test keyboard handling on iOS").locator("select[data-act=status]").selectOption("not_started");
   await page.waitForFunction(() => [...document.querySelectorAll(".li-task.st-not_started .li-task-title")].some((e) => e.textContent.includes("keyboard")));
   await page.close();
 });
@@ -330,7 +332,7 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   assert.match(await dot.getAttribute("class"), /late/, "the demo has overdue tasks: red");
   // Finishing one lowers the count.
   await page.click("#li-nav [data-view=today]");
-  await row(page, "Test keyboard handling on iOS").locator("[data-act=toggle]").click();
+  await viewRow(page, "Test keyboard handling on iOS").locator("[data-act=toggle]").click();
   await skipLearningLog(page);
   await page.waitForFunction((n) => document.querySelector("#li-nav [data-view=tasks] .li-nav-dot").textContent === String(n - 1), unfinished);
   // Team card: Ben has an unfinished task.
@@ -345,7 +347,7 @@ test("laptops and desktops: the ☰ items sit in the tab row; phones keep the �
   const page = await open("", { width: 1280, height: 800 });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "no ☰ on a wide screen");
   const extra = page.locator("#li-nav-extra");
-  assert.deepEqual((await extra.locator(".li-nav-link").allInnerTexts()).map((t) => t.trim()), ["Profile", "Projects", "Portfolio", "Settings", "☀", "Log out"]);
+  assert.deepEqual((await extra.locator(".li-nav-link").allInnerTexts()).map((t) => t.trim()), ["Profile", "Projects", "Portfolio", "Resume", "Settings", "☀", "Log out"]);
   const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), ext = await extra.boundingBox();
   assert.ok(Math.abs(tabs.y - ext.y) < 12 && ext.x >= tabs.x + tabs.width - 1, "same line, on the right");
   // Light / Dark from the bar.
@@ -488,6 +490,8 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.uncheck("#li-pf-form [name=show_stats]");
   await page.click("#li-pf-form button[type=submit]");
   await page.waitForFunction(() => !document.querySelector("#li-pf-preview .pf-s-stats"));
+  await page.waitForTimeout(400); // nothing stale redraws it afterwards
+  assert.equal(await page.locator("#li-pf-preview .pf-s-stats").count(), 0);
   // Switch the link off.
   await row.locator("[data-revoke-link]").click();
   await page.click("#li-modal button[type=submit]");
@@ -554,6 +558,61 @@ test("portfolio: Preview on web (database) uses your own private link, reused an
   await tab.close(); await page.close();
 });
 
+test("resume: starts from your resume, edits live, drags to reorder, saves, and opens from the portfolio's Resume button", async () => {
+  const page = await open("resume", { width: 1280, height: 900 });
+  await page.waitForSelector("#li-cv-form");
+  const preview = page.locator("#li-cv-preview .cv");
+  assert.match(await preview.innerText(), /AYENEW SHIFERAW[\s\S]*UI\/UX DESIGNER \| FRONT-END DEVELOPER[\s\S]*PROFESSIONAL SUMMARY[\s\S]*CORE SKILLS[\s\S]*SELECTED UI\/UX PROJECTS[\s\S]*Mobile Banking Application — UI\/UX Design[\s\S]*FRONT-END DEVELOPMENT[\s\S]*PROFESSIONAL EXPERIENCE[\s\S]*The Home Depot[\s\S]*EDUCATION[\s\S]*Mekelle University \| 2016 – 2022[\s\S]*CERTIFICATION[\s\S]*ADDITIONAL/);
+  assert.equal(await page.textContent("#li-cv-save"), "Save •", "the starting draft isn't saved yet");
+  await openAllSections(page);
+  // Type: the preview follows.
+  const phone = page.locator('[data-list="contacts"] [data-row]').first();
+  await phone.locator('[data-k="value"]').fill("240-555-0100");
+  await phone.locator('[data-k="href"]').fill("tel:+12405550100");
+  await page.waitForFunction(() => /Silver Spring, MD \| 240-555-0100/.test(document.querySelector("#li-cv-preview").textContent));
+  // Drag the second project above the first by its grip.
+  const projects = page.locator('[data-list="projects"] > [data-row]');
+  await projects.nth(0).evaluate((e) => e.scrollIntoView({ block: "start" }));
+  const grip = await projects.nth(1).locator("[data-sort-handle]").boundingBox();
+  const first = await projects.nth(0).boundingBox();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + grip.width / 2, first.y + 5, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector("#li-cv-preview #cv-projects .cv-entry__title")?.textContent.startsWith("Flight & Hotel"));
+  // Keyboard: arrow up on a grip moves it back.
+  await projects.nth(1).locator("[data-sort-handle]").focus();
+  await page.keyboard.press("ArrowUp");
+  await page.waitForFunction(() => document.querySelector("#li-cv-preview #cv-projects .cv-entry__title")?.textContent.startsWith("Mobile Banking"));
+  // Add and remove entries, hide a section.
+  await page.click('[data-add="certifications"]');
+  await page.locator('[data-list="certifications"] > [data-row]').last().locator('[data-k="title"]').fill("Google UX Design Certificate");
+  await page.locator('[data-list="certifications"] > [data-row]').last().locator('[data-k="bullets"]').fill("Coursera, 2025");
+  await page.locator('[data-list="projects"] > [data-row]').last().locator("[data-remove]").click();
+  await page.uncheck("#li-cv-form [name=show_frontend]");
+  await page.waitForFunction(() => !document.querySelector("#li-cv-preview #cv-frontend") && !/Spotify/.test(document.querySelector("#li-cv-preview").textContent)
+    && /Google UX Design Certificate/.test(document.querySelector("#li-cv-preview").textContent));
+  await page.click("#li-cv-save");
+  await page.waitForFunction(() => document.querySelector("#li-cv-save")?.textContent === "Save");
+  // Reopen: saved.
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  await page.waitForSelector(".li-formula");
+  await page.evaluate(() => { location.hash = "#/resume"; });
+  await page.waitForSelector("#li-cv-form");
+  assert.equal(await page.textContent("#li-cv-save"), "Save");
+  assert.match(await page.locator("#li-cv-preview").innerText(), /240-555-0100[\s\S]*Google UX Design Certificate/);
+  // The portfolio's Resume button opens it; Back returns.
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-preview [data-resume]");
+  await page.click("#li-pf-preview [data-resume]");
+  await page.waitForSelector("#li-pf-preview .cv");
+  assert.match(await page.locator("#li-pf-preview .cv").innerText(), /AYENEW SHIFERAW[\s\S]*240-555-0100/);
+  await page.click("#li-pf-preview .cv-bar [data-home]");
+  await page.waitForSelector("#li-pf-preview .pf-hero, #li-pf-preview .pf-s-hero");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("portfolio page (hiring managers): opens from a link, refuses bad links, fits a phone", async () => {
   const calls = [];
   const page = await browser.newPage({ viewport: { width: 375, height: 800 } });
@@ -575,7 +634,12 @@ test("portfolio page (hiring managers): opens from a link, refuses bad links, fi
                  { name: "Old app", description: "Shipped", status: "good", links: {}, checklist: [{ done: true }] }],
       milestones: [{ title: "Booking flow", status: "in_progress", pct: 60, deadline: "2026-10-10" }, { title: "Foundations", status: "completed", pct: 100, completed_at: "2026-09-20T00:00:00Z" }],
       plan: null,
-      work: [{ title: "Booking store", day: "2026-09-27", changed: "Added the booking store", how: "One slice per step", solved: "Props five levels deep", minutes: 90 }] };
+      work: [{ title: "Booking store", day: "2026-09-27", changed: "Added the booking store", how: "One slice per step", solved: "Props five levels deep", minutes: 90 }],
+      site: { cv: { name: "AYENEW SHIFERAW", location: "Silver Spring, MD", title: "UI/UX DESIGNER | FRONT-END DEVELOPER",
+        contacts: [{ label: "Email", value: "a@example.com", href: "mailto:a@example.com" }, { label: "LinkedIn", value: "LinkedIn", href: "javascript:alert(1)" }],
+        summary: "UI/UX Designer with a background in architecture.", skills: [{ label: "Tools", items: ["Figma", "HTML"] }],
+        experience: [{ title: "The Home Depot", subtitle: "Service Desk Associate", place: "Aspen Hill, MD", dates: "September 2024 – Present", bullets: ["Employee of the Month twice"] }],
+        certifications: [{ title: "UI/UX Design Foundations", bullets: ["Figma"] }], show: { certifications: false } } } };
     export function createClient() { return { rpc: async (name, args) => { await window.__rpcCall(name, args);
       return args.p_token === "lip_good_secret_0123456789abcdef" ? { data: summary, error: null } : { data: null, error: { message: "invalid link", code: "28000" } }; } }; }` }));
   await page.goto(BASE.replace(/\/?$/, "/") + "portfolio.html#t=lip_good_secret_0123456789abcdef");
@@ -587,6 +651,18 @@ test("portfolio page (hiring managers): opens from a link, refuses bad links, fi
   assert.equal(await page.locator("#pf-plan").count(), 0, "hidden sections stay hidden");
   assert.equal(await page.locator('.pf-contact[href^="javascript"]').count(), 0, "only safe links");
   assert.equal(await page.title(), "Ayenew Shiferaw · Portfolio");
+  // Resume: from the Resume button, on the same private link; Back returns.
+  await page.click(".pf-contacts [data-resume]");
+  await page.waitForSelector(".cv");
+  assert.match(page.url(), /#t=lip_good_secret_0123456789abcdef&page=resume$/);
+  assert.equal(await page.title(), "AYENEW SHIFERAW · Resume");
+  assert.match(await page.locator(".cv").innerText(), /AYENEW SHIFERAW[\s\S]*Silver Spring, MD \| a@example\.com \| LinkedIn[\s\S]*PROFESSIONAL SUMMARY[\s\S]*CORE SKILLS[\s\S]*Tools: Figma • HTML[\s\S]*PROFESSIONAL EXPERIENCE[\s\S]*The Home Depot — Service Desk Associate[\s\S]*Aspen Hill, MD \| September 2024 – Present[\s\S]*Employee of the Month twice/i);
+  assert.equal(await page.locator(".cv #cv-certifications").count(), 0, "hidden resume sections stay hidden");
+  assert.equal(await page.locator('.cv a[href^="javascript"]').count(), 0, "only safe links on the resume");
+  assert.equal(await page.locator(".cv-bar [data-print-resume]").count(), 1, "Download PDF");
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), "the resume fits a phone");
+  await page.click(".cv-bar [data-home]");
+  await page.waitForSelector(".pf-hero h1");
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), "fits a phone");
   assert.equal(await page.locator("#gate, .gate").count(), 0, "no passcode screen");
   // A switched-off or expired link.
@@ -740,12 +816,12 @@ test("portfolio site: import from GitHub, then the preview and share page follow
 
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
-  const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio"];
+  const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio", "resume"];
   for (const [width, height] of sizes) {
     const page = await open("", { width, height });
     for (const v of views) {
       await page.goto(BASE + "?demo=1#/" + v);
-      await page.waitForSelector(/^(profile|projects|portfolio|settings)$/.test(v) ? "#li-back" : "#li-nav .li-nav-link");
+      await page.waitForSelector(/^(profile|projects|portfolio|resume|settings)$/.test(v) ? "#li-back" : "#li-nav .li-nav-link");
       await page.waitForTimeout(100);
       const where = `${v || "overview"} at ${width}px`;
       const r = await page.evaluate(() => {
@@ -1282,7 +1358,7 @@ test("☰ menu: Profile, Settings, Light / Dark mode (remembered) and Log out", 
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Portfolio", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
   // Light background: the row switches it and then offers Dark mode.
   await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");

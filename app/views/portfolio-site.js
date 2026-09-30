@@ -288,7 +288,8 @@ export function wireEditor(el, hooks) {
   }
   // The preview follows as you type (a moment after you pause); Save makes it real.
   let typing = 0;
-  const live = () => { clearTimeout(typing); typing = setTimeout(() => hooks.draft?.(dirty ? readForm() : null), 250); };
+  // (A form that has left the page, e.g. a field blurred as you navigated away, is ignored.)
+  const live = () => { clearTimeout(typing); typing = setTimeout(() => { if (form.isConnected) hooks.draft?.(dirty ? readForm() : null); }, 250); };
   form.addEventListener("input", live);
   form.addEventListener("change", live);
   form.addEventListener("click", (e) => { if (e.target.closest("[data-row-remove],[data-remove-portrait],[data-exp]")) live(); });
@@ -306,7 +307,7 @@ export function wireEditor(el, hooks) {
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 
-  wireCaseCards(el, { saved() { hooks.saved(); if (dirty) hooks.draft?.(readForm()); } });
+  wireCaseCards(el, { saved() { hooks.saved(); if (dirty && form.isConnected) hooks.draft?.(readForm()); } });
   return { save: () => form.requestSubmit(), isDirty: () => dirty };
 }
 
