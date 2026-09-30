@@ -706,6 +706,24 @@ test("portfolio site: import from GitHub, then the preview and share page follow
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.locator('#li-pf-preview [data-case="guxo"]').first().click();
   await page.waitForFunction(() => /Riders trust a seat map/.test(document.querySelector("#li-pf-preview").textContent));
+  // Personas: a photo in a circle and demographics; initials when there's no photo.
+  await page.locator('#li-pf-cases [data-case-card="hidgo"]').click();
+  const persona = page.locator("#li-modal [data-persona]").first();
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await persona.locator("[data-persona-photo]").setInputFiles({ name: "flyer.png", mimeType: "image/png", buffer: png });
+  await page.locator("#li-modal [data-persona]").first().locator(".li-pf-persona-photo img").waitFor();
+  await page.locator("#li-modal [data-persona]").first().locator('[data-p="age"]').fill("32");
+  await page.locator("#li-modal [data-persona]").first().locator('[data-p="sex"]').selectOption("Female");
+  await page.locator("#li-modal [data-persona]").first().locator('[data-p="location"]').fill("Addis Ababa");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.locator('#li-pf-preview [data-case="hidgo"]').first().click();
+  await page.locator("#li-pf-preview .pf-persona").first().waitFor();
+  const first = page.locator("#li-pf-preview .pf-persona").first();
+  assert.equal(await first.locator("img.pf-persona__photo").count(), 1, "the photo shows");
+  assert.equal(await first.locator(".pf-persona__demo").innerText(), "32 · Female · Addis Ababa");
+  assert.equal(await first.locator("img.pf-persona__photo").evaluate((e) => getComputedStyle(e).borderRadius), "50%", "in a circle");
+  assert.ok(await page.locator("#li-pf-preview .pf-persona .pf-persona__initials").count() >= 1, "others show initials");
   // Delete one from its editor.
   await page.locator("#li-pf-cases [data-case-card]").first().click();
   await page.click("#li-modal [data-case-delete]");

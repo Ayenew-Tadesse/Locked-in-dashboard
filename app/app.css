@@ -718,7 +718,11 @@ html.li-modal-open .li-chat:not([data-open="true"]){display:none;}
 .li-pf-personas{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:8px;}
 .li-pf-persona{position:relative;display:flex;flex-direction:column;gap:5px;padding:10px 10px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);}
 .li-pf-persona .li-icon-btn{position:absolute;top:4px;right:4px;}
-.li-pf-persona input:first-child{margin-right:26px;}
+.li-pf-persona-head{display:flex;align-items:center;gap:10px;margin-right:26px;}
+.li-pf-persona-photo{flex:none;width:56px;height:56px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--surface-2);border:2px solid var(--line);font-size:22px;color:var(--ink-3);}
+.li-pf-persona-photo img{width:100%;height:100%;object-fit:cover;}
+.li-pf-persona-demo{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:5px;}
 /* Edit portfolio: sections you open and close */
 .li-pf-editor-form{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
 .li-pf-sec{border:1px solid var(--line);border-radius:12px;background:var(--surface);}
