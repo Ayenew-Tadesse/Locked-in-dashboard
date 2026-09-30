@@ -613,6 +613,48 @@ test("resume: starts from your resume, edits live, drags to reorder, saves, and 
   await page.close();
 });
 
+test("GitHub: days you commit turn green on the Activity map", async () => {
+  const page = await open("settings", { width: 1280, height: 900 });
+  // A day the demo marks as missed (its checklist wasn't finished).
+  await page.waitForSelector("#heat-cells .heat-cell.missed", { state: "attached" });
+  const yesterday = await page.evaluate(() => document.querySelector("#heat-cells .heat-cell.missed").dataset.day);
+  const at = (h) => new Date(`${yesterday}T${h}:00:00`).toISOString();
+  const asked = [];
+  await page.route("https://api.github.com/search/commits**", (r) => {
+    asked.push(r.request().url());
+    r.fulfill({ json: { items: [
+      { sha: "a1", commit: { author: { date: at("10") }, message: "Add guest sign-in\n\nbody" }, repository: { name: "guxo-flights-app" }, html_url: "https://github.com/x/a1" },
+      { sha: "b2", commit: { author: { date: at("15") }, message: "Update resume link" }, repository: { name: "Portfolio" }, html_url: "https://github.com/x/b2" },
+    ] } });
+  });
+  // Before: that day isn't green.
+  const cell = () => page.evaluate((d) => document.querySelector(`#heat-cells [data-day="${d}"]`)?.className, yesterday);
+  assert.equal(await page.locator("#li-gh-status").innerText(), "Off: add your username to count your commits.");
+  assert.match(await cell(), /\bl0\b/, "not green before");
+  await page.fill("#li-gh-form [name=user]", "https://github.com/Ayenew-Tadesse");
+  await page.click("#li-gh-form button[type=submit]");
+  await page.waitForFunction(() => /2 commits on 1 day/.test(document.querySelector("#li-gh-status")?.textContent || ""));
+  assert.equal(await page.inputValue("#li-gh-form [name=user]"), "Ayenew-Tadesse", "the username from the link");
+  assert.match(decodeURIComponent(asked[0]), /author:Ayenew-Tadesse/);
+  // The Activity map: that day is green, not missed.
+  await page.click('#li-back');
+  await page.waitForSelector("#heat-cells [data-day]");
+  const cls = await cell();
+  assert.match(cls, /\bl[1-4]\b/, "green");
+  assert.doesNotMatch(cls, /missed/);
+  // The day's commits are in that day's list.
+  await page.evaluate((d) => document.querySelector(`#heat-cells [data-day="${d}"]`).dispatchEvent(new MouseEvent("click", { bubbles: true })), yesterday);
+  await page.waitForFunction(() => /guxo-flights-app:[\s\S]*Add guest sign-in/.test(document.querySelector("#heat-tip")?.textContent || ""));
+  // Refresh asks GitHub again.
+  await page.evaluate(() => { location.hash = "#/settings"; });
+  const before = asked.length;
+  await page.click("#li-gh-refresh");
+  for (let i = 0; i < 60 && asked.length === before; i++) await page.waitForTimeout(50);
+  assert.ok(asked.length > before, "Refresh checks GitHub now");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("portfolio page (hiring managers): opens from a link, refuses bad links, fits a phone", async () => {
   const calls = [];
   const page = await browser.newPage({ viewport: { width: 375, height: 800 } });
