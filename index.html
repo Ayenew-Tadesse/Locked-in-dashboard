@@ -915,6 +915,8 @@
     flex:none;
     cursor:pointer;
   }
+  .checklist a.task-text{color:inherit;text-decoration:none;}
+  .checklist a.task-text:hover, .checklist a.task-text:focus-visible{color:var(--accent);text-decoration:underline;}
   .checklist .task-text{
     flex:1;
     font-size:13.5px;
@@ -1021,7 +1023,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="app/app.css?v=7c60b5c2c5">
 <link rel="stylesheet" href="app/portfolio.css?v=873d2ae788">
-<script type="importmap" id="li-versions">{"imports":{"./app/core/dates.js":"./app/core/dates.js?v=ae6f14c4c2","./app/core/github.js":"./app/core/github.js?v=099f90b608","./app/core/insights.js":"./app/core/insights.js?v=e72da91746","./app/core/people.js":"./app/core/people.js?v=7c04639ff4","./app/core/portfolio.js":"./app/core/portfolio.js?v=66e28d2434","./app/core/projects.js":"./app/core/projects.js?v=2ce6e6c5b7","./app/core/scoring.js":"./app/core/scoring.js?v=c08775ce9d","./app/core/tasks.js":"./app/core/tasks.js?v=bfd5eafa41","./app/demo.js":"./app/demo.js?v=b9ee6b63cc","./app/github.js":"./app/github.js?v=587223fad7","./app/legacy-import.js":"./app/legacy-import.js?v=d2fdca0d7a","./app/main.js":"./app/main.js?v=bd92bf66d3","./app/plan/setup.js":"./app/plan/setup.js?v=277dcb19e7","./app/plan/year-plan.js":"./app/plan/year-plan.js?v=5e6cb2a316","./app/portfolio-page.js":"./app/portfolio-page.js?v=9a614db7f8","./app/portfolio/import.js":"./app/portfolio/import.js?v=3fbc024a9b","./app/portfolio/render.js":"./app/portfolio/render.js?v=359383840a","./app/portfolio/resume.js":"./app/portfolio/resume.js?v=6b9d1fc248","./app/portfolio/site.js":"./app/portfolio/site.js?v=67a295bdf8","./app/report/daily-report.js":"./app/report/daily-report.js?v=330fed8a5c","./app/report/download.js":"./app/report/download.js?v=72dfdda97d","./app/state.js":"./app/state.js?v=dcb44b26f1","./app/store.js":"./app/store.js?v=d6bf3ac7e7","./app/ui/auth.js":"./app/ui/auth.js?v=b942b8c8c3","./app/ui/charts.js":"./app/ui/charts.js?v=b7af1eed91","./app/ui/chat.js":"./app/ui/chat.js?v=d3a5981e75","./app/ui/dom.js":"./app/ui/dom.js?v=0886e2824f","./app/ui/menu.js":"./app/ui/menu.js?v=f6cca40721","./app/ui/sortable.js":"./app/ui/sortable.js?v=af60675f58","./app/ui/task-ui.js":"./app/ui/task-ui.js?v=df206dc21e","./app/vendor/jspdf.umd.min.js":"./app/vendor/jspdf.umd.min.js?v=e6551fcdc3","./app/views/analytics.js":"./app/views/analytics.js?v=fe2be17c11","./app/views/calendar.js":"./app/views/calendar.js?v=3fe9306cae","./app/views/milestones.js":"./app/views/milestones.js?v=d247b2e542","./app/views/overview.js":"./app/views/overview.js?v=47556ad705","./app/views/portfolio-site.js":"./app/views/portfolio-site.js?v=0cc9386bfd","./app/views/portfolio.js":"./app/views/portfolio.js?v=84521975bb","./app/views/profile.js":"./app/views/profile.js?v=e7b48f329a","./app/views/project-cards.js":"./app/views/project-cards.js?v=c0410a590e","./app/views/projects.js":"./app/views/projects.js?v=4987a4975c","./app/views/quarter.js":"./app/views/quarter.js?v=fbdb130ea4","./app/views/resume.js":"./app/views/resume.js?v=4b5709f13e","./app/views/settings.js":"./app/views/settings.js?v=85372e2084","./app/views/tasks-card.js":"./app/views/tasks-card.js?v=811ab8a469","./app/views/tasks.js":"./app/views/tasks.js?v=07d4794f97","./app/views/team-card.js":"./app/views/team-card.js?v=8bf113f83e","./app/views/team.js":"./app/views/team.js?v=16fe0927f1","./app/views/today.js":"./app/views/today.js?v=2d5dbe0b9f","./app/views/week.js":"./app/views/week.js?v=e69e36ed77"}}</script>
+<script type="importmap" id="li-versions">{"imports":{"./app/core/dates.js":"./app/core/dates.js?v=ae6f14c4c2","./app/core/github.js":"./app/core/github.js?v=099f90b608","./app/core/insights.js":"./app/core/insights.js?v=1ff82dbc10","./app/core/people.js":"./app/core/people.js?v=7c04639ff4","./app/core/portfolio.js":"./app/core/portfolio.js?v=53f99e9392","./app/core/projects.js":"./app/core/projects.js?v=2ce6e6c5b7","./app/core/quarters.js":"./app/core/quarters.js?v=d6c9183de1","./app/core/scoring.js":"./app/core/scoring.js?v=2ed42ca2b5","./app/core/tasks.js":"./app/core/tasks.js?v=bfd5eafa41","./app/demo.js":"./app/demo.js?v=b9ee6b63cc","./app/github.js":"./app/github.js?v=587223fad7","./app/legacy-import.js":"./app/legacy-import.js?v=d2fdca0d7a","./app/main.js":"./app/main.js?v=3d87ee3063","./app/plan/setup.js":"./app/plan/setup.js?v=277dcb19e7","./app/plan/year-plan.js":"./app/plan/year-plan.js?v=761f28ff38","./app/portfolio-page.js":"./app/portfolio-page.js?v=9a614db7f8","./app/portfolio/import.js":"./app/portfolio/import.js?v=3fbc024a9b","./app/portfolio/render.js":"./app/portfolio/render.js?v=92e074e45e","./app/portfolio/resume.js":"./app/portfolio/resume.js?v=6b9d1fc248","./app/portfolio/site.js":"./app/portfolio/site.js?v=67a295bdf8","./app/report/daily-report.js":"./app/report/daily-report.js?v=330fed8a5c","./app/report/download.js":"./app/report/download.js?v=72dfdda97d","./app/state.js":"./app/state.js?v=d338626814","./app/store.js":"./app/store.js?v=d6bf3ac7e7","./app/ui/auth.js":"./app/ui/auth.js?v=b942b8c8c3","./app/ui/charts.js":"./app/ui/charts.js?v=b7af1eed91","./app/ui/chat.js":"./app/ui/chat.js?v=d3a5981e75","./app/ui/dom.js":"./app/ui/dom.js?v=0886e2824f","./app/ui/menu.js":"./app/ui/menu.js?v=f6cca40721","./app/ui/sortable.js":"./app/ui/sortable.js?v=af60675f58","./app/ui/task-ui.js":"./app/ui/task-ui.js?v=df206dc21e","./app/vendor/jspdf.umd.min.js":"./app/vendor/jspdf.umd.min.js?v=e6551fcdc3","./app/views/analytics.js":"./app/views/analytics.js?v=2a4803f1f7","./app/views/calendar.js":"./app/views/calendar.js?v=3fe9306cae","./app/views/milestones.js":"./app/views/milestones.js?v=e5f4a6399a","./app/views/overview.js":"./app/views/overview.js?v=47556ad705","./app/views/portfolio-site.js":"./app/views/portfolio-site.js?v=d376675647","./app/views/portfolio.js":"./app/views/portfolio.js?v=742c874799","./app/views/profile.js":"./app/views/profile.js?v=e7b48f329a","./app/views/project-cards.js":"./app/views/project-cards.js?v=c0410a590e","./app/views/projects.js":"./app/views/projects.js?v=4987a4975c","./app/views/quarter.js":"./app/views/quarter.js?v=d37b3a1d92","./app/views/resume.js":"./app/views/resume.js?v=4b5709f13e","./app/views/settings.js":"./app/views/settings.js?v=dbcbbd2058","./app/views/tasks-card.js":"./app/views/tasks-card.js?v=b81fb4d3ae","./app/views/tasks.js":"./app/views/tasks.js?v=07d4794f97","./app/views/team-card.js":"./app/views/team-card.js?v=8bf113f83e","./app/views/team.js":"./app/views/team.js?v=16fe0927f1","./app/views/today.js":"./app/views/today.js?v=2d5dbe0b9f","./app/views/week.js":"./app/views/week.js?v=e69e36ed77"}}</script>
 <!-- config.js is generated at deploy time (public Supabase URL + anon key).
      Without it the page runs as the original dashboard. -->
 <script src="config.js?v=b7168425ee"></script>
@@ -1461,7 +1463,15 @@
   // "Now", and clicking a step opens its goal and checklist underneath.
   var objData = null, objOpenId = null;
   var OBJ_RANGES = { q1: [[2026,8,1],[2026,11,31]], q2: [[2027,0,1],[2027,2,31]], q3: [[2027,3,1],[2027,5,30]], q4: [[2027,6,1],[2027,8,30]] };
+  // In app mode the card shows your goals and milestones (LockedInLegacy.objective).
+  var objFromDb = false;
+  function objPhase(qid){ return ((objData && objData.phases) || []).filter(function(p){ return p.id === qid; })[0]; }
   function objStatus(qid){
+    var ph = objFromDb && objPhase(qid);
+    if (ph && ph.range){
+      var t = todayKeyNow();
+      return t > ph.range[1] ? "done" : t >= ph.range[0] ? "now" : "next";
+    }
     var r = OBJ_RANGES[qid]; if (!r) return "next";
     var today = new Date(); today.setHours(0,0,0,0);
     var a = new Date(r[0][0], r[0][1], r[0][2]), b = new Date(r[1][0], r[1][1], r[1][2]);
@@ -1469,7 +1479,10 @@
     if (today >= a) return "now";
     return "next";
   }
-  function objTasks(qid){ return checklistCache[qid] || []; }
+  function objTasks(qid){
+    if (objFromDb){ var ph = objPhase(qid); return ph && ph.items ? ph.items : []; }
+    return checklistCache[qid] || [];
+  }
   function renderObjective(data){
     if (data !== undefined) objData = data && data.objective ? data : FALLBACK_OBJECTIVE;
     var obj = objData || FALLBACK_OBJECTIVE;
@@ -1500,7 +1513,7 @@
     var allPct = allTotal ? Math.round(allDone / allTotal * 100) : 0;
     document.getElementById("obj-overall").innerHTML =
       '<span class="bar" aria-hidden="true"><b style="width:' + allPct + '%"></b></span>' +
-      '<span class="lbl"><b>' + allDone + '/' + allTotal + '</b> roadmap tasks \u00b7 ' + allPct + '%</span>';
+      '<span class="lbl"><b>' + allDone + '/' + allTotal + '</b> ' + (objFromDb ? "milestones" : "roadmap tasks") + ' \u00b7 ' + allPct + '%</span>';
     renderObjPanel();
   }
   function renderObjPanel(){
@@ -1521,8 +1534,8 @@
       '<div class="obj-drop-body" id="obj-drop-body"' + (objListOpen ? '' : ' hidden') + '>' +
         '<p class="obj-panel-goal">' + esc(p.text || "") + '</p>' +
         (tasks.length
-          ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul><p class="today-note">Ticked by Claude after the work is verified.</p>'
-          : '<p class="modal-empty">Nothing logged for this quarter yet.</p>') +
+          ? '<ul class="checklist" id="obj-list">' + taskListHtml(tasks) + '</ul><p class="today-note">' + (objFromDb ? "Ticks itself when you complete a milestone. Tap one to open it." : "Ticked by Claude after the work is verified.") + '</p>'
+          : '<p class="modal-empty">' + (objFromDb ? "No milestones for this quarter yet." : "Nothing logged for this quarter yet.") + '</p>') +
       '</div>';
   }
   // Quarters and levels show by default; the checklist opens on demand.
@@ -1656,7 +1669,7 @@
       return (
         '<li class="' + (t.done ? "done" : "") + '">' +
           '<input type="checkbox" disabled data-task-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + ' aria-label="' + esc(t.text) + (t.done ? ' (verified done)' : ' (not done yet)') + '">' +
-          '<span class="task-text">' + esc(t.text) + '</span>' +
+          (t.href ? '<a class="task-text" href="' + esc(t.href) + '">' + esc(t.text) + '</a>' : '<span class="task-text">' + esc(t.text) + '</span>') +
           (t.deadline ? '<span class="deadline-pill">' + esc(t.deadline) + '</span>' : "") +
         '</li>'
       );
@@ -2746,6 +2759,9 @@
     data: function(){
       return { daily: FALLBACK_DAILY, reports: FALLBACK_REPORTS, contributions: FALLBACK_CONTRIBUTIONS, checklists: checklistCache, objective: objData || FALLBACK_OBJECTIVE, apps: FALLBACK_APPS };
     },
+    // The Objective card from your goals and milestones:
+    // { objective, phases: [{ id, tag, text, range: [start, end], items: [{ id, text, done, deadline, href }] }] }.
+    objective: function(d){ objFromDb = true; renderObjective(d); },
     // The day the Daily report card is showing (for its PDF download).
     reportDay: function(){ return reportDay || todayKeyNow(); }
   };
@@ -2820,6 +2836,6 @@
   }).catch(function(){ /* no db this view — static fallback stands */ });
 })();
 </script>
-<script type="module" src="app/main.js?v=bd92bf66d3"></script>
+<script type="module" src="app/main.js?v=3d87ee3063"></script>
 
 </body></html>

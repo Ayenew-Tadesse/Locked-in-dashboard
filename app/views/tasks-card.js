@@ -22,7 +22,7 @@ let expanded = false;
 function range(today) {
   if (period === "week") return weekRange(today);
   if (period === "month") return monthRange(today);
-  if (period === "quarter") { const q = quarterOf(today); return quarterRange(q.quarter, q.year); }
+  if (period === "quarter") { const q = state.quarterAt(today); return { start: q.start, end: q.end }; }
   return { start: today, end: today };
 }
 
@@ -30,8 +30,7 @@ function label(today, r) {
   if (period === "day") return formatDay(today, { weekday: "long", month: "short", day: "numeric" });
   if (period === "week") return formatRange(r.start, r.end);
   if (period === "month") { const [y, m] = r.start.split("-").map(Number); return `${MONTHS[m - 1]} ${y}`; }
-  const q = quarterOf(today);
-  return `Q${q.quarter} ${q.year} · ${formatRange(r.start, r.end)}`;
+  return state.quarterAt(today).long;
 }
 
 const GROUPS = [

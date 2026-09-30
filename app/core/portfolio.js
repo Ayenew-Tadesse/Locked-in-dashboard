@@ -69,7 +69,7 @@ export function portfolioPrefs(preferences) {
 }
 
 /** Same shape as public.portfolio_view: { about, activity, projects, milestones, plan, work }. */
-export function buildPortfolioData({ name, preferences, tasks = [], projects = [], milestones = [], goals = [], weekly = [], today, timeZone }) {
+export function buildPortfolioData({ name, preferences, tasks = [], projects = [], milestones = [], goals = [], weekly = [], today, timeZone, year = null }) {
   const p = portfolioPrefs(preferences);
   const done = tasks.filter((t) => t.status === "completed");
   const doneDay = (t) => dayOf(t.completed_at, timeZone) || t.date;
@@ -79,7 +79,7 @@ export function buildPortfolioData({ name, preferences, tasks = [], projects = [
   const msTitle = (id) => milestones.find((m) => m.id === id)?.title || null;
   return {
     generated_at: new Date().toISOString(),
-    site: visibleSite(p.site, p.show),
+    site: visibleSite(year ? { ...p.site, year } : p.site, p.show),
     about: { name, headline: p.headline || null, bio: p.bio || null, approach: p.approach || null, links: p.links,
       details: visibleDetails(p.details, p.show) },
     activity: !p.show.activity ? null : {

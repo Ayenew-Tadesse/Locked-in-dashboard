@@ -259,6 +259,8 @@ export function wireEditor(el, hooks) {
       .filter((c) => c.value);
     site.social = Object.fromEntries(site.contact.filter((c) => /^https?:\/\//i.test(c.href)).map((c) => [socialKey(c.label, c.href), c.href]));
     site.cases = site.cases || [];
+    // Your plan year travels with the site, so "The plan" shows your quarters (Q1 = Sep 22 – Dec 31).
+    if (state.year) site.year = state.year; else delete site.year;
     // Keep the older profile fields in step (anything that still reads them).
     const prefs = state.settings.preferences || {}, old = prefs.portfolio || {};
     const yearsStat = site.stats.find((x) => /year/i.test(x.label));

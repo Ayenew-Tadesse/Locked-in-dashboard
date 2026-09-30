@@ -2,6 +2,10 @@
 import { state, saveMilestone, deleteMilestone, toast } from "../state.js";
 import { milestoneInfo, PACE_LABELS } from "../core/insights.js";
 import { formatDay, relativeDay } from "../core/dates.js";
+import { quarterOfGoal } from "../core/quarters.js";
+
+// "Q1" (your plan year) or "Q4 2026" (calendar), and the Quarter page link for it.
+const goalQ = (g) => quarterOfGoal(g, state.year);
 import { sortTasks, PRIORITIES } from "../core/tasks.js";
 import { esc, progressBar, priorityPill, openModal, confirmDialog, options } from "../ui/dom.js";
 import { taskList } from "../ui/task-ui.js";
@@ -63,7 +67,7 @@ function renderDetail(el, id) {
         <div><dt>Deadline</dt><dd>${m.deadline ? `${esc(formatDay(m.deadline, { month: "long", day: "numeric", year: "numeric" }))} (${relativeDay(m.deadline, today)})` : "—"}</dd></div>
         <div><dt>Progress</dt><dd>${m.progress_mode === "tasks" ? "Automatic, from related tasks" : `${Number(m.current_progress)} of ${Number(m.target)} (manual)`}${info.expected_pct != null && info.pace !== "done" ? ` · expected ~${info.expected_pct}% by now` : ""}</dd></div>
         <div><dt>Related tasks</dt><dd>${info.total_tasks} total · ${info.completed_tasks} completed · ${info.remaining_tasks} remaining${info.overdue_tasks ? ` · <span class="li-danger">${info.overdue_tasks} overdue</span>` : ""}</dd></div>
-        ${goal ? `<div><dt>Quarterly goal</dt><dd><a class="li-link" href="#/quarter?q=${goal.quarter}&y=${goal.year}">${esc(goal.title)} (Q${goal.quarter} ${goal.year})</a></dd></div>` : ""}
+        ${goal ? `<div><dt>Quarterly goal</dt><dd><a class="li-link" href="#/quarter?q=${goalQ(goal).quarter}&y=${goalQ(goal).year}">${esc(goal.title)} (${esc(goalQ(goal).long)})</a></dd></div>` : ""}
       </dl>
       ${m.description ? `<p class="li-prose">${esc(m.description)}</p>` : ""}
       ${m.notes ? `<p class="li-prose li-muted">${esc(m.notes)}</p>` : ""}
@@ -90,7 +94,7 @@ export function openMilestoneForm(ms = {}) {
       <label class="li-field">Start date<input type="date" name="start_date" value="${esc(m.start_date || "")}"></label>
       <label class="li-field">Deadline<input type="date" name="deadline" value="${esc(m.deadline || "")}"></label>
       <label class="li-field">Status<select name="status">${options(Object.entries(MS_STATUS), m.status)}</select></label>
-      <label class="li-field">Quarterly goal<select name="goal_id">${options(state.goals.map((g) => [g.id, `Q${g.quarter} ${g.year}: ${g.title}`]), m.goal_id, { empty: "None" })}</select></label>
+      <label class="li-field">Quarterly goal<select name="goal_id">${options(state.goals.map((g) => [g.id, `${goalQ(g).title}: ${g.title}`]), m.goal_id, { empty: "None" })}</select></label>
       <label class="li-field full">Progress from<select name="progress_mode">${options([["tasks", "Related tasks (automatic)"], ["manual", "A number I update (current ÷ target)"]], m.progress_mode)}</select></label>
       <label class="li-field" data-manual>Target<input type="number" name="target" min="0.01" step="any" value="${esc(m.target)}"></label>
       <label class="li-field" data-manual>Current progress<input type="number" name="current_progress" min="0" step="any" value="${esc(m.current_progress)}"></label>

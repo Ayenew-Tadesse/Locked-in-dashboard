@@ -613,6 +613,60 @@ test("resume: starts from your resume, edits live, drags to reorder, saves, and 
   await page.close();
 });
 
+test("my year: quarters follow the plan year everywhere (Tasks card, Quarter page, goals, Objective card)", async () => {
+  const page = await open("settings", { width: 1280, height: 900 });
+  // A plan year that started 8 days ago (like Sep 22 when it's Sep 30).
+  const start = shift(today(), -8);
+  const end = shift(shift(start, 366), 1);
+  await page.fill("#li-year-form [name=start]", start);
+  await page.fill("#li-year-form [name=end]", end);
+  await page.waitForFunction(() => /^Q1 .+ · Q2 .+ · Q3 .+ · Q4 /.test(document.querySelector("#li-year-quarters").textContent));
+  await page.click("#li-year-form button[type=submit]");
+  // The Tasks card's Quarter tab: Q1, from the start of the plan year.
+  await page.click("#li-back");
+  await page.click('#li-tasks-card [data-period="quarter"]');
+  const [y, m, d] = start.split("-").map(Number);
+  const startText = new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  await page.waitForFunction((t) => new RegExp("Q1 · " + t + " –").test(document.querySelector("#li-tasks-card").textContent), startText);
+  // The Quarter page is Q1 and "Now".
+  await page.evaluate(() => { location.hash = "#/quarter"; });
+  await page.waitForSelector(".li-view-head h2");
+  assert.equal(await page.textContent(".li-view-head h2"), "Q1");
+  assert.match(await page.textContent(".li-view-head .card-label"), /^Q1 · .+ · Year \d{4}–\d{2} · Now$/);
+  // Move a goal into Q1 (the goal form lists your plan quarters).
+  const goalsBefore = await page.locator(".li-goals li").count();
+  const q1Label = await page.textContent(".li-view-head .card-label");
+  // Edit "Ship Guxo Flights publicly" (demo, stored in the calendar quarter) from whichever quarter shows it.
+  const found = await page.evaluate(async () => {
+    for (let y = new Date().getFullYear() - 1; y <= new Date().getFullYear() + 1; y++) for (let q = 1; q <= 4; q++) {
+      location.hash = `#/quarter?q=${q}&y=${y}`;
+      await new Promise((r) => setTimeout(r, 30));
+      if (document.querySelector('[data-goal="g1"]')) return location.hash;
+    }
+    return null;
+  });
+  assert.ok(found, "the demo goal is in one of the quarters");
+  await page.click('[data-goal="g1"]');
+  const opt = await page.locator('#li-modal select[name=pq] option', { hasText: q1Label.split(" · Year")[0] }).first().getAttribute("value");
+  await page.selectOption("#li-modal select[name=pq]", opt);
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.evaluate(() => { location.hash = "#/quarter"; });
+  await page.waitForSelector('[data-goal="g1"]');
+  assert.equal(await page.locator(".li-goals li").count(), goalsBefore + 1, "the goal is now in Q1");
+  // The Objective card: Q1 is Now, with the goal's milestones.
+  await page.click('#li-nav a[href="#/"]');
+  await page.waitForSelector("#obj-track .obj-step.now");
+  assert.match(await page.locator("#obj-track .obj-step.now").innerText(), /Q1/);
+  assert.match(await page.textContent("#obj-overall"), /milestones/);
+  await page.click("#obj-panel .obj-drop");
+  const items = await page.locator("#obj-list li").allInnerTexts();
+  assert.ok(items.some((t) => /Launch personal portfolio/.test(t)) && items.some((t) => /Booking flow end-to-end/.test(t)), "the goal's milestones");
+  assert.equal(await page.locator('#obj-list a[href^="#/milestones/"]').count(), items.length, "each opens its milestone");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("GitHub: days you commit turn green on the Activity map", async () => {
   const page = await open("settings", { width: 1280, height: 900 });
   // A day the demo marks as missed (its checklist wasn't finished).
@@ -968,9 +1022,14 @@ test("?demo=history previews the original dashboard's tracking history", async (
   assert.equal(await row(page, "Map the booking flow and choose a state library").count(), 1, "the plan's first ticket");
   await page.goto(BASE + "?demo=history#/milestones?show=all");
   await page.waitForFunction(() => document.querySelector(".li-h2")?.textContent === "23 total");
-  await page.goto(BASE + "?demo=history#/quarter?q=4&y=2026");
+  // Quarters follow the plan year: Q1 is Sep 22 – Dec 31, 2026 (the foundation), Q4 ends on launch day.
+  await page.goto(BASE + "?demo=history#/quarter?q=1&y=2026");
   await page.waitForSelector(".li-goals");
   assert.match(await page.locator(".li-goals").innerText(), /33%[\s\S]*Build the shared foundation/);
+  assert.match(await page.textContent(".li-view-head .card-label"), /^Q1 · Sep 22 – Dec 31, 2026 · Year 2026–27/);
+  await page.goto(BASE + "?demo=history#/quarter?q=4&y=2026");
+  await page.waitForFunction(() => /Ship Gexi; connect the network/.test(document.querySelector(".li-goals")?.textContent || ""));
+  assert.match(await page.textContent(".li-view-head .card-label"), /^Q4 · Jul 1 – Sep 23, 2027/);
   await page.goto(BASE + "?demo=history#/calendar?month=2026-09&day=2026-09-24");
   await page.waitForSelector("#li-cal-day");
   assert.match(await page.locator("#li-cal-day").innerText(), /Megabus|megabus/);

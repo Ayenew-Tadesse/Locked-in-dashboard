@@ -325,6 +325,23 @@ fields back in step. Case studies are cards: tap to edit (delete is in the
 editor), drag onto another to swap (mouse anywhere on the card, touch by the
 grip, Ctrl/⌘ + arrow keys); they save straight away.
 
+**Plan-year quarters.** `app/core/quarters.js`: with a plan year
+(`preferences.year` = { start, end }, set in Settings → My year; owners who
+loaded the year plan default to `PLAN_YEAR`, Sep 22, 2026 → Sep 23, 2027) Q1
+runs from the start to the end of the calendar quarter that's mostly inside
+it, Q2–Q4 follow the calendar and Q4 ends on the last day; the next year
+starts the day after. `"calendar"` (or no plan) keeps calendar quarters.
+`state.year` / `state.quarterAt()` drive the Tasks card's Quarter tab, the
+Quarter page and goal form, the quarter ring and score (`scoreQuarterOf`),
+analytics, warnings, milestone labels and the portfolio's plan (the year is
+copied into `site.year`). Goals keep their stored calendar quarter: a goal
+belongs to the plan quarter containing its calendar quarter's first day
+(`goalInQuarter`), and new goals are stored under the calendar quarter of the
+plan quarter's last day (`storageQuarter`), so no data changes. The Objective
+card (`LockedInLegacy.objective`) now shows the plan year's four quarters,
+each with its goals' milestones (ticked when completed, linked to the
+milestone), instead of the original fixed roadmap checklist.
+
 **GitHub commits on the Activity map.** `app/github.js` asks GitHub's
 public commit search (`app/core/github.js`, keyless, public repos only) for
 the last 90 days of `author:<username>` commits when the dashboard opens and

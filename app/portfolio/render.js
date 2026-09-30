@@ -7,6 +7,7 @@ import { projectProgress, safeUrl, LINK_LABELS } from "../core/projects.js";
 import { activityStats, PORTFOLIO_LINKS } from "../core/portfolio.js";
 import { hasSite, renderSite } from "./site.js";
 import { hasResume, renderResumePage } from "./resume.js";
+import { yearConfig, quarterOfGoal } from "../core/quarters.js";
 
 const STATUS = { not_started: "Not started", in_progress: "In progress", completed: "Completed", on_hold: "On hold" };
 const PROJECT_STATE = { good: "On track", warn: "Needs attention", idle: "Not started" };
@@ -116,9 +117,10 @@ export function renderPortfolio(data, opts = {}) {
       ${msDone.length ? `<h3 class="pf-h3">Achieved</h3><ul class="pf-ms done">${msDone.map(item).join("")}</ul>` : ""}
     </section>`);
   }
+  const planYear = yearConfig(data.site?.year);
   if (data.plan && data.plan.length) {
     sections.plan = (`<section class="pf-section" id="pf-plan"><h2>The plan</h2>
-      <ol class="pf-plan">${data.plan.map((g) => `<li><span class="pf-q">Q${g.quarter} ${g.year}</span><b>${esc(g.title)}</b>
+      <ol class="pf-plan">${data.plan.map((g) => `<li><span class="pf-q">${esc(quarterOfGoal(g, planYear).long)}</span><b>${esc(g.title)}</b>
         <div class="pf-bar"><i style="width:${g.pct}%"></i></div><span class="pf-plan-meta">${esc(STATUS[g.status] || "")} · ${g.pct}%</span></li>`).join("")}</ol>
     </section>`);
   }

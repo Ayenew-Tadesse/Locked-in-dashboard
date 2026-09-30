@@ -3,6 +3,7 @@
 // scored what it did. The formula is documented in docs/SCORING.md and in
 // the app under Settings -> Scoring formula.
 import { addDays, eachDay, quarterRange, weekRange, diffDays } from "./dates.js";
+import { goalInQuarter } from "./quarters.js";
 import { completedDay, wasOverdueOn } from "./tasks.js";
 
 export const DEFAULT_SCORING = {
@@ -190,8 +191,17 @@ export function scoreWeek(tasks, anyDayInWeek, cfg, opts) {
  * overlap the quarter, up to today) + goalProgressWeight x average
  * progress of that quarter's goals. A missing part is skipped.
  */
-export function scoreQuarter(tasks, goals, quarter, year, cfg, { today, timeZone } = {}) {
+export function scoreQuarter(tasks, goals, quarter, year, cfg, opts = {}) {
   const { start, end } = quarterRange(quarter, year);
+  return scoreQuarterRange(tasks, goals.filter((g) => g.quarter === quarter && g.year === year), { quarter, year, start, end }, cfg, opts);
+}
+
+/** The same for any quarter { quarter, year, start, end } (a plan-year quarter) and its goals. */
+export function scoreQuarterOf(tasks, goals, q, cfg, opts = {}) {
+  return scoreQuarterRange(tasks, goals.filter((g) => goalInQuarter(g, q)), q, cfg, opts);
+}
+
+function scoreQuarterRange(tasks, quarterGoals, { quarter, year, start, end }, cfg, { today, timeZone } = {}) {
   const period = scorePeriod(tasks, start, end, cfg, { today, timeZone });
   const weeks = [];
   for (let w = weekRange(start).start; w <= end; w = addDays(w, 7)) {
@@ -201,7 +211,7 @@ export function scoreQuarter(tasks, goals, quarter, year, cfg, { today, timeZone
   }
   const scoredWeeks = weeks.filter((w) => w.score != null);
   const weeklyAvg = scoredWeeks.length ? scoredWeeks.reduce((s, w) => s + w.score, 0) / scoredWeeks.length : null;
-  const qGoals = goals.filter((g) => g.quarter === quarter && g.year === year && g.status !== "cancelled");
+  const qGoals = quarterGoals.filter((g) => g.status !== "cancelled");
   const goalAvg = qGoals.length ? qGoals.reduce((s, g) => s + Number(g.percentage_complete || 0), 0) / qGoals.length : null;
   const score = blend([
     { weight: cfg.quarter.weeklyAverageWeight, value: weeklyAvg },
