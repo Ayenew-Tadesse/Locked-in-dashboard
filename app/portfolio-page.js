@@ -38,14 +38,41 @@ async function demo() {
   });
 }
 
+// Opened with the dashboard's "Preview on web": redraw whenever you save there.
+const query = new URLSearchParams(location.search);
+const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("lockedin-portfolio");
+let reload = null; // fetches the latest version (set once the page has loaded)
+if (channel) channel.onmessage = async (e) => {
+  const m = e.data || {};
+  if (m.data && query.has("live")) render(m.data, true);
+  else if (m.type === "saved" && reload) {
+    try { render(await reload(), true); } catch (err) { console.error("portfolio refresh:", err); }
+  }
+};
+
 async function main() {
-  if (new URLSearchParams(location.search).has("demo")) { render(await demo()); return; }
+  if (query.has("demo")) {
+    // Demo "Preview on web": the dashboard tab sends your (unsaved-anywhere) demo portfolio.
+    if (query.has("live") && channel) {
+      channel.postMessage({ type: "hello" });
+      await new Promise((r) => setTimeout(r, 1500));
+      if (current) return;
+    }
+    render(await demo()); return;
+  }
   const token = new URLSearchParams(location.hash.slice(1)).get("t");
   if (!token) { show(`<h1>Private portfolio</h1><p>This page opens from a private link. If someone shared one with you, open it again from their message.</p>`); return; }
   if (!config.supabaseUrl || !config.supabaseAnonKey) { show(`<h1>Private portfolio</h1><p>This portfolio isn't available right now.</p>`); return; }
   const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm");
   const sb = createClient(config.supabaseUrl, config.supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
   const { data, error } = await sb.rpc("portfolio_view", { p_token: token });
+  if (!error && query.has("preview")) {
+    reload = async () => {
+      const r = await sb.rpc("portfolio_view", { p_token: token });
+      if (r.error) throw r.error;
+      return r.data;
+    };
+  }
   if (error) {
     const expired = /invalid link/i.test(error.message) || error.code === "28000";
     const notReady = /portfolio_view|function|schema cache|PGRST202/i.test(`${error.message} ${error.code}`);
@@ -66,7 +93,8 @@ function setCase(id) {
   if (id) p.set("case", id); else p.delete("case");
   location.hash = p.toString();
 }
-function render(data) {
+function render(data, keepScroll = false) {
+  const y = window.scrollY;
   current = data;
   const view = hashParams().get("case");
   const name = data.site?.hero?.name || data.about?.name || "Portfolio";
@@ -74,6 +102,7 @@ function render(data) {
   document.title = c ? `${c.title} · ${name}` : `${name} · Portfolio`;
   root.innerHTML = renderPortfolio(data, { view });
   root.removeAttribute("aria-busy");
+  if (keepScroll) window.scrollTo(0, y);
 }
 window.addEventListener("hashchange", () => { if (current) { render(current); window.scrollTo(0, 0); } });
 root.addEventListener("click", (e) => {
