@@ -15,6 +15,26 @@ export function githubUsername() {
   return state.isColleague ? "" : defaultGithubUser(state.settings?.preferences, location.hostname);
 }
 
+/** What the portfolio needs to show your commits: { github, tz }. */
+export function portfolioGithub() {
+  return { github: githubUsername() || "", tz: state.timeZone || "" };
+}
+
+/**
+ * Keep your portfolio's copy of the GitHub username (and time zone) in step,
+ * so share links show your commits without a trip to the Portfolio page.
+ */
+export async function syncPortfolioGithub() {
+  const prefs = state.settings?.preferences || {}, site = prefs.portfolio?.site;
+  if (state.isColleague || !site || typeof site !== "object") return;
+  const want = portfolioGithub();
+  if ((site.github || "") === want.github && (site.tz || "") === want.tz) return;
+  const next = { ...site, ...want };
+  if (!next.github) delete next.github;
+  const s = await state.store.savePreferences({ ...prefs, portfolio: { ...prefs.portfolio, site: next } });
+  state.settings = { ...state.settings, ...s };
+}
+
 /** Load (from the 10-minute memory unless force) and redraw. */
 export async function refreshGithub({ force = false } = {}) {
   const user = githubUsername();

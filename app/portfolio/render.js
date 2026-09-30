@@ -25,7 +25,7 @@ function contactLinks(links = {}, resume = false) {
 
 function heatmap(activity) {
   const today = activity.today;
-  const count = new Map((activity.days || []).map((d) => [d.date, d.done]));
+  const byDay = new Map((activity.days || []).map((d) => [d.date, d]));
   // 26 columns (weeks) x 7 rows (Mon..Sun), ending with this week.
   const dow = (new Date(today + "T12:00:00Z").getUTCDay() + 6) % 7;
   const start = addDays(today, -(25 * 7 + dow));
@@ -33,11 +33,12 @@ function heatmap(activity) {
   for (let i = 0; i < 26 * 7; i++) {
     const d = addDays(start, i);
     if (d > today) { cells.push(`<i class="pf-cell future"></i>`); continue; }
-    const n = count.get(d) || 0;
+    const day = byDay.get(d) || {}, done = day.done || 0, commits = day.commits || 0, n = done + commits;
     const level = n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4;
-    cells.push(`<i class="pf-cell l${level}" title="${esc(formatDay(d, { weekday: "short", month: "short", day: "numeric" }))}: ${n} task${n === 1 ? "" : "s"} finished"></i>`);
+    const what = [`${done} task${done === 1 ? "" : "s"} finished`, commits ? `${commits} GitHub commit${commits === 1 ? "" : "s"}` : ""].filter(Boolean).join(", ");
+    cells.push(`<i class="pf-cell l${level}" title="${esc(formatDay(d, { weekday: "short", month: "short", day: "numeric" }))}: ${what}"></i>`);
   }
-  return `<div class="pf-heat-wrap"><div class="pf-heat" role="img" aria-label="Tasks finished per day over the last 6 months">${cells.join("")}</div>
+  return `<div class="pf-heat-wrap"><div class="pf-heat" role="img" aria-label="${activity.github ? "Tasks finished and GitHub commits" : "Tasks finished"} per day over the last 6 months">${cells.join("")}</div>
     <div class="pf-heat-legend"><span>${esc(formatDay(start, { month: "short", year: "numeric" }))}</span><span class="pf-heat-scale">Less <i class="pf-cell l0"></i><i class="pf-cell l1"></i><i class="pf-cell l2"></i><i class="pf-cell l3"></i><i class="pf-cell l4"></i> More</span><span>Today</span></div></div>`;
 }
 
@@ -96,8 +97,10 @@ export function renderPortfolio(data, opts = {}) {
         ${stat(s.activeDays90, "active days (90)")}
         ${stat(s.streak ? `${s.streak} day${s.streak === 1 ? "" : "s"}` : "—", "current streak")}
         ${act.minutes_total ? stat(formatMinutes(act.minutes_total), "logged") : ""}
+        ${act.github ? stat(act.commits_90, "GitHub commits (90 days)") : ""}
       </div>
       ${heatmap(act)}</div>
+      ${act.github ? `<p class="pf-note">Green days include public GitHub commits.</p>` : ""}
       ${weeks.length ? `<div class="pf-weeks" aria-label="Weekly score, last ${weeks.length} weeks">${weeks.map((w) => `<span title="Week of ${esc(formatDay(w.week_start, { month: "short", day: "numeric" }))}: ${Math.round(w.score)}/100"><i style="height:${Math.max(4, Math.round(w.score))}%"></i></span>`).join("")}</div>
         <p class="pf-note">Weekly score (0–100): tasks finished on time, time logged and consistency.</p>` : ""}
     </section>`);

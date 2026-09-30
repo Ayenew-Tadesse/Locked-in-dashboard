@@ -4,6 +4,28 @@
 import { renderPortfolio } from "./portfolio/render.js";
 import { buildPortfolioData } from "./core/portfolio.js";
 import { printResume } from "./portfolio/resume.js";
+import { mergeCommits } from "./core/portfolio.js";
+import { fetchCommits, commitsByDay, githubUser } from "./core/github.js";
+
+// Your public GitHub commits on the Activity map: the visitor's browser asks
+// GitHub (no key), remembered for 10 minutes in their browser.
+async function withCommits(data) {
+  const user = githubUser(data?.site?.github || "");
+  if (!user || !data.activity || data.activity.github) return data;
+  const key = "lockedin_pf_github:" + user.toLowerCase();
+  let days = null;
+  try { const c = JSON.parse(localStorage.getItem(key) || "null"); if (c && Date.now() - c.at < 600000) days = c.days; } catch { /* ask GitHub */ }
+  if (!days) {
+    days = commitsByDay(await fetchCommits(user, { today: data.activity.today }), data.site.tz);
+    try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), days })); } catch { /* fine */ }
+  }
+  return { ...data, activity: mergeCommits(data.activity, days) };
+}
+// Draw now, then again with the commits once GitHub answers (a failure keeps the page as it is).
+function present(data, keepScroll = false) {
+  render(data, keepScroll);
+  withCommits(data).then((d) => { if (d !== data && current === data) render(d, true); }, (e) => console.warn("GitHub:", e.message));
+}
 
 const root = document.getElementById("pf-root");
 const config = window.LOCKEDIN_CONFIG || {};
@@ -47,7 +69,7 @@ if (channel) channel.onmessage = async (e) => {
   const m = e.data || {};
   if (m.data && query.has("live")) render(m.data, true);
   else if (m.type === "saved" && reload) {
-    try { render(await reload(), true); } catch (err) { console.error("portfolio refresh:", err); }
+    try { present(await reload(), true); } catch (err) { console.error("portfolio refresh:", err); }
   }
 };
 
@@ -82,7 +104,7 @@ async function main() {
       : notReady ? "This portfolio isn't ready yet. Please try again later." : "This portfolio couldn't be loaded. Please try again in a moment."}</p>`);
     return;
   }
-  render(data);
+  present(data);
 }
 
 // The open case study lives in the address after the link's secret: #t=…&case=hidgo,

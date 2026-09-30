@@ -41,3 +41,17 @@ test("github: asks GitHub's commit search for the last 90 days, keyless", async 
   assert.equal(asked[0][1].headers.Authorization, undefined, "no token");
   await assert.rejects(fetchCommits("nobody", { today: "2026-09-30", fetchImpl: async () => ({ ok: false, status: 422 }) }), /doesn't know the user/);
 });
+
+test("portfolio activity: commits join the days, the 90-day total and the streak", async () => {
+  const { mergeCommits, activityStats } = await import("../../app/core/portfolio.js");
+  const act = { today: "2026-09-30", days: [{ date: "2026-09-28", done: 2 }] };
+  const merged = mergeCommits(act, { "2026-09-29": { count: 3 }, "2026-09-30": { count: 1 }, "2026-10-01": { count: 5 }, "2026-05-01": { count: 4 } });
+  assert.deepEqual(merged.days.map((d) => [d.date, d.done || 0, d.commits || 0]),
+    [["2026-05-01", 0, 4], ["2026-09-28", 2, 0], ["2026-09-29", 0, 3], ["2026-09-30", 0, 1]], "future commits are left out");
+  assert.equal(merged.commits_90, 4, "only the last 90 days count toward the total");
+  assert.equal(merged.github, true);
+  assert.equal(activityStats(merged).streak, 3, "commit days keep the streak going");
+  assert.equal(activityStats(act).streak, 0, "without commits there's no streak up to today");
+  assert.equal(mergeCommits(act, {}), act, "nothing to add: unchanged");
+  assert.equal(mergeCommits(null, { "2026-09-29": { count: 1 } }), null, "activity switched off stays off");
+});

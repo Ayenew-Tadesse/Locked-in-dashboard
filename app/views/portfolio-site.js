@@ -9,6 +9,7 @@ import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { fetchGitHubPortfolio, parsePortfolioHtml, uploadSiteImages } from "../portfolio/import.js";
+import { portfolioGithub } from "../github.js";
 
 const DEFAULT_REPO = "Ayenew-Tadesse/portfolio";
 // Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
@@ -261,6 +262,9 @@ export function wireEditor(el, hooks) {
     site.cases = site.cases || [];
     // Your plan year travels with the site, so "The plan" shows your quarters (Q1 = Sep 22 – Dec 31).
     if (state.year) site.year = state.year; else delete site.year;
+    // Your GitHub username and time zone, so the portfolio's Activity map can show your public commits.
+    Object.assign(site, portfolioGithub());
+    if (!site.github) delete site.github;
     // Keep the older profile fields in step (anything that still reads them).
     const prefs = state.settings.preferences || {}, old = prefs.portfolio || {};
     const yearsStat = site.stats.find((x) => /year/i.test(x.label));

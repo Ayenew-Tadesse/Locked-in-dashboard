@@ -69,7 +69,7 @@ export function portfolioPrefs(preferences) {
 }
 
 /** Same shape as public.portfolio_view: { about, activity, projects, milestones, plan, work }. */
-export function buildPortfolioData({ name, preferences, tasks = [], projects = [], milestones = [], goals = [], weekly = [], today, timeZone, year = null }) {
+export function buildPortfolioData({ name, preferences, tasks = [], projects = [], milestones = [], goals = [], weekly = [], today, timeZone, year = null, commitDays = null }) {
   const p = portfolioPrefs(preferences);
   const done = tasks.filter((t) => t.status === "completed");
   const doneDay = (t) => dayOf(t.completed_at, timeZone) || t.date;
@@ -82,14 +82,15 @@ export function buildPortfolioData({ name, preferences, tasks = [], projects = [
     site: visibleSite(year ? { ...p.site, year } : p.site, p.show),
     about: { name, headline: p.headline || null, bio: p.bio || null, approach: p.approach || null, links: p.links,
       details: visibleDetails(p.details, p.show) },
-    activity: !p.show.activity ? null : {
+    activity: !p.show.activity ? null : mergeCommits({
       completed_total: done.length, completed_30: since(30), completed_90: since(90),
       minutes_total: done.reduce((s, t) => s + (Number(t.actual_minutes) || 0), 0),
       today,
       days: [...perDay].sort(([a], [b]) => a.localeCompare(b)).map(([date, n]) => ({ date, done: n })),
       weeks: weekly.filter((w) => w.score != null).sort((a, b) => a.week_start.localeCompare(b.week_start)).slice(-12)
         .map((w) => ({ week_start: w.week_start, score: Number(w.score) })),
-    },
+    }, commitDays),
+
     projects: !p.show.projects ? null : (projects || []).map((x) => ({ name: x.name, code: x.code, description: x.description, category: x.category,
       stage: x.stage, status: x.status, links: x.links || {}, checklist: x.checklist || [] })),
     milestones: !p.show.milestones ? null : milestones.filter((m) => m.status !== "cancelled").map((m) => ({ title: m.title, description: m.description,
@@ -106,9 +107,30 @@ export function buildPortfolioData({ name, preferences, tasks = [], projects = [
   };
 }
 
-/** Active days in the last 90 days and the current streak (days in a row with something finished). */
+/**
+ * Adds GitHub commits to the activity: { "YYYY-MM-DD": { count } } from
+ * core/github.js. Each day becomes { date, done, commits }; commits_90 is the
+ * total over the last 90 days. Returns a new activity.
+ */
+export function mergeCommits(activity, commitDays) {
+  if (!activity || !commitDays || !Object.keys(commitDays).length) return activity;
+  const byDate = new Map((activity.days || []).map((d) => [d.date, { ...d }]));
+  let total = 0;
+  const from = addDays(activity.today, -89);
+  for (const [date, c] of Object.entries(commitDays)) {
+    const n = Number(c?.count) || 0;
+    if (!n || date > activity.today) continue;
+    const d = byDate.get(date) || { date, done: 0 };
+    d.commits = (d.commits || 0) + n;
+    byDate.set(date, d);
+    if (date >= from) total += n;
+  }
+  return { ...activity, days: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)), commits_90: total, github: true };
+}
+
+/** Active days in the last 90 days and the current streak (days in a row with something finished or committed). */
 export function activityStats(activity) {
-  const days = new Set((activity?.days || []).filter((d) => d.done > 0).map((d) => d.date));
+  const days = new Set((activity?.days || []).filter((d) => (d.done || 0) + (d.commits || 0) > 0).map((d) => d.date));
   const today = activity?.today;
   if (!today) return { activeDays90: 0, streak: 0 };
   let activeDays90 = 0;

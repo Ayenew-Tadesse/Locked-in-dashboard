@@ -6,7 +6,7 @@ import { formatDay, dayOf } from "../core/dates.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { buildYearSetup, buildMissingHistory } from "../plan/setup.js";
 import { PLAN_STATS } from "../plan/year-plan.js";
-import { githubUsername, refreshGithub } from "../github.js";
+import { githubUsername, refreshGithub, syncPortfolioGithub } from "../github.js";
 import { githubUser } from "../core/github.js";
 import { quarterBy, yearConfig } from "../core/quarters.js";
 
@@ -146,6 +146,7 @@ export function renderSettings(el) {
       state.settings = { ...state.settings, ...s };
       e.target.elements.user.value = user;
       toast(user ? "Saved: checking GitHub…" : "GitHub switched off");
+      syncPortfolioGithub().catch(() => {});
       await refreshGithub({ force: true });
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
