@@ -81,9 +81,17 @@ LOCKEDIN_TASK_TOKEN=lki_... node scripts/complete-task.mjs --id 6f1c...
 * A task someone assigned you still needs a file attached first, as in the app.
 * Needs the migration `20261009000000_api_complete_task.sql`.
 
-For Claude Code on the web, put the token in the cloud environment's
-settings as the variable `LOCKEDIN_TASK_TOKEN` (never in chat or the repo),
-and allow the host `uzbgbtzcnufaebifkeab.supabase.co` in its network access.
+For Claude Code on the web, add the token as an **API credential** in the
+cloud environment's settings (never in chat or the repo), so the assistant
+never sees it:
+
+* Allowed websites: `uzbgbtzcnufaebifkeab.supabase.co`
+* Custom header: name `x-lockedin-token`, no prefix, value = the token
+  (not `Authorization`: Supabase reads that header itself)
+
+`api_complete_task` reads the token from that header when none is passed
+(migration `20261010000000_api_complete_task_header.sql`). An environment
+variable `LOCKEDIN_TASK_TOKEN` works too.
 
 ## Connecting Claude later
 
