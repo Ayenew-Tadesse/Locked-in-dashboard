@@ -103,9 +103,10 @@
   font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;line-height:1.2;}
 .pf-btn--solid{background:var(--accent);color:var(--surface);}
 .pf-btn--outline{background:transparent;color:var(--accent);}
-/* The resume link: the document icon on its own, 66px. */
-.pf-resume-icon{display:inline-flex;color:var(--accent);border-radius:8px;line-height:0;transition:color .15s;}
-.pf-resume-icon svg{width:66px;height:66px;margin-left:-13px;} /* the page starts 5/24 in: line it up with the text */
+/* The resume link: a 132px document icon with "Resume" under it, centred in the text column. */
+.pf-s-hero .pf-s-actions{justify-content:center;}
+.pf-resume-icon{display:inline-flex;flex-direction:column;align-items:center;gap:2px;color:var(--accent);border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;line-height:1.2;transition:color .15s;}
+.pf-resume-icon svg{width:132px;height:132px;}
 .pf-resume-icon:hover{color:color-mix(in srgb, var(--accent) 75%, var(--ink));}
 .pf-btn--disabled{border-color:var(--line);color:var(--ink-3);cursor:default;}
 .pf-s-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center;padding:12px 0 28px;}
