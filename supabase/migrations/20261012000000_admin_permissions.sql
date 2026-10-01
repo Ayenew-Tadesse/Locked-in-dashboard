@@ -134,22 +134,26 @@ create policy "owner renames the team" on public.teams
   for update to authenticated using ((select private.admin_can(id, 'rename_team'))) with check ((select private.admin_can(id, 'rename_team')));
 
 -- Team goals and milestones (personal ones stay their owner's).
-do $$
-declare t text;
-begin
-  foreach t in array array['quarterly_goals', 'milestones'] loop
-    execute format('drop policy if exists "own or owned team: insert" on public.%I', t);
-    execute format('drop policy if exists "own or owned team: update" on public.%I', t);
-    execute format('drop policy if exists "own or owned team: delete" on public.%I', t);
-    execute format($f$create policy "own or owned team: insert" on public.%I for insert to authenticated
-      with check (user_id = (select auth.uid()) and (team_id is null or (select private.admin_can(team_id, 'edit_goals'))))$f$, t);
-    execute format($f$create policy "own or owned team: update" on public.%I for update to authenticated
-      using (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end)
-      with check (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end)$f$, t);
-    execute format($f$create policy "own or owned team: delete" on public.%I for delete to authenticated
-      using (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end)$f$, t);
-  end loop;
-end $$;
+drop policy if exists "own or owned team: insert" on public.quarterly_goals;
+create policy "own or owned team: insert" on public.quarterly_goals for insert to authenticated
+  with check (user_id = (select auth.uid()) and (team_id is null or (select private.admin_can(team_id, 'edit_goals'))));
+drop policy if exists "own or owned team: update" on public.quarterly_goals;
+create policy "own or owned team: update" on public.quarterly_goals for update to authenticated
+  using (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end)
+  with check (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end);
+drop policy if exists "own or owned team: delete" on public.quarterly_goals;
+create policy "own or owned team: delete" on public.quarterly_goals for delete to authenticated
+  using (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end);
+drop policy if exists "own or owned team: insert" on public.milestones;
+create policy "own or owned team: insert" on public.milestones for insert to authenticated
+  with check (user_id = (select auth.uid()) and (team_id is null or (select private.admin_can(team_id, 'edit_goals'))));
+drop policy if exists "own or owned team: update" on public.milestones;
+create policy "own or owned team: update" on public.milestones for update to authenticated
+  using (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end)
+  with check (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end);
+drop policy if exists "own or owned team: delete" on public.milestones;
+create policy "own or owned team: delete" on public.milestones for delete to authenticated
+  using (case when team_id is null then user_id = (select auth.uid()) else (select private.admin_can(team_id, 'edit_goals')) end);
 
 -- Team chat: your own messages, and (moderate_chat) anyone's message to the whole team.
 drop policy if exists "team chat: delete your own messages" on public.messages;
@@ -251,3 +255,4 @@ grant execute on function public.set_admin_permissions(uuid, jsonb) to authentic
 revoke update on public.team_members from authenticated;
 
 notify pgrst, 'reload schema';
+-- End of file: if you pasted this into the SQL editor, this line should be the last one.
