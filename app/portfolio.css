@@ -168,7 +168,7 @@
 .pf-meta dt{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;}
 .pf-meta dd{margin:2px 0 0;font-weight:600;font-size:14px;}
 .pf-live-prog{margin:14px 0 0;padding:10px 14px;border-radius:10px;background:var(--accent-soft);font-size:13.5px;}
-.pf-case-block{padding:0 0 2px;}
+.pf-case-block{padding:26px 0 2px;border-bottom:1px solid var(--line);}
 .pf-case-block h2{margin:0 0 10px;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:0;text-transform:none;font-family:inherit;}
 .pf-case-block p{margin:0 0 12px;color:var(--ink-2);}
 .pf-intro{color:var(--ink-3) !important;font-size:14px;}

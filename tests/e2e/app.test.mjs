@@ -954,6 +954,7 @@ test("portfolio site: the editor, preview and share page follow your portfolio's
   assert.match(cs, /Hid-Go Flight Booking App[\s\S]*Role[\s\S]*UI\/UX Designer \(solo\)[\s\S]*Overview[\s\S]*Design process[\s\S]*Research[\s\S]*Problem statement[\s\S]*Who I designed for[\s\S]*The Frequent Flyer[\s\S]*Competitive analysis[\s\S]*Key insight[\s\S]*Information architecture[\s\S]*User flow[\s\S]*Solution[\s\S]*UI style guide[\s\S]*#1B2CC1[\s\S]*Outcome[\s\S]*Next: Guxo Bus Booking App/i);
   assert.equal(await preview.locator(".pf-shots img").count(), 3);
   assert.equal(await preview.locator(".pf-flow img").count(), 4);
+  assert.equal(await preview.locator(".pf-case .pf-bars").count(), 0, "no bar strips on case studies");
   await preview.locator("[data-home]").first().click();
   await preview.locator(".pf-s-hero").waitFor();
   // Drag a case study card onto another: they swap places, and the preview follows.
