@@ -34,6 +34,7 @@ import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { renderMessages, startMessages } from "./views/messages.js";
 import { setupChatDock, openChat, updateChatBadge } from "./ui/chat-dock.js";
 import { buildTeamDays } from "./core/teamdays.js";
+import { renderGroup, forgetGroupTasks } from "./views/group.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { renderTeamCard } from "./views/team-card.js";
@@ -55,6 +56,7 @@ const VIEWS = {
   portfolio: { label: "Portfolio", render: renderPortfolioPage },
   resume: { label: "Resume", render: renderResumeEditor },
   team: { label: "Team", render: renderTeam },
+  group: { label: "Group", render: renderGroup },
 };
 
 // Tabs in the top row. The other pages stay reachable by link: Tasks and Week
@@ -483,7 +485,7 @@ async function start(store) {
       ? "Preview with your tracking history from the original dashboard. Changes you make here aren't saved."
       : "Demo mode: sample data held in memory only. Nothing you change here is saved.")
     : "Your tasks, scores and milestones are saved to your database and sync across devices.";
-  subscribe(() => render());
+  subscribe(() => { forgetGroupTasks(); render(); });
   if (store.mode === "supabase" && needsProfile(state.profile)) askForProfile();
   // Roll over at midnight.
   let day = state.today;

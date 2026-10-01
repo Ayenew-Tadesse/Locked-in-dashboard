@@ -211,6 +211,8 @@ export function supabaseStoreFromClient(sb) {
       return { ...saved, members: [...g.members] };
     },
     async deleteGroup(id) { check(await sb.from("project_groups").delete().eq("id", id)); },
+    /** Every task you can see on a project (yours, the people you manage, your group's). */
+    async loadProjectTasks(projectId) { return check(await sb.from("tasks").select("*").eq("project_id", projectId).order("date")); },
     /** The extra projects someone works on (beyond their groups'), replaced by projectIds. */
     async setProjectAccess(memberId, projectIds) {
       const had = check(await sb.from("project_access").select("project_id").eq("user_id", memberId)).map((r) => r.project_id);
@@ -477,6 +479,7 @@ export function createMemoryStore(seed) {
       return { ...saved };
     },
     async deleteGroup(id) { db.groups = db.groups.filter((g) => g.id !== id); },
+    async loadProjectTasks(projectId) { return db.tasks.filter((t) => t.project_id === projectId).map((t) => ({ ...t })); },
     async setProjectAccess(memberId, projectIds) {
       db.access = db.access.filter((a) => a.user_id !== memberId).concat(projectIds.map((project_id) => ({ project_id, user_id: memberId })));
     },

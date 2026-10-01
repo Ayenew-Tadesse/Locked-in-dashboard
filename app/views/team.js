@@ -303,7 +303,7 @@ function groupsCard() {
     <div class="li-card-head"><span class="card-label">Project groups</span>${manage ? `<button type="button" class="li-btn small primary" data-group-new>+ New group</button>` : ""}</div>
     <p class="li-sub">Each group works on one project. Colleagues see and are assigned tasks only on their groups' projects (plus any extra project you give them on their page).</p>
     ${groups.length ? `<ul class="li-groups">${groups.map((g) => `<li data-group="${esc(g.id)}">
-      <div class="li-group-main"><b>${esc(g.name)}</b> <span class="li-pill">${esc(projectName(g.project_id))}</span>
+      <div class="li-group-main"><a class="li-link" href="#/group/${esc(g.id)}"><b>${esc(g.name)}</b></a> <span class="li-pill">${esc(projectName(g.project_id))}</span>
         <div class="li-group-people">${g.members.map((u) => `<span class="li-chip${u === g.lead_id ? " lead" : ""}">${esc(memberName(u))}${u === g.lead_id ? " · lead" : ""}</span>`).join("") || `<small class="li-muted">No members yet</small>`}</div></div>
       ${manage ? `<span class="li-btn-row"><button type="button" class="li-btn small" data-group-edit="${esc(g.id)}">Edit</button>
         <button type="button" class="li-btn small danger-ghost" data-group-delete="${esc(g.id)}">Delete</button></span>` : ""}

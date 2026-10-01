@@ -72,7 +72,9 @@ git-ignored).
    [`supabase/migrations/20261012000000_admin_permissions.sql`](../supabase/migrations/20261012000000_admin_permissions.sql)
    (Team → Admin management: what each admin may do), then
    [`supabase/migrations/20261013000000_project_groups.sql`](../supabase/migrations/20261013000000_project_groups.sql)
-   (project groups: colleagues work only on their groups' projects). Run the files in this order.
+   (project groups: colleagues work only on their groups' projects), then
+   [`supabase/migrations/20261014000000_group_work.sql`](../supabase/migrations/20261014000000_group_work.sql)
+   (people in a group see each other's tasks on its project, read only). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.
@@ -114,7 +116,10 @@ groups"): **+ New group** → a name, one project, members and an optional
 lead. Colleagues see and are assigned tasks only on their groups' projects;
 give someone another project on their page (**Give access…**). The owner and
 admins see every project. Tasks have a **Project** field that offers only
-projects the person works on; the database enforces it.
+projects the person works on; the database enforces it. Each group has a
+page (☰ → **Project groups**, or the group's name on the Team page): the
+project's progress, its people, and everyone's open and recent work on it,
+read only.
 
 ### Inviting colleagues
 1. Team → **Invite colleagues** → enter their email → **Invite**.

@@ -721,3 +721,17 @@ select pg_temp.act_as(:owner);
 delete from projects where name = 'Shop';
 reset role;
 select pg_temp.check(not exists (select 1 from project_groups where name = 'Shop crew'), 'deleting a project removes its groups');
+
+-- 19. Group work: members see each other's tasks on the group's project (read only)
+select pg_temp.act_as(:owner);
+insert into project_group_members (group_id, user_id) select id, :ana from project_groups where name = 'Flights crew';
+select public.set_member_role(:ana, 'member');
+insert into tasks (user_id, title, project_id) select :ana, 'Ana on Flights', id from projects where name = 'Flights';
+insert into tasks (user_id, title) values (:ana, 'Ana, private');
+reset role;
+select pg_temp.act_as(:ben);
+select pg_temp.check(exists (select 1 from tasks where title = 'Ana on Flights'), 'group members see each other''s tasks on the project');
+select pg_temp.check(not exists (select 1 from tasks where title = 'Ana, private'), 'but not their other tasks');
+update tasks set title = 'Changed by Ben' where title = 'Ana on Flights';
+reset role;
+select pg_temp.check(exists (select 1 from tasks where title = 'Ana on Flights'), 'read only: Ben can''t change Ana''s task');
