@@ -1789,6 +1789,33 @@ test("project groups: create a group, its members work on its project; extra acc
   await page.close();
 });
 
+test("project groups: the group page shows the project, its people and everyone's work on it", async () => {
+  const page = await open("team", { width: 390, height: 844 });
+  await page.waitForSelector("#li-groups");
+  // A group with Ana and Ben on the first project, and a task for Ana on it.
+  const pid = await page.evaluate(async () => {
+    const S = await import(new URL("app/state.js", location.href).href);
+    const p = S.state.projects[0];
+    await S.saveGroup({ name: "Flights crew", project_id: p.id, lead_id: "sample-ana", members: ["sample-ana", "sample-ben"] });
+    await S.saveTask({ title: "Seat map for Flights", date: S.state.today, user_id: "sample-ana", project_id: p.id });
+    return p.id;
+  });
+  // From the menu: Project groups, then the group.
+  await (await menuItem(page, 'a[href="#/group"]')).click();
+  await page.locator('a[href^="#/group/"]', { hasText: "Flights crew" }).click();
+  await page.waitForSelector("#li-group-open .li-task");
+  const name = await page.evaluate((pid) => import(new URL("app/state.js", location.href).href).then((S) => S.state.projects.find((p) => p.id === pid).name), pid);
+  assert.equal(await page.textContent(".li-view-head h2"), "Flights crew");
+  assert.match(await page.textContent(".li-view-head .li-sub"), new RegExp(`${name} · Lead: Ana \\(sample\\)`));
+  assert.equal(await page.locator(".li-project h3").first().textContent(), name, "the project's card");
+  assert.match(await page.textContent("#li-group-members"), /Ana \(sample\)\s*Lead[\s\S]*1 open[\s\S]*Ben \(sample\)[\s\S]*0 open/);
+  const row = page.locator("#li-group-open .li-task", { hasText: "Seat map for Flights" });
+  assert.match(await row.innerText(), /Ana \(sample\)/, "who's doing it");
+  assert.equal(await row.locator("select, button.li-check").count(), 0, "read only here");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {
   const page = await dbPage({ signedIn: false });
   await page.waitForSelector("#li-auth .gate-card", { state: "visible" });
