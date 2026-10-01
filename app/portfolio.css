@@ -16,11 +16,11 @@
    left and drift slowly to the right, then a solid block. Navy at 10% (from
    the theme's ink and accent, so it reads as light blue on dark backgrounds). */
 .pf-bars{--pf-bar:color-mix(in srgb, color-mix(in srgb, var(--ink) 60%, var(--accent)) 10%, transparent);display:flex;height:65px;margin:18px 0 75px;}
-.pf-bars::before{content:"";flex:1;background:repeating-linear-gradient(90deg, var(--pf-bar) 0 2px, transparent 2px 9px);animation:pf-bars-drift 1.2s linear infinite;
+.pf-bars::before{content:"";flex:1;background:repeating-linear-gradient(90deg, var(--pf-bar) 0 6px, transparent 6px 13px);animation:pf-bars-drift 1.75s linear infinite;
   -webkit-mask:linear-gradient(90deg, transparent, #000 85%);mask:linear-gradient(90deg, transparent, #000 85%);}
 .pf-bars::after{content:"";width:30%;background:var(--pf-bar);}
 .pf-bars + .pf-section{padding-top:0;}
-@keyframes pf-bars-drift{ to{background-position:9px 0;} }
+@keyframes pf-bars-drift{ to{background-position:13px 0;} }
 @media (prefers-reduced-motion: reduce){ .pf-bars::before{animation:none;} }
 @media print{ .pf-bars{display:none;} }
 .pf-h3{margin:14px 0 8px;font-size:13px;font-weight:600;color:var(--ink-2);}
