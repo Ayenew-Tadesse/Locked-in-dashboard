@@ -104,7 +104,7 @@ function home(data, live) {
       ${h.description ? `<p class="pf-s-desc">${esc(h.description)}</p>` : ""}
       ${openLine(h)}
       <div class="pf-s-actions">
-        ${hasResume(s) ? `<a class="pf-resume-icon" href="#page=resume" data-resume aria-label="Resume" title="Resume">${RESUME_ICON}</a>` : link(s.resume, RESUME_ICON, "pf-resume-icon").replace("<a ", '<a aria-label="Resume" title="Resume" ')}
+        ${hasResume(s) ? `<a class="pf-resume-icon" href="#page=resume" data-resume>${RESUME_ICON}<span>Resume</span></a>` : link(s.resume, `${RESUME_ICON}<span>Resume</span>`, "pf-resume-icon")}
       </div>
       ${portrait ? "" : social}
     </div>
