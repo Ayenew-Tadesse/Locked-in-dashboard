@@ -227,3 +227,16 @@ test("tasks: countdown to the end of the deadline day", () => {
   assert.equal(countdownText("2026-10-01", new Date(2026, 9, 1, 23, 0, 0)), "00:59:59 left");
   assert.equal(countdownText("2026-09-30", new Date(2026, 9, 1, 9, 0, 0)), "Past deadline");
 });
+
+test("admin permissions: defaults, saved choices, and what gets saved", async () => {
+  const { adminPermissions, permissionChanges, ADMIN_DEFAULTS, ADMIN_PERMISSIONS } = await import("../../app/core/permissions.js");
+  assert.equal(ADMIN_PERMISSIONS.length, 13);
+  assert.deepEqual(adminPermissions(null), ADMIN_DEFAULTS, "nothing saved: the defaults");
+  const p = adminPermissions({ see_work: false, rename_team: true, bogus: true, invite: "yes" });
+  assert.equal(p.see_work, false);
+  assert.equal(p.rename_team, true);
+  assert.equal(p.invite, true, "non-booleans fall back to the default");
+  assert.ok(!("bogus" in p), "unknown names are dropped");
+  assert.deepEqual(permissionChanges({ ...ADMIN_DEFAULTS, see_work: false, rename_team: true }), { see_work: false, rename_team: true });
+  assert.deepEqual(permissionChanges(ADMIN_DEFAULTS), {});
+});

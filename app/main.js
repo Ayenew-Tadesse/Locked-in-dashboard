@@ -2,7 +2,7 @@
 // Supabase config (config.js) or is a preview (?demo=1 for sample data,
 // ?demo=history for the original dashboard's tracking history); otherwise
 // the original dashboard runs exactly as before.
-import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile, seedProjects, toast, refreshAccessRequests } from "./state.js";
+import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile, seedProjects, toast, refreshAccessRequests, can } from "./state.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
 import { demoSeed, emptySeed } from "./demo.js";
 import { buildYearSetup } from "./plan/setup.js";
@@ -96,7 +96,7 @@ function updateMessagesBadge() {
 function updateTeamBadge() {
   const tab = document.querySelector('#li-nav [data-view="team"]');
   if (!tab) return;
-  const n = state.isOwner ? (state.accessRequests || []).length : 0;
+  const n = can("access_requests") ? (state.accessRequests || []).length : 0;
   let dot = tab.querySelector(".li-nav-dot");
   if (!dot) { dot = document.createElement("span"); dot.className = "li-nav-dot"; tab.append(dot); }
   dot.hidden = !n;
@@ -105,7 +105,7 @@ function updateTeamBadge() {
 }
 // Owner: say so when people are waiting, and check again every few minutes.
 function watchAccessRequests() {
-  if (!state.isOwner || state.accessRequests == null) return;
+  if (!can("access_requests") || state.accessRequests == null) return;
   const say = () => {
     const n = state.accessRequests?.length || 0;
     if (n) toast(`${n} ${n === 1 ? "person asked" : "people asked"} for access. Open Team to approve or decline.`);

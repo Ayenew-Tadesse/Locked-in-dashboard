@@ -1,7 +1,7 @@
 // Tasks: every task grouped by planned day, with buttons to show one status
 // at a time (#/tasks?status=ongoing). The Overview's Overdue tile opens
 // #/tasks?status=overdue.
-import { state, myAssignments, memberName, filesFor, addPersonToAssignment, editAssignment, revokeAssignment, deleteAssignment, toast, SHARED_TASK_FIELDS, managesPerson } from "../state.js";
+import { state, myAssignments, memberName, filesFor, addPersonToAssignment, editAssignment, revokeAssignment, deleteAssignment, toast, SHARED_TASK_FIELDS, assignsTo } from "../state.js";
 import { effectiveStatus, sortTasks, PRIORITIES, categoriesOf } from "../core/tasks.js";
 import { formatDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, confirmDialog, options } from "../ui/dom.js";
@@ -91,7 +91,7 @@ function assignmentCard({ key, copies }) {
   const t = copies[0], today = state.today;
   const people = [...copies].sort((a, b) => memberName(a.user_id).localeCompare(memberName(b.user_id)));
   const done = copies.filter((c) => c.status === "completed").length;
-  const canAdd = state.members.some((m) => managesPerson(m) && !copies.some((c) => c.user_id === m.user_id));
+  const canAdd = state.members.some((m) => assignsTo(m) && !copies.some((c) => c.user_id === m.user_id));
   return `<section class="li-card li-assignment" data-assignment="${esc(key)}">
     <div class="li-asg-head">
       <div class="li-asg-title">
@@ -124,7 +124,7 @@ function assignmentCard({ key, copies }) {
 
 function addPersonForm(t) {
   const have = new Set(state.tasks.concat(state.teamTasks).filter((c) => (t.group_id ? c.group_id === t.group_id : c.id === t.id)).map((c) => c.user_id));
-  const free = state.members.filter((m) => !have.has(m.user_id) && managesPerson(m));
+  const free = state.members.filter((m) => !have.has(m.user_id) && assignsTo(m));
   openModal({
     eyebrow: "Add person", title: t.title, submitLabel: "Assign",
     body: `<fieldset class="full li-assignees"><legend>Also give this task to</legend>

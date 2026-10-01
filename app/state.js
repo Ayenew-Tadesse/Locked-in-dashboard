@@ -1,5 +1,6 @@
 // App state and actions. Views read `state` and re-render on change; every
 // write goes through the store (database) first, then updates state.
+import { adminPermissions } from "./core/permissions.js";
 import { todayKey, weekRange, addDays, eachDay, dayOf } from "./core/dates.js";
 import { normalizeTask } from "./core/tasks.js";
 import { resolveScoring, scoreDay, scorePeriod } from "./core/scoring.js";
@@ -328,9 +329,9 @@ async function refreshTeam() {
   const t = await state.store.loadTeam();
   state.team = t.team; state.members = t.members; state.invites = t.invites;
 }
-// Only the team owner sees access requests.
+// The team owner, and admins allowed to, see access requests.
 async function loadRequests(store = state.store) {
-  if (!state.team || state.team.role !== "owner" || !store.loadAccessRequests) return null;
+  if (!state.team || !can("access_requests") || !store.loadAccessRequests) return null;
   try { return await store.loadAccessRequests(); } catch (e) { console.warn("access requests:", e.message); return null; }
 }
 /** Check for new access requests (the Team tab's badge follows); true when the list changed. */
@@ -348,9 +349,33 @@ export async function decideAccessRequest(id, approve) {
   state.accessRequests = await loadRequests();
   emit();
 }
-/** People you manage: everyone for the owner; colleagues (and yourself) for an admin. */
+/** May you do this? The owner always; an admin as the owner allows (Team → Admin management). */
+export function can(name) {
+  if (state.isOwner) return true;
+  return state.isAdmin && !!adminPermissions(state.team?.permissions)[name];
+}
+/** People whose work you see: everyone for the owner; for an admin, yourself, colleagues (see_work) and other admins (see_admins). */
 export function managesPerson(m) {
-  return state.isOwner || (state.isAdmin && (m.user_id === state.me || m.role === "member"));
+  if (state.isOwner) return true;
+  if (!state.isAdmin) return false;
+  if (m.user_id === state.me) return true;
+  return m.role === "member" ? can("see_work") : m.role === "admin" && can("see_admins");
+}
+/** People you can give a task to: yourself, and (owner) everyone or (admin, assign_tasks) colleagues. */
+export function assignsTo(m) {
+  if (m.user_id === state.me || state.isOwner) return true;
+  return state.isAdmin && m.role === "member" && can("assign_tasks");
+}
+/** People whose tasks you change and remove: (owner) everyone, (admin, edit_tasks) colleagues. */
+export function editsTasksOf(m) {
+  if (!m || m.user_id === state.me || state.isOwner) return true;
+  return state.isAdmin && m.role === "member" && can("edit_tasks");
+}
+/** Owner: what an admin may do (null: every admin). */
+export async function setAdminPermissions(memberId, permissions) {
+  await guard(() => state.store.setAdminPermissions(memberId, permissions), "Couldn't save the permissions");
+  await refreshTeam();
+  emit();
 }
 export const ROLE_LABELS = { owner: "Owner", admin: "Admin", member: "Colleague" };
 export async function setMemberRole(userId, role) {

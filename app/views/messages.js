@@ -3,7 +3,7 @@
 // phones the list comes first and a conversation opens full width with Back.
 // New messages arrive live; the tab shows your unread count. Which messages
 // you've seen is remembered per device.
-import { state, sendMessage, deleteMessage, receiveMessage, forgetMessage, memberName } from "../state.js";
+import { state, sendMessage, deleteMessage, receiveMessage, forgetMessage, memberName, can } from "../state.js";
 import { esc, confirmDialog, showToast } from "../ui/dom.js";
 import { formatDay } from "../core/dates.js";
 
@@ -156,7 +156,7 @@ function paint() {
     return `${sep}<li class="li-chat-msg${mine ? " mine" : ""}">
       ${!mine && convo === "group" ? `<span class="li-chat-from">${esc(memberName(m.sender_id))}</span>` : ""}
       <span class="li-chat-body">${esc(m.body)}</span>
-      <span class="li-chat-meta">${esc(time(m.created_at))}${mine ? ` <button type="button" class="li-chat-del" data-delete-msg="${esc(m.id)}" aria-label="Delete message" title="Delete">✕</button>` : ""}</span>
+      <span class="li-chat-meta">${esc(time(m.created_at))}${mine || (convo === "group" && can("moderate_chat")) ? ` <button type="button" class="li-chat-del" data-delete-msg="${esc(m.id)}" aria-label="Delete message" title="Delete">✕</button>` : ""}</span>
     </li>`;
   }).join("") : `<li class="li-chat-empty">${convo === "group" ? "No messages yet. Say hello to the team." : `No messages with ${esc(memberName(convo))} yet.`}</li>`;
   log.scrollTop = log.scrollHeight;

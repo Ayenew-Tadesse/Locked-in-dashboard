@@ -539,3 +539,90 @@ end $$;
 reset role;
 insert into auth.users (id, email) values ('88888888-0000-0000-0000-000000000008', 'visitor@example.com');
 select pg_temp.check((select count(*) from team_members where user_id = '88888888-0000-0000-0000-000000000008') = 1, 'the approved visitor signs up and joins the team');
+
+-- 17. Admin permissions: the owner chooses, per admin ----------------------
+select pg_temp.act_as(:owner);
+select public.set_member_role(:ana, 'admin');
+insert into projects (team_id, name) select team_id, 'Perm project' from team_members where user_id = :owner;
+insert into messages (team_id, sender_id, body) select team_id, :owner, 'Owner says hi' from team_members where user_id = :owner;
+reset role;
+select pg_temp.act_as(:ben);
+insert into messages (team_id, sender_id, body) select team_id, :ben, 'Ben says hi' from team_members where user_id = :ben;
+reset role;
+
+-- Defaults: today's admin access.
+select pg_temp.act_as(:ana);
+select pg_temp.check(exists (select 1 from tasks where user_id = :ben), 'by default an admin sees colleagues'' tasks');
+update teams set name = 'Ana''s team';
+delete from messages where body = 'Ben says hi';
+do $$ begin
+  delete from public.access_requests;
+  raise exception 'FAILED: an admin deleted access requests';
+exception when insufficient_privilege then raise notice 'ok - nobody deletes access requests directly';
+end $$;
+reset role;
+select pg_temp.check((select name from teams) <> 'Ana''s team', 'by default an admin can''t rename the team');
+select pg_temp.check(exists (select 1 from messages where body = 'Ben says hi'), 'by default an admin can''t delete others'' messages');
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from access_requests) = 0, 'by default an admin doesn''t see access requests');
+do $$ begin
+  perform public.set_admin_permissions('22222222-0000-0000-0000-000000000002', '{"rename_team": true}');
+  raise exception 'FAILED: an admin changed permissions';
+exception when insufficient_privilege then raise notice 'ok - admins can''t change permissions';
+end $$;
+do $$ begin
+  update public.team_members set permissions = '{"rename_team": true}' where user_id = auth.uid();
+  raise exception 'FAILED: an admin wrote their own permissions';
+exception when insufficient_privilege then raise notice 'ok - permissions can''t be written directly';
+end $$;
+do $$ begin
+  insert into public.quarterly_goals (title, quarter, year, team_id) select 'Ana goal', 4, 2026, team_id from public.team_members where user_id = auth.uid();
+  raise exception 'FAILED: an admin added a team goal without permission';
+exception when insufficient_privilege then raise notice 'ok - by default an admin can''t add team goals';
+end $$;
+reset role;
+
+-- The owner changes Ana's permissions (unknown names are dropped).
+select pg_temp.act_as(:owner);
+select pg_temp.check(public.set_admin_permissions(:ana, '{"see_work": false, "rename_team": true, "delete_projects": false,
+  "moderate_chat": true, "access_requests": true, "edit_goals": true, "remove_colleagues": true, "bogus": true, "invite": "yes"}')
+  = '{"see_work": false, "rename_team": true, "delete_projects": false, "moderate_chat": true, "access_requests": true, "edit_goals": true, "remove_colleagues": true}'::jsonb,
+  'the owner sets an admin''s permissions (only known names, true/false)');
+do $$ begin
+  perform public.set_admin_permissions('33333333-0000-0000-0000-000000000003', '{"invite": false}');
+  raise exception 'FAILED: set permissions on a colleague';
+exception when no_data_found then raise notice 'ok - permissions are for admins only';
+end $$;
+reset role;
+
+select pg_temp.act_as(:ana);
+select pg_temp.check(not exists (select 1 from tasks where user_id = :ben), 'see_work off: no colleagues'' tasks');
+update teams set name = 'Ana''s team';
+delete from projects where name = 'Perm project';
+delete from messages where body = 'Ben says hi';
+delete from messages where body = 'Owner says hi';
+insert into quarterly_goals (title, quarter, year, team_id) select 'Ana goal', 4, 2026, team_id from team_members where user_id = auth.uid();
+select pg_temp.check((select count(*) from access_requests) >= 1, 'access_requests on: the admin sees requests');
+reset role;
+select pg_temp.check((select name from teams) = 'Ana''s team', 'rename_team on: the admin renames the team');
+select pg_temp.check(exists (select 1 from projects where name = 'Perm project'), 'delete_projects off: the project stays');
+select pg_temp.check(not exists (select 1 from messages where body = 'Ben says hi'), 'moderate_chat on: the admin deletes a colleague''s team message');
+select pg_temp.check(exists (select 1 from quarterly_goals where title = 'Ana goal'), 'edit_goals on: the admin adds a team goal');
+select pg_temp.act_as(:ana);
+select public.remove_member_completely('88888888-0000-0000-0000-000000000008');
+do $$ begin
+  perform public.remove_member_completely('11111111-0000-0000-0000-000000000001');
+  raise exception 'FAILED: an admin removed the owner';
+exception when insufficient_privilege then raise notice 'ok - nobody removes the owner';
+end $$;
+reset role;
+select pg_temp.check(not exists (select 1 from team_members where user_id = '88888888-0000-0000-0000-000000000008'), 'remove_colleagues on: the admin removes a colleague');
+
+-- Copy to all admins (null), and back to the defaults ({}).
+select pg_temp.act_as(:owner);
+select public.set_admin_permissions(null, '{}');
+reset role;
+select pg_temp.check((select permissions from team_members where user_id = :ana) = '{}'::jsonb, 'reset to defaults for every admin');
+select pg_temp.act_as(:ana);
+select pg_temp.check(exists (select 1 from tasks where user_id = :ben), 'defaults again: the admin sees colleagues'' tasks');
+reset role;

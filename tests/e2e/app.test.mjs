@@ -1378,7 +1378,7 @@ test("without a database the original dashboard runs unchanged", async () => {
 // A stand-in for supabase-js, served in place of the CDN module. `signedIn`
 // decides whether there's a session; the profile starts without a greeting.
 // `oldDb` imitates a database without the greeting migration.
-function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0, assigned = false }) {
+function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0, assigned = false, perms = {} }) {
   return `
 const oldDb = ${oldDb};
 const slow = ${slow};
@@ -1405,7 +1405,7 @@ function builder(table) {
     if (table === "task_files" && q.op === "insert") { const f = { id: "f" + (files.length + 1), user_id: "u1", created_at: today, ...q.values }; files.push(f); return { ...f }; }
     if (table === "task_files") return files.map((f) => ({ ...f }));
     if (table === "profiles") return q.single ? { ...profile } : [{ ...profile }];
-    if (table === "team_members" && q.cols.includes("teams(")) return [{ team_id: "t1", role: "${role}", teams: { name: "My team" } }];
+    if (table === "team_members" && q.cols.includes("teams(")) return [{ team_id: "t1", role: "${role}", permissions: ${JSON.stringify(perms)}, teams: { name: "My team" } }];
     if (table === "team_members" && q.cols.includes("profiles(")) return [{ user_id: "u1", role: "${role}", joined_at: "2026-09-26T00:00:00Z", profiles: { ...profile } }];
     if (table === "user_settings" && q.single) return { user_id: "u1", scoring: {}, preferences: {}, plan_loaded_at: "2026-09-26T00:00:00Z", legacy_imported_at: "2026-09-26T00:00:00Z" };
     return q.single ? (q.values || null) : [];
@@ -1478,7 +1478,7 @@ async function seedPortfolio(page) {
 }
 const openAllSections = (page) => page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
 
-async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
+async function dbPage({ signedIn, oldDb, role, slow, assigned, perms }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -1487,7 +1487,7 @@ async function dbPage({ signedIn, oldDb, role, slow, assigned }) {
   // On the context, so a tab this page opens (Preview on web) gets the same fakes.
   await page.context().route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.context().route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned }) }));
+  await page.context().route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned, perms }) }));
   await page.goto(BASE);
   return page;
 }
@@ -1572,6 +1572,53 @@ test("access requests: the owner sees them on the Team tab and approves or decli
   assert.doesNotMatch(await p2.locator("#li-invites").innerText(), /sam\.sample/);
   assert.deepEqual(p2.errors, []);
   await p2.close();
+});
+
+test("admin management: the owner chooses, per admin, what they may do", async () => {
+  const page = await open("team", { width: 1280, height: 900 });
+  // Make Ana an admin, then open Admin management.
+  await page.locator('.li-team-table tr', { hasText: "Ana (sample)" }).locator('[data-role="admin"]').click();
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => [...document.querySelectorAll(".li-team-table tr")].some((r) => r.textContent.includes("Ana (sample)") && r.querySelector('[data-role="member"]')));
+  await page.click("#li-admin-management");
+  const modal = page.locator("#li-modal");
+  assert.equal(await modal.locator(".modal-title").innerText(), "Admin management");
+  const checked = () => modal.locator("[data-perm-list] input:checked").evaluateAll((els) => els.map((e) => e.name.slice(5)));
+  assert.deepEqual(await checked(), ["invite", "cancel_invites", "see_work", "assign_tasks", "edit_tasks", "edit_projects", "delete_projects"], "today's admin access by default");
+  assert.equal(await modal.locator("[data-perm-list] input").count(), 13, "13 permissions, in 4 groups");
+  assert.deepEqual(await modal.locator("[data-perm-list] legend").allTextContents(), ["People and team", "Colleagues' work", "Plans", "Messages"]);
+  await modal.locator('[name="perm_rename_team"]').check();
+  await modal.locator('[name="perm_see_work"]').uncheck();
+  await modal.locator("button[type=submit]").click();
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  // Saved for Ana: reopen and see it; Reset to defaults goes back.
+  await page.click("#li-admin-management");
+  assert.deepEqual(await checked(), ["invite", "cancel_invites", "rename_team", "assign_tasks", "edit_tasks", "edit_projects", "delete_projects"]);
+  await modal.locator("[data-perm-reset]").click();
+  assert.deepEqual(await checked(), ["invite", "cancel_invites", "see_work", "assign_tasks", "edit_tasks", "edit_projects", "delete_projects"]);
+  await modal.locator("button[type=submit]").click();
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.deepEqual(await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return state.members.find((m) => m.name === "Ana (sample)").permissions;
+  }), {}, "only changes from the defaults are stored");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("admin management: an admin sees their permissions and only the matching buttons", async () => {
+  const page = await dbPage({ signedIn: true, role: "admin", perms: { rename_team: true, invite: false, cancel_invites: false } });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  await page.evaluate(() => { document.querySelector("#li-modal")?.remove(); location.hash = "#/team"; });
+  await page.waitForSelector("#li-my-permissions");
+  const mine = page.locator("#li-my-permissions");
+  assert.match(await mine.locator("li.on").allInnerTexts().then((t) => t.join("|")), /Rename the team/);
+  assert.match(await mine.locator("li.off").allInnerTexts().then((t) => t.join("|")), /Invite colleagues/);
+  assert.equal(await page.locator("#li-rename-team").count(), 1, "rename_team on: Rename shows");
+  assert.equal(await page.locator("#li-invite-form, #li-invites").count(), 0, "invite and cancel off: no invitations card");
+  assert.equal(await page.locator("#li-admin-management").count(), 0, "only the owner manages admins");
+  assert.deepEqual(page.errors, []);
+  await page.close();
 });
 
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {

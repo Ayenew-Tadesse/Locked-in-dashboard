@@ -88,16 +88,21 @@ export function supabaseStoreFromClient(sb) {
 
     /** Your team, its members (names from profiles) and, for the owner, open invitations. */
     async loadTeam() {
-      const mine = check(await sb.from("team_members").select("team_id, role, teams(name)").eq("user_id", userId));
+      // permissions: admin permissions (20261012000000_admin_permissions.sql); load without them until it's run.
+      let own = await sb.from("team_members").select("team_id, role, permissions, teams(name)").eq("user_id", userId);
+      const noPerms = !!(own.error && /permissions/.test(own.error.message));
+      if (noPerms) own = await sb.from("team_members").select("team_id, role, teams(name)").eq("user_id", userId);
+      const mine = check(own);
       if (!mine.length) return { team: null, members: [], invites: [] };
       const m = mine[0];
-      const team = { id: m.team_id, name: m.teams?.name || "My team", role: m.role };
+      const team = { id: m.team_id, name: m.teams?.name || "My team", role: m.role, permissions: m.permissions || {}, permissionsReady: !noPerms };
       // profiles.greeting comes from migration 20260927000000_greeting.sql; until
       // it has been run, load names without it rather than failing.
-      let res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email, greeting)").eq("team_id", team.id);
-      if (res.error && /greeting/.test(res.error.message)) res = await sb.from("team_members").select("user_id, role, joined_at, profiles(name, email)").eq("team_id", team.id);
+      const perms = noPerms ? "" : ", permissions";
+      let res = await sb.from("team_members").select(`user_id, role, joined_at${perms}, profiles(name, email, greeting)`).eq("team_id", team.id);
+      if (res.error && /greeting/.test(res.error.message)) res = await sb.from("team_members").select(`user_id, role, joined_at${perms}, profiles(name, email)`).eq("team_id", team.id);
       const members = check(res)
-        .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, name: displayName(r.profiles) || "Member", greeting: r.profiles?.greeting || null, email: r.profiles?.email || "" }));
+        .map((r) => ({ user_id: r.user_id, role: r.role, joined_at: r.joined_at, permissions: r.permissions || {}, name: displayName(r.profiles) || "Member", greeting: r.profiles?.greeting || null, email: r.profiles?.email || "" }));
       const invites = team.role === "owner" || team.role === "admin"
         ? check(await sb.from("team_invites").select("*").eq("team_id", team.id).is("accepted_at", null).is("revoked_at", null).order("created_at"))
         : [];
@@ -171,6 +176,12 @@ export function supabaseStoreFromClient(sb) {
       const res = await sb.from("team_invites").insert({ team_id: teamId, email: email.trim().toLowerCase(), invited_by: userId, ...(role === "admin" ? { role } : {}) }).select().single();
       if (res.error && role === "admin" && /role_check|violates check/.test(res.error.message)) throw new Error("run the latest SQL update in Supabase first (20261007000000_team_admins.sql)");
       return check(res);
+    },
+    /** Owner only: what an admin may do (memberId null: every admin). 20261012000000_admin_permissions.sql. */
+    async setAdminPermissions(memberId, permissions) {
+      const { error } = await sb.rpc("set_admin_permissions", { p_member: memberId, p_permissions: permissions });
+      if (error && /set_admin_permissions|schema cache/.test(error.message)) throw new Error("run the latest SQL update in Supabase first (20261012000000_admin_permissions.sql)");
+      if (error) throw new Error(error.message);
     },
     /** Owner only: make someone an admin, or a colleague again (20261007000000_team_admins.sql). */
     async setMemberRole(memberId, role) {
@@ -319,7 +330,7 @@ export function createMemoryStore(seed) {
   const db = JSON.parse(JSON.stringify(seed));
   // A preview account owns a team (sample colleagues come from the seed).
   db.me = db.me || db.profile?.id || "demo";
-  db.team = db.team || { id: "team-preview", name: "My team", role: "owner" };
+  db.team = { id: "team-preview", name: "My team", role: "owner", ...db.team, permissionsReady: true };
   db.members = db.members || [{ user_id: db.me, role: "owner", name: db.profile?.name || "You", email: db.profile?.email || "" }];
   db.invites = db.invites || [];
   db.requests = db.requests || [];
@@ -398,6 +409,11 @@ export function createMemoryStore(seed) {
     },
     async fileUrl(f) { return f.url || "about:blank"; },
     async deleteTaskFile(f) { db.files = db.files.filter((x) => x.id !== f.id); },
+    async setAdminPermissions(memberId, permissions) {
+      const admins = db.members.filter((x) => x.role === "admin" && (memberId == null || x.user_id === memberId));
+      if (!admins.length) throw new Error("That person isn't an admin on your team.");
+      admins.forEach((x) => { x.permissions = { ...permissions }; });
+    },
     async setMemberRole(memberId, role) {
       const m = db.members.find((x) => x.user_id === memberId);
       if (!m || m.role === "owner") throw new Error("Only the team owner can change this person's role.");
