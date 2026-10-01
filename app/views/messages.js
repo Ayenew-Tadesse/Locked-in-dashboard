@@ -4,6 +4,7 @@
 // count. Which messages you've seen is remembered per device.
 import { state, sendMessage, deleteMessage, receiveMessage, forgetMessage, memberName, can } from "../state.js";
 import { esc, confirmDialog, showToast } from "../ui/dom.js";
+import { chime } from "../ui/chime.js";
 import { formatDay } from "../core/dates.js";
 
 const READ_KEY = "li_chat_read";
@@ -42,11 +43,18 @@ export function unreadTotal() {
 }
 const viewing = () => !!host && document.contains(host) && !host.closest("[hidden]");
 
+/** A message arriving live: added to its conversation, with a ding when it's someone else's and new. */
+export function incomingMessage(m) {
+  const fresh = !!m && Array.isArray(state.messages) && !state.messages.some((x) => x.id === m.id);
+  receiveMessage(m);
+  if (fresh && m.sender_id !== state.me) chime();
+}
+
 /** Live updates (once): new and deleted messages; the badge and an open page follow. */
 export function startMessages(onBadge) {
   badgeChanged = onBadge || badgeChanged;
   if (stopLive || !messagesAvailable()) return;
-  stopLive = state.store.subscribeMessages?.(state.team.id, { onInsert: receiveMessage, onDelete: forgetMessage }) || (() => {});
+  stopLive = state.store.subscribeMessages?.(state.team.id, { onInsert: incomingMessage, onDelete: forgetMessage }) || (() => {});
   window.addEventListener("li:messages", () => {
     if (viewing() && (!isPhone() || phoneThread)) markRead(convo);
     if (viewing()) paint();
