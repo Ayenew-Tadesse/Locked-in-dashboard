@@ -1,15 +1,15 @@
-// Messages: the team chat as its own tab (next to Tasks). Conversations on the
-// left (the Team group chat, then each person), the open one on the right; on
-// phones the list comes first and a conversation opens full width with Back.
-// New messages arrive live; the tab shows your unread count. Which messages
-// you've seen is remembered per device.
+// Messages: the team chat, in the floating chat window (ui/chat-dock.js).
+// Conversations (the Team group chat, then each person) come first; one opens
+// with Back. New messages arrive live; the chat button shows your unread
+// count. Which messages you've seen is remembered per device.
 import { state, sendMessage, deleteMessage, receiveMessage, forgetMessage, memberName, can } from "../state.js";
 import { esc, confirmDialog, showToast } from "../ui/dom.js";
 import { formatDay } from "../core/dates.js";
 
 const READ_KEY = "li_chat_read";
 let convo = "group";        // the open conversation: "group" or a person's user id
-let phoneThread = false;    // phones: showing a conversation (not the list)
+let phoneThread = false;    // narrow: showing a conversation (not the list)
+let dock = false;           // drawn in the chat window: always one column
 let stopLive = null, host = null, badgeChanged = () => {};
 
 /** Is there a team chat? (a team and the messages table) */
@@ -53,18 +53,20 @@ export function startMessages(onBadge) {
     badgeChanged();
   });
 }
-const isPhone = () => matchMedia("(max-width: 699px)").matches;
+const isPhone = () => dock || matchMedia("(max-width: 699px)").matches;
 
-export function renderMessages(el) {
+export function renderMessages(el, opts = {}) {
   host = el;
+  dock = !!opts.dock;
+  const head = dock ? "" : `<header class="li-view-head"><div><span class="card-label">Messages</span><h2 class="li-h2">Messages</h2></div></header>`;
   if (!messagesAvailable()) {
-    el.innerHTML = `<header class="li-view-head"><div><span class="card-label">Messages</span><h2 class="li-h2">Messages</h2></div></header>
+    el.innerHTML = `${head}
       <section class="li-card"><p class="li-empty">${state.team ? "Messages need a small database update: run the team chat SQL (20261004000000_team_chat.sql) in Supabase." : "Messages are for teams."}</p></section>`;
     return;
   }
   if (convo !== "group" && !others().some((m) => m.user_id === convo)) convo = "group";
   el.innerHTML = `
-    <header class="li-view-head"><div><span class="card-label">Messages</span><h2 class="li-h2">Messages</h2></div></header>
+    ${head}
     <section class="li-card li-msgs${phoneThread ? " thread-open" : ""}" aria-label="Messages">
       <nav class="li-msgs-list" aria-label="Conversations"></nav>
       <div class="li-msgs-thread">
@@ -78,6 +80,14 @@ export function renderMessages(el) {
     </section>
     ${others().length ? "" : `<p class="li-sub li-msgs-note">No one to message yet: <a class="li-link" href="#/team">invite someone from the Team page</a>.</p>`}`;
   wire(el);
+  if (!isPhone() || phoneThread) markRead(convo);
+  paint();
+  badgeChanged();
+}
+
+/** The chat window opened again: catch up on what arrived while it was closed (keeps what you typed). */
+export function resumeMessages() {
+  if (!viewing()) return;
   if (!isPhone() || phoneThread) markRead(convo);
   paint();
   badgeChanged();
