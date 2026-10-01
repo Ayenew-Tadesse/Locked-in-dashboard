@@ -2228,7 +2228,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
       return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, resume: (() => { const b = document.querySelector(".pf-s-actions .pf-resume-icon"), c = getComputedStyle(b), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), col = document.querySelector(".pf-s-hero__text").getBoundingClientRect();
           const mid = (x) => x.left + x.width / 2;
-          return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), c.borderTopStyle, l.top >= i.bottom, Math.round(mid(i) - mid(col)), Math.round(mid(l) - mid(i))]; })(),
+          return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), c.borderTopStyle, l.top >= i.bottom, Math.abs(Math.round(mid(i) - mid(col))), Math.abs(Math.round(mid(l) - mid(i)))]; })(),
         heroButtons: document.querySelectorAll(".pf-s-actions .pf-btn").length, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
         stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
