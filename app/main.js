@@ -262,12 +262,27 @@ function render() {
   if (restoreScroll != null) { window.scrollTo(0, restoreScroll); restoreScroll = null; }
 }
 
+// Where the tab row sits in the page when it isn't pinned to the top.
+function navHome() {
+  const nav = $("#li-nav");
+  return nav.previousElementSibling.getBoundingClientRect().bottom + window.scrollY + (parseFloat(getComputedStyle(nav).marginTop) || 0);
+}
+
 let lastRoute = null;
+// Switching tabs keeps the tab row where it is on screen (no jump). If it was
+// pinned to the top, the new page starts from its beginning, just under it.
 window.addEventListener("hashchange", () => {
   const r = route();
+  const nav = $("#li-nav");
+  const tabs = (name) => !MENU_PAGES.has(name);
+  const keep = started && navReady && tabs(r.name) && lastRoute != null && tabs(lastRoute.split("/")[0]) && nav?.offsetParent;
+  const before = keep ? nav.getBoundingClientRect().top : 0;
+  const pinned = keep && before <= 0.5 && window.scrollY > 0; // stuck to the top of the screen
   render();
-  const key = r.name + "/" + (r.id || "");
-  if (key !== lastRoute) { lastRoute = key; if (r.name !== "overview") $("#li-nav").scrollIntoView({ block: "start" }); }
+  lastRoute = r.name + "/" + (r.id || "");
+  if (!keep) return;
+  if (pinned) window.scrollTo(0, navHome());
+  else window.scrollBy(0, nav.getBoundingClientRect().top - before);
 });
 window.addEventListener("li:rerender", () => render());
 
@@ -466,6 +481,7 @@ async function start(store) {
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);
   try { setupChatDock(); } catch (e) { console.error(e); }
   render();
+  lastRoute = route().name + "/" + (route().id || "");
   try { startMessages(updateChatBadge); } catch (e) { console.error(e); }
   watchAccessRequests();
   // GitHub commits turn Activity days green (fetched now and every 10 minutes).
