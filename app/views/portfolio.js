@@ -8,6 +8,7 @@ import { renderPortfolio } from "../portfolio/render.js";
 import { editorHtml, wireEditor } from "./portfolio-site.js";
 import { printResume } from "../portfolio/resume.js";
 import { tryInPhone } from "../portfolio/phone.js";
+import { countStats } from "../portfolio/count.js";
 
 let previewView = null; // the case study open in the preview
 
@@ -111,7 +112,11 @@ export function renderPortfolioPage(el) {
       <div class="li-pf-preview" id="li-pf-preview">${renderPortfolio(previewData(), { view: previewView })}</div>
     </section>`;
 
-  const drawPreview = () => { el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView }); };
+  const drawPreview = () => {
+    el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView });
+    countStats(el.querySelector("#li-pf-preview"));
+  };
+  countStats(el.querySelector("#li-pf-preview"));
   // Links inside the preview: open a case study, go back home, or scroll to a section.
   el.querySelector("#li-pf-preview").addEventListener("click", (e) => {
     if (tryInPhone(e)) return;
