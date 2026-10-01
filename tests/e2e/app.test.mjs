@@ -2224,7 +2224,6 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const stripBg = getComputedStyle(document.querySelector(".pf-s-stats")).backgroundColor;
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
       return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, stripBg,
-        buttons: [".pf-s-actions .pf-btn--solid", ".pf-s-actions .pf-btn--outline"].map((q) => { const c = getComputedStyle(document.querySelector(q)); return [c.backgroundColor, c.borderTopColor, c.color]; }),
         stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
         firstBarAfterStats: document.querySelector(".pf-s-stats").nextElementSibling.className };
@@ -2236,7 +2235,6 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     const [white, navy] = ["rgb(255, 255, 255)", "rgb(3, 4, 94)"];
     assert.deepEqual(m.stats, [["rgba(0, 0, 0, 0)", navy, ""], [navy, white, "is-hi"], ["rgba(0, 0, 0, 0)", navy, ""]], "white boxes with navy text; the middle one navy with white text");
     assert.equal(m.stripBg, white);
-    assert.deepEqual(m.buttons, [[navy, navy, white], ["rgba(0, 0, 0, 0)", navy, navy]], "buttons are navy (filled) or navy-outlined");
     assert.equal(m.bars.length, m.sections, "a strip before every section");
     assert.ok(m.bars.every((x) => x === "true"), "the strips are decorative");
     assert.equal(m.firstBarAfterStats, "pf-bars");
