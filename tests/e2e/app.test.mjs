@@ -2221,8 +2221,10 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       root.removeAttribute("aria-busy");
       root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
       const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const stripBg = getComputedStyle(document.querySelector(".pf-s-stats")).backgroundColor;
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
-      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
+      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, stripBg,
+        stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
         firstBarAfterStats: document.querySelector(".pf-s-stats").nextElementSibling.className };
     }, PORTFOLIO_SITE);
@@ -2230,6 +2232,9 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     assert.match(m.barColor, /0\.1\)$/, `the strips are 10% navy: ${m.barColor}`);
     assert.equal(m.drift, "pf-bars-drift", "the bars drift");
     assert.equal(m.statsGap, "0px", "stats are one joined strip");
+    const [white, navy] = ["rgb(255, 255, 255)", "rgb(3, 4, 94)"];
+    assert.deepEqual(m.stats, [["rgba(0, 0, 0, 0)", navy, ""], [navy, white, "is-hi"], ["rgba(0, 0, 0, 0)", navy, ""]], "white boxes with navy text; the middle one navy with white text");
+    assert.equal(m.stripBg, white);
     assert.equal(m.bars.length, m.sections, "a strip before every section");
     assert.ok(m.bars.every((x) => x === "true"), "the strips are decorative");
     assert.equal(m.firstBarAfterStats, "pf-bars");
