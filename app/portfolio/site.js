@@ -89,7 +89,7 @@ function home(data, live) {
     </div>
     ${img(s.portrait, `Portrait of ${name}`, "pf-s-portrait")}
   </section>
-  ${s.stats?.length ? `<div class="pf-s-stats">${s.stats.map((x) => `<div><b>${esc(x.num)}</b><span>${esc(x.label)}</span></div>`).join("")}</div>` : ""}
+  ${s.stats?.length ? `<div class="pf-s-stats">${s.stats.map((x, i) => `<div${i === Math.floor((s.stats.length - 1) / 2) ? ' class="is-hi"' : ""}><b>${esc(x.num)}</b><span>${esc(x.label)}</span></div>`).join("")}</div>` : ""}
   ${withBars([
     live.highlights || "",
     s.cases?.length ? `<section class="pf-section" id="pf-cases"><h2>Featured projects</h2><div class="pf-cards">${s.cases.map((c) => caseCard(c, data.projects)).join("")}</div></section>` : "",
