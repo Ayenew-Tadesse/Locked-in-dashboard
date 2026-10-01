@@ -1671,7 +1671,7 @@ test("admin management: the owner chooses, per admin, what they may do", async (
   assert.equal(await modal.locator(".modal-title").innerText(), "Admin management");
   const checked = () => modal.locator("[data-perm-list] input:checked").evaluateAll((els) => els.map((e) => e.name.slice(5)));
   assert.deepEqual(await checked(), ["invite", "cancel_invites", "see_work", "assign_tasks", "edit_tasks", "edit_projects", "delete_projects"], "today's admin access by default");
-  assert.equal(await modal.locator("[data-perm-list] input").count(), 13, "13 permissions, in 4 groups");
+  assert.equal(await modal.locator("[data-perm-list] input").count(), 14, "14 permissions, in 4 groups");
   assert.deepEqual(await modal.locator("[data-perm-list] legend").allTextContents(), ["People and team", "Colleagues' work", "Plans", "Messages"]);
   await modal.locator('[name="perm_rename_team"]').check();
   await modal.locator('[name="perm_see_work"]').uncheck();
@@ -1735,6 +1735,58 @@ test("activity map on a team (not the owner): starts the day you joined; on time
   assert.match(await owner.textContent("#greet-journey"), /of \d+.*days to go/);
   assert.match(await owner.textContent("#heat-legend"), /Less\s*More/);
   await owner.close();
+});
+
+test("project groups: create a group, its members work on its project; extra access; the task form offers only their projects", async () => {
+  const page = await open("team", { width: 1280, height: 900 });
+  await page.waitForSelector("#li-groups");
+  const list = await page.evaluate(async () => (await import(new URL("app/state.js", location.href).href)).state.projects.map((p) => [p.id, p.name]));
+  const projects = list.map(([, n]) => n);
+  assert.ok(projects.length >= 2, "the demo has projects");
+  assert.match(await page.textContent("#li-groups"), /No groups yet/);
+  // New group: name, project, members, lead.
+  await page.click("[data-group-new]");
+  await page.fill('#li-modal [name="name"]', "Flights crew");
+  await page.selectOption('#li-modal [name="project_id"]', { label: projects[0] });
+  await page.locator('#li-modal .li-check-row', { hasText: "Ana (sample)" }).locator("input").check();
+  await page.selectOption('#li-modal [name="lead_id"]', { label: "Ana (sample)" });
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const group = page.locator('#li-groups li', { hasText: "Flights crew" });
+  assert.match((await group.textContent()).replace(/\s+/g, " "), new RegExp(`Flights crew[\\s\\S]*${projects[0]}[\\s\\S]*Ana \\(sample\\) · lead`));
+  // Ana's page: the group's project; give her another one.
+  await page.evaluate(() => { location.hash = "#/team/sample-ana"; });
+  await page.waitForSelector("#li-member-projects");
+  assert.match(await page.textContent("#li-member-projects"), new RegExp(`${projects[0]}\\s*via Flights crew`));
+  await page.click("[data-access-edit]");
+  await page.check(`#li-modal [name="extra[]"][value="${list[1][0]}"]`);
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.match(await page.textContent("#li-member-projects"), new RegExp(`${projects[1]}\\s*extra access`));
+  // Assigning Ana a task: her two projects; Ben (no group): none.
+  await page.click("[data-assign]");
+  const opts = () => page.locator('#li-modal [name="project_id"] option').allInnerTexts();
+  assert.deepEqual((await opts()).sort(), ["None", projects[0], projects[1]].sort());
+  await page.click("#li-modal [data-close]");
+  await page.evaluate(() => { location.hash = "#/team/sample-ben"; });
+  await page.waitForSelector("#li-member-projects");
+  assert.match(await page.textContent("#li-member-projects"), /None yet/);
+  await page.click("[data-assign]");
+  assert.deepEqual(await opts(), ["None"], "no projects for someone outside every group");
+  await page.click("#li-modal [data-close]");
+  // Edit, then delete the group.
+  await page.evaluate(() => { location.hash = "#/team"; });
+  await page.waitForSelector("#li-groups");
+  await page.click("[data-group-edit]");
+  await page.fill('#li-modal [name="name"]', "Flights team");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.match(await page.textContent("#li-groups"), /Flights team/);
+  await page.click("[data-group-delete]");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForFunction(() => /No groups yet/.test(document.querySelector("#li-groups").textContent));
+  assert.deepEqual(page.errors, []);
+  await page.close();
 });
 
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {

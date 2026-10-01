@@ -230,7 +230,7 @@ test("tasks: countdown to the end of the deadline day", () => {
 
 test("admin permissions: defaults, saved choices, and what gets saved", async () => {
   const { adminPermissions, permissionChanges, ADMIN_DEFAULTS, ADMIN_PERMISSIONS } = await import("../../app/core/permissions.js");
-  assert.equal(ADMIN_PERMISSIONS.length, 13);
+  assert.equal(ADMIN_PERMISSIONS.length, 14);
   assert.deepEqual(adminPermissions(null), ADMIN_DEFAULTS, "nothing saved: the defaults");
   const p = adminPermissions({ see_work: false, rename_team: true, bogus: true, invite: "yes" });
   assert.equal(p.see_work, false);
