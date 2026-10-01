@@ -1020,6 +1020,36 @@ test("portfolio: Try the app opens the live app in a phone frame on computers", 
   await small.close();
 });
 
+test("tabs: switching keeps the tab row where it is (no jump); the browser tab says Locked-In", async () => {
+  for (const [width, height] of [[390, 844], [1280, 800]]) {
+    const page = await open("", { width, height });
+    await page.evaluate(() => document.querySelector("#li-modal")?.remove());
+    assert.equal(await page.title(), "Locked-In");
+    const top = () => page.evaluate(() => Math.round(document.querySelector("#li-nav").getBoundingClientRect().top));
+    // Half-scrolled: the row stays at the same height on screen.
+    await page.evaluate(() => window.scrollTo(0, 120));
+    const start = await top();
+    // Tapped in place (a test click would first scroll a half-hidden tab into view).
+    const tap = (v) => page.evaluate((v) => document.querySelector(`#li-nav [data-view="${v}"]`).click(), v);
+    for (const v of ["today", "calendar", "tasks", "analytics", "overview"]) {
+      await tap(v);
+      await page.waitForFunction((v) => document.querySelector(`#li-nav [data-view="${v}"]`).classList.contains("active"), v);
+      assert.equal(await top(), start, `${v} at ${width}px: the tab row didn't move`);
+    }
+    // Pinned to the top (scrolled down a long page): it stays pinned and the new page starts just under it.
+    await tap("tasks");
+    await page.evaluate(() => window.scrollTo(0, 2500));
+    assert.equal(await top(), 0);
+    await tap("calendar");
+    await page.waitForFunction(() => document.querySelector('#li-nav [data-view="calendar"]').classList.contains("active"));
+    assert.equal(await top(), 0, "still pinned");
+    const gap = await page.evaluate(() => document.querySelector("#li-view").getBoundingClientRect().top - document.querySelector("#li-nav").getBoundingClientRect().bottom);
+    assert.ok(gap >= 0 && gap < 40, `the new page starts under the row (${gap}px)`);
+    assert.deepEqual(page.errors, []);
+    await page.close();
+  }
+});
+
 test("responsive: every page fits phones, tablets, laptops and big monitors", async () => {
   const sizes = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080]];
   const views = ["", "today", "tasks", "calendar", "week", "quarter", "milestones", "analytics", "team", "settings", "profile", "projects", "portfolio", "resume"];

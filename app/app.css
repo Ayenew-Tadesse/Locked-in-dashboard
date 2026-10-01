@@ -870,3 +870,5 @@ html.li-has-chat body{padding-bottom:84px;}
 @media (max-width: 699px){
   html.li-has-chat #li-toasts{bottom:calc(84px + env(safe-area-inset-bottom, 0px));}
 }
+/* A short page still leaves room for the tab row to stay where it was. */
+html.app-mode:not(.li-page) .li-view{min-height:100vh;min-height:100dvh;}
