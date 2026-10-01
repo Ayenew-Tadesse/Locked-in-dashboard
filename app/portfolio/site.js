@@ -126,7 +126,7 @@ function casePage(data, c) {
   const all = data.site.cases || [];
   const i = all.indexOf(c), next = all.slice(i + 1).concat(all.slice(0, i)).find((x) => x.status !== "progress" && x !== c);
   const p = projectFor(c, data.projects), prog = p ? projectProgress(p) : null;
-  const block = (title, body, id = "") => body ? `${BARS}<section class="pf-case-block"${id ? ` id="${id}"` : ""}><h2>${esc(title)}</h2>${body}</section>` : "";
+  const block = (title, body, id = "") => body ? `<section class="pf-case-block"${id ? ` id="${id}"` : ""}><h2>${esc(title)}</h2>${body}</section>` : "";
   const intro = (t) => (t ? `<p class="pf-intro">${esc(t)}</p>` : "");
   return `
   <article class="pf-case" id="pf-case-${esc(c.id)}">
