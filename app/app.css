@@ -835,3 +835,38 @@ html:not(.app-mode) .li-team-card{display:none;}
 .li-perm-list li{padding:3px 0;}
 .li-perm-list li.on span[aria-hidden]{color:var(--good);font-weight:700;}
 .li-perm-list li.off{color:var(--ink-3);}
+
+/* Chat button (bottom right) and its window (ui/chat-dock.js) */
+#li-chat-fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom, 0px));z-index:71;width:56px;height:56px;border-radius:50%;border:none;
+  background:var(--accent);color:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 8px 24px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25);transition:transform .15s ease, filter .15s ease;}
+#li-chat-fab:hover{transform:translateY(-2px);filter:brightness(1.06);}
+#li-chat-fab:focus-visible{outline:3px solid var(--accent-soft, var(--accent));outline-offset:3px;}
+#li-chat-fab .li-nav-dot{position:absolute;top:-3px;right:-3px;margin:0;min-width:20px;height:20px;line-height:20px;font-size:11px;border:2px solid var(--bg);}
+html.li-modal-open #li-chat-fab, html.li-authing #li-chat-fab, html.app-booting #li-chat-fab{display:none;}
+#li-chat-panel{position:fixed;right:20px;bottom:calc(88px + env(safe-area-inset-bottom, 0px));z-index:70;width:min(380px, calc(100vw - 40px));
+  height:min(560px, calc(100vh - 120px));height:min(560px, calc(100dvh - 120px));display:flex;flex-direction:column;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.45);}
+#li-chat-panel[hidden]{display:none;}
+.li-dock-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);flex:none;}
+.li-dock-head b{font-size:15px;}
+.li-dock-body{flex:1;min-height:0;display:flex;flex-direction:column;}
+.li-dock-body > .li-card{margin:0;}
+.li-dock-body .li-msgs{flex:1;height:auto;min-height:0;grid-template-columns:1fr;border:0;border-radius:0;box-shadow:none;}
+.li-dock-body .li-msgs-list{border-right:0;}
+.li-dock-body .li-msgs .li-msgs-thread{display:none;}
+.li-dock-body .li-msgs.thread-open .li-msgs-list{display:none;}
+.li-dock-body .li-msgs.thread-open .li-msgs-thread{display:flex;}
+.li-dock-body .li-msgs-back{display:inline-flex;}
+.li-dock-body .li-msgs-note{margin:8px 12px 12px;font-size:13px;}
+@media (max-width: 699px){
+  #li-chat-fab{right:16px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));}
+  #li-chat-panel{inset:0;width:auto;height:auto;border-radius:0;border:0;}
+  html.li-chat-open{overflow:hidden;}
+  html.li-chat-open #li-chat-fab{display:none;}
+}
+/* Room for the chat button: the page ends above it; on phones notices sit above it (and the message box). */
+html.li-has-chat body{padding-bottom:84px;}
+@media (max-width: 699px){
+  html.li-has-chat #li-toasts{bottom:calc(84px + env(safe-area-inset-bottom, 0px));}
+}

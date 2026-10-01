@@ -235,7 +235,7 @@ test("quarter view: switch quarters, add a goal with progress", async () => {
 test("Tasks: a tab on the main page; every task, no filters", async () => {
   const page = await open("");
   const tabs = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
-  assert.deepEqual(tabs.slice(0, 5).map((t) => t.trim()), ["Overview", "Today", "Tasks", "Messages", "Calendar"]);
+  assert.deepEqual(tabs.slice(0, 4).map((t) => t.trim()), ["Overview", "Today", "Tasks", "Calendar"]);
   await page.click('#li-nav [data-view=tasks]');
   await page.waitForFunction(() => location.hash === "#/tasks");
   await page.waitForSelector("#li-task-results .li-task");
@@ -389,66 +389,82 @@ test("work pages end with their own content: no Overview cards underneath (the O
   }
 });
 
-test("messages: a tab next to Tasks with unread count; team and one-to-one chats; send and delete; phone and computer", async () => {
+test("messages: a chat button (bottom right) with the unread count; team and one-to-one chats; send and delete; phone and computer", async () => {
   const page = await open("", { width: 390, height: 844 });
   await page.evaluate(() => document.querySelector("#li-modal")?.remove());
-  assert.equal(await page.locator("#li-chat").count(), 0, "no chat bar pinned to the bottom");
-  const tabs = await page.locator("#li-nav .li-nav-link").evaluateAll((els) => els.map((e) => e.dataset.view));
-  assert.equal(tabs[tabs.indexOf("tasks") + 1], "messages", "Messages sits right after Tasks");
-  const tab = page.locator('#li-nav [data-view="messages"]');
-  assert.equal(await tab.locator(".li-nav-dot").innerText(), "3", "2 team messages + 1 direct message unread");
-  // Phone: the conversation list first.
-  await tab.click();
-  await page.waitForSelector(".li-msgs-list .li-msgs-convo");
-  assert.deepEqual(await page.locator(".li-msgs-convo .li-msgs-who b").allInnerTexts(), ["Team", "Ana (sample)", "Ben (sample)"]);
-  assert.equal(await page.locator('.li-msgs-convo[data-convo="sample-ben"] .li-nav-dot').innerText(), "1", "Ben's direct message is unread");
-  assert.ok(await page.locator(".li-msgs-thread").isHidden(), "phones: the list first");
-  // Open the team chat: full width, with Back.
-  await page.click('.li-msgs-convo[data-convo="group"]');
-  await page.locator(".li-msgs-thread").waitFor();
-  assert.ok(await page.locator(".li-msgs-list").isHidden());
-  assert.match(await page.locator(".li-chat-log").innerText(), /Ana \(sample\)[\s\S]*Picking up the trips list[\s\S]*Ben \(sample\)[\s\S]*booking flow on Android/);
-  await page.waitForFunction(() => document.querySelector('#li-nav [data-view="messages"] .li-nav-dot').textContent === "1", null, { timeout: 5000 });
+  assert.equal(await page.locator('#li-nav [data-view="messages"]').count(), 0, "no Messages tab: it's the chat button");
+  const fab = page.locator("#li-chat-fab");
+  const box = await fab.boundingBox();
+  assert.ok(box.x + box.width > 390 - 30 && box.y + box.height > 844 - 30, "bottom right");
+  assert.equal(await fab.locator(".li-nav-dot").innerText(), "3", "2 team messages + 1 direct message unread");
+  assert.equal(await fab.getAttribute("aria-label"), "Messages, 3 unread");
+  // Phone: full screen, the conversation list first.
+  await fab.click();
+  const panel = page.locator("#li-chat-panel");
+  await panel.locator(".li-msgs-list .li-msgs-convo").first().waitFor();
+  const p = await panel.boundingBox();
+  assert.ok(p.x === 0 && p.y === 0 && p.width === 390 && p.height === 844, "phones: full screen");
+  assert.deepEqual(await panel.locator(".li-msgs-convo .li-msgs-who b").allInnerTexts(), ["Team", "Ana (sample)", "Ben (sample)"]);
+  assert.equal(await panel.locator('.li-msgs-convo[data-convo="sample-ben"] .li-nav-dot').innerText(), "1", "Ben's direct message is unread");
+  assert.ok(await panel.locator(".li-msgs-thread").isHidden(), "the list first");
+  // Open the team chat, with Back.
+  await panel.locator('.li-msgs-convo[data-convo="group"]').click();
+  await panel.locator(".li-msgs-thread").waitFor();
+  assert.ok(await panel.locator(".li-msgs-list").isHidden());
+  assert.match(await panel.locator(".li-chat-log").innerText(), /Ana \(sample\)[\s\S]*Picking up the trips list[\s\S]*Ben \(sample\)[\s\S]*booking flow on Android/);
+  await page.waitForFunction(() => document.querySelector("#li-chat-fab .li-nav-dot").textContent === "1", null, { timeout: 5000 });
   // Send (Enter sends).
-  await page.fill(".li-chat-form textarea", "On it, thanks both");
-  await page.press(".li-chat-form textarea", "Enter");
-  await page.locator(".li-chat-msg.mine", { hasText: "On it, thanks both" }).waitFor();
+  await panel.locator(".li-chat-form textarea").fill("On it, thanks both");
+  await panel.locator(".li-chat-form textarea").press("Enter");
+  await panel.locator(".li-chat-msg.mine", { hasText: "On it, thanks both" }).waitFor();
   // Back, then one-to-one with Ben.
-  await page.click(".li-msgs-back");
-  await page.click('.li-msgs-convo[data-convo="sample-ben"]');
-  assert.match(await page.locator(".li-chat-log").innerText(), /payment screen/);
-  assert.equal((await page.locator(".li-chat-log").innerText()).includes("On it, thanks both"), false, "team messages stay in Team");
-  await page.fill(".li-chat-form textarea", "Sure, 2pm?");
-  await page.click(".li-chat-form button[type=submit]");
-  const mine = page.locator(".li-chat-msg.mine", { hasText: "Sure, 2pm?" });
+  await panel.locator(".li-msgs-back").click();
+  await panel.locator('.li-msgs-convo[data-convo="sample-ben"]').click();
+  assert.match(await panel.locator(".li-chat-log").innerText(), /payment screen/);
+  assert.equal((await panel.locator(".li-chat-log").innerText()).includes("On it, thanks both"), false, "team messages stay in Team");
+  await panel.locator(".li-chat-form textarea").fill("Sure, 2pm?");
+  await panel.locator(".li-chat-form button[type=submit]").click();
+  const mine = panel.locator(".li-chat-msg.mine", { hasText: "Sure, 2pm?" });
   await mine.waitFor();
-  // Delete your own message.
+  // Delete your own message (the question shows over the chat; the chat stays open).
   await mine.locator(".li-chat-del").click();
   await page.locator("#li-modal button[type=submit]").click();
   await mine.waitFor({ state: "detached" });
-  assert.ok(await tab.locator(".li-nav-dot").isHidden(), "nothing unread now");
-  assert.equal(await page.locator(".dash-grid").isVisible(), false, "no Overview cards underneath");
-  // Computer: the list and the conversation side by side.
+  assert.ok(await panel.isVisible(), "still open after deleting");
+  assert.ok(await fab.locator(".li-nav-dot").isHidden(), "nothing unread now");
+  // A draft survives closing and opening again.
+  await panel.locator(".li-chat-form textarea").fill("half-written");
+  await panel.locator("[data-dock-close]").click();
+  assert.ok(await panel.isHidden());
+  await fab.click();
+  assert.equal(await panel.locator(".li-chat-form textarea").inputValue(), "half-written", "what you typed stays");
+  // Computer: a window above the button, over whatever page you're on; Esc closes it.
+  await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.locator(".li-msgs-list").waitFor();
-  assert.ok(await page.locator(".li-msgs-thread").isVisible() && await page.locator(".li-msgs-back").isHidden());
-  const l = await page.locator(".li-msgs-list").boundingBox(), t = await page.locator(".li-msgs-thread").boundingBox();
-  assert.ok(t.x > l.x + l.width - 2 && Math.abs(t.y - l.y) < 2, "side by side");
-  await page.click('.li-msgs-convo[data-convo="sample-ana"]');
-  assert.equal(await page.textContent(".li-msgs-title"), "Ana (sample)");
+  await page.evaluate(() => { location.hash = "#/calendar"; });
+  await fab.click();
+  const w = await panel.boundingBox(), f = await fab.boundingBox();
+  assert.ok(w.width <= 380 && w.y + w.height <= f.y && w.x + w.width >= f.x + f.width - 2, "a window above the button, bottom right");
+  assert.equal(await page.evaluate(() => location.hash), "#/calendar", "the page underneath stays");
+  await page.keyboard.press("Escape");
+  assert.ok(await panel.isHidden(), "Esc closes it");
+  // Old links to #/messages open the chat.
+  await page.evaluate(() => { location.hash = "#/messages"; });
+  await panel.waitFor();
+  assert.equal(await page.evaluate(() => location.hash), "#/");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
 
-test("messages: with no colleagues yet, the tab says who to invite", async () => {
+test("messages: with no colleagues yet, the chat says who to invite", async () => {
   const page = await dbPage({ signedIn: true });
   await page.waitForSelector("#li-nav .li-nav-link");
-  await page.evaluate(() => document.querySelector("#li-modal")?.remove());
-  await page.evaluate(() => { location.hash = "#/messages"; });
-  await page.waitForSelector(".li-msgs-note");
-  assert.match(await page.textContent(".li-msgs-note"), /No one to message yet: invite someone from the Team page/);
-  assert.ok(await page.locator('#li-nav [data-view="messages"] .li-nav-dot').isHidden(), "nothing unread");
-  assert.equal(await page.locator("#li-chat").count(), 0);
+  await page.keyboard.press("Escape"); // the first-visit profile question
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.ok(await page.locator("#li-chat-fab .li-nav-dot").isHidden(), "nothing unread");
+  await page.click("#li-chat-fab");
+  await page.waitForSelector("#li-chat-panel .li-msgs-note");
+  assert.match(await page.textContent("#li-chat-panel .li-msgs-note"), /No one to message yet: invite someone from the Team page/);
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -1159,7 +1175,7 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.ok(appFiles.length > 20, "app files requested");
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
   const nav = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
-  assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Messages", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
+  assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
   const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
   assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
@@ -1290,7 +1306,7 @@ test("team: the owner sees everyone's progress, assigns tasks and invites collea
   // Colleagues' tasks never mix into your own Today.
   assert.equal(await page.locator("#li-view .li-task:visible").filter({ hasText: "(sample)" }).count(), 0);
   const tabs = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
-  assert.deepEqual(tabs, ["Overview", "Today", "Tasks", "Messages", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
+  assert.deepEqual(tabs, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "owner gets a Team tab");
   await page.click('#li-nav a[href="#/team"]');
   await page.waitForSelector(".li-team-table");
   const rows = await page.locator(".li-team-table tbody tr").allInnerTexts();
