@@ -103,6 +103,7 @@
   font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;line-height:1.2;}
 .pf-btn--solid{background:var(--accent);color:var(--surface);}
 .pf-btn--outline{background:transparent;color:var(--accent);}
+.pf-btn--icon{padding:0;width:40px;height:40px;flex:none;}
 .pf-btn--disabled{border-color:var(--line);color:var(--ink-3);cursor:default;}
 .pf-s-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center;padding:12px 0 28px;}
 .pf-s-eyebrow{margin:0 0 6px;font-size:16px;color:var(--ink-2);}

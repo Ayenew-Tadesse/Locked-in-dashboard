@@ -40,6 +40,8 @@ const SOCIAL_ICONS = {
   dribbble: svg('<circle cx="12" cy="12" r="9"/><path d="M19.1 6.6C15.5 9.4 9 10 3.3 9.6M8.6 3.7c3 3.6 6.2 10.6 7.2 16.5M3.4 13.9c5-1.6 11.6-1.5 17.4.5"/>'),
   website: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
 };
+// The resume button's icon: a page with a folded corner and four lines of text.
+const RESUME_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.3 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.3z"/><path d="M14.3 2.5v3.6a1.2 1.2 0 0 0 1.2 1.2H19"/><path d="M8.6 11h6.8M8.6 13.3h6.8M8.6 15.6h6.8M8.6 17.9h4.6"/></svg>`;
 const LINK_ICON = svg('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>');
 /** The social links as icon buttons (the site's name is the label for screen readers and the tooltip). */
 function socialIcons(s, about) {
@@ -104,7 +106,7 @@ function home(data, live) {
       <div class="pf-s-actions">
         ${s.cases?.length ? `<a class="pf-btn pf-btn--solid" href="#pf-cases" data-scroll="pf-cases">View projects</a>` : ""}
         ${s.contact?.length ? `<a class="pf-btn pf-btn--outline" href="#pf-contact" data-scroll="pf-contact">Contact me</a>` : ""}
-        ${hasResume(s) ? `<a class="pf-btn pf-btn--outline" href="#page=resume" data-resume>Resume</a>` : link(s.resume, "Resume")}
+        ${hasResume(s) ? `<a class="pf-btn pf-btn--outline pf-btn--icon" href="#page=resume" data-resume aria-label="Resume" title="Resume">${RESUME_ICON}</a>` : link(s.resume, RESUME_ICON, "pf-btn pf-btn--outline pf-btn--icon").replace("<a ", '<a aria-label="Resume" title="Resume" ')}
       </div>
       ${portrait ? "" : social}
     </div>
