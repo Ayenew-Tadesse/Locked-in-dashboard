@@ -104,9 +104,7 @@ function home(data, live) {
       ${h.description ? `<p class="pf-s-desc">${esc(h.description)}</p>` : ""}
       ${openLine(h)}
       <div class="pf-s-actions">
-        ${s.cases?.length ? `<a class="pf-btn pf-btn--solid" href="#pf-cases" data-scroll="pf-cases">View projects</a>` : ""}
-        ${s.contact?.length ? `<a class="pf-btn pf-btn--outline" href="#pf-contact" data-scroll="pf-contact">Contact me</a>` : ""}
-        ${hasResume(s) ? `<a class="pf-btn pf-btn--outline pf-btn--icon" href="#page=resume" data-resume aria-label="Resume" title="Resume">${RESUME_ICON}</a>` : link(s.resume, RESUME_ICON, "pf-btn pf-btn--outline pf-btn--icon").replace("<a ", '<a aria-label="Resume" title="Resume" ')}
+        ${hasResume(s) ? `<a class="pf-resume-icon" href="#page=resume" data-resume aria-label="Resume" title="Resume">${RESUME_ICON}</a>` : link(s.resume, RESUME_ICON, "pf-resume-icon").replace("<a ", '<a aria-label="Resume" title="Resume" ')}
       </div>
       ${portrait ? "" : social}
     </div>
