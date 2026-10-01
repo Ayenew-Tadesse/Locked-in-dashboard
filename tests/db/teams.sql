@@ -213,7 +213,7 @@ exception when insufficient_privilege then raise notice 'ok - signed-out visitor
 end $$;
 reset role;
 
--- 9. Projects: the team reads them, only the owner changes them -----------
+-- 9. Projects: the team reads them (colleagues: theirs), only the owner changes them --
 select pg_temp.act_as(:owner);
 insert into projects (team_id, name, code, status, facts, links, checklist, position)
   select team_id, 'Guxo Flights', 'FLT', 'good', '["First case study drafted"]', '{"web":"https://example.com"}',
@@ -223,8 +223,12 @@ update projects set stage = 'Building' where name = 'Gexi';
 reset role;
 select pg_temp.check((select stage from projects where name = 'Gexi') = 'Building', 'the owner adds and edits projects');
 
+-- (Since project groups, colleagues see only the projects they work on: give Ana both.)
+select pg_temp.act_as(:owner);
+insert into project_access (project_id, user_id) select id, :ana from projects;
+reset role;
 select pg_temp.act_as(:ana);
-select pg_temp.check((select count(*) from projects) = 2, 'members see the team''s projects');
+select pg_temp.check((select count(*) from projects) = 2, 'members see the projects they work on');
 update projects set name = 'Hacked' where name = 'Gexi';
 delete from projects;
 do $$ begin
@@ -626,3 +630,94 @@ select pg_temp.check((select permissions from team_members where user_id = :ana)
 select pg_temp.act_as(:ana);
 select pg_temp.check(exists (select 1 from tasks where user_id = :ben), 'defaults again: the admin sees colleagues'' tasks');
 reset role;
+
+-- 18. Project groups and project access --------------------------------------
+select pg_temp.act_as(:owner);
+insert into projects (team_id, name) select team_id, 'Flights' from team_members where user_id = :owner;
+insert into projects (team_id, name) select team_id, 'Bus' from team_members where user_id = :owner;
+insert into projects (team_id, name) select team_id, 'Shop' from team_members where user_id = :owner;
+reset role;
+select pg_temp.act_as(:ben);
+select pg_temp.check((select count(*) from projects where name in ('Flights', 'Bus', 'Shop')) = 0, 'a colleague in no group sees no projects');
+do $$ begin
+  insert into public.project_groups (team_id, project_id, name)
+    select tm.team_id, gen_random_uuid(), 'Ben''s group' from public.team_members tm where tm.user_id = auth.uid();
+  raise exception 'FAILED: a colleague created a group';
+exception when insufficient_privilege then raise notice 'ok - colleagues can''t create groups';
+end $$;
+reset role;
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from projects where name in ('Flights', 'Bus', 'Shop')) = 3, 'admins see every project');
+do $$ begin
+  insert into public.project_groups (team_id, project_id, name)
+    select p.team_id, p.id, 'Ana''s group' from public.projects p where p.name = 'Bus';
+  raise exception 'FAILED: an admin created a group without permission';
+exception when insufficient_privilege then raise notice 'ok - by default admins can''t create groups';
+end $$;
+reset role;
+
+select pg_temp.act_as(:owner);
+insert into project_groups (team_id, project_id, name, lead_id, created_by)
+  select p.team_id, p.id, 'Flights crew', :ben, :owner from projects p where p.name = 'Flights';
+insert into project_group_members (group_id, user_id) select id, :ben from project_groups where name = 'Flights crew';
+do $$ begin
+  insert into public.tasks (user_id, title, project_id)
+    select '33333333-0000-0000-0000-000000000003', 'Ben on Bus', id from public.projects where name = 'Bus';
+  raise exception 'FAILED: assigned a colleague a task outside their project';
+exception when insufficient_privilege then raise notice 'ok - a colleague''s tasks stay on their projects';
+end $$;
+insert into tasks (user_id, title, project_id) select :ben, 'Ben on Flights', id from projects where name = 'Flights';
+insert into tasks (user_id, title) values (:ben, 'Ben, no project');
+reset role;
+select pg_temp.check(exists (select 1 from tasks where title = 'Ben on Flights') and exists (select 1 from tasks where title = 'Ben, no project'),
+  'tasks on their project, or on no project, are fine');
+
+select pg_temp.act_as(:ben);
+select pg_temp.check((select array_agg(name order by name) from projects where name in ('Flights', 'Bus', 'Shop')) = array['Flights'], 'a group member sees only the group''s project');
+select pg_temp.check((select count(*) from project_groups) = 1 and (select count(*) from project_group_members) = 1, 'a colleague sees their own group and its members');
+update tasks set project_id = (select id from projects where name = 'Flights') where title = 'Ben, no project';
+select pg_temp.check((select project_id is not null from tasks where title = 'Ben, no project'), 'a colleague can put their own task on their project');
+reset role;
+select pg_temp.act_as(:ben);
+do $$ declare shop uuid; begin
+  select id into shop from public.projects where name = 'Shop';  -- hidden from Ben: null
+  if shop is not null then raise exception 'FAILED: Ben sees Shop'; end if;
+end $$;
+reset role;
+do $$ begin
+  -- (as the database itself, the trigger still applies)
+  update public.tasks set project_id = (select id from public.projects where name = 'Shop') where title = 'Ben, no project';
+  raise exception 'FAILED: moved a colleague''s task onto a project they don''t work on';
+exception when insufficient_privilege then raise notice 'ok - a colleague''s task can''t move to a project they don''t work on';
+end $$;
+
+-- Extra access.
+select pg_temp.act_as(:owner);
+insert into project_access (project_id, user_id, granted_by) select id, :ben, :owner from projects where name = 'Bus';
+insert into tasks (user_id, title, project_id) select :ben, 'Ben on Bus', id from projects where name = 'Bus';
+reset role;
+select pg_temp.act_as(:ben);
+select pg_temp.check((select array_agg(name order by name) from projects where name in ('Flights', 'Bus', 'Shop')) = array['Bus', 'Flights'], 'extra access adds a project');
+do $$ begin
+  insert into public.project_access (project_id, user_id) select id, auth.uid() from public.projects where name = 'Bus';
+  raise exception 'FAILED: a colleague gave themselves access';
+exception when insufficient_privilege or unique_violation then raise notice 'ok - colleagues can''t give themselves access';
+end $$;
+reset role;
+
+-- Admins with manage_groups.
+select pg_temp.act_as(:owner);
+select public.set_admin_permissions(:ana, '{"manage_groups": true}');
+reset role;
+select pg_temp.act_as(:ana);
+insert into project_groups (team_id, project_id, name) select team_id, id, 'Shop crew' from projects where name = 'Shop';
+insert into project_group_members (group_id, user_id) select id, :ben from project_groups where name = 'Shop crew';
+reset role;
+select pg_temp.check(exists (select 1 from project_group_members m join project_groups g on g.id = m.group_id where g.name = 'Shop crew'),
+  'manage_groups on: the admin creates a group and adds people');
+
+-- Deleting a project removes its groups and access.
+select pg_temp.act_as(:owner);
+delete from projects where name = 'Shop';
+reset role;
+select pg_temp.check(not exists (select 1 from project_groups where name = 'Shop crew'), 'deleting a project removes its groups');

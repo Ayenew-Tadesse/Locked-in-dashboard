@@ -120,5 +120,6 @@ export function normalizeTask(input, today) {
   if (t.status === "completed") pct = 100;
   t.completion_percentage = pct;
   t.milestone_id = t.milestone_id || null;
+  if ("project_id" in t) t.project_id = t.project_id || null;
   return t;
 }

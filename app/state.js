@@ -23,6 +23,8 @@ export const state = {
   members: [],    // [{ user_id, role, name, email }]
   invites: [],
   accessRequests: null, // owner: people who asked to join (null: not set up / not the owner)
+  groups: null,         // project groups (null: not set up yet)
+  projectAccess: [],    // extra projects people work on: [{ project_id, user_id }]
   get isOwner() { return this.team?.role === "owner"; },
   // Colleagues work on the tasks the owner gives them; only the owner (or
   // someone without a team) adds new ones. The database enforces the same.
@@ -76,6 +78,7 @@ export async function loadAll(store) {
   state.members = d.members || [];
   state.invites = d.invites || [];
   state.accessRequests = await loadRequests(store);
+  await loadGroups(store);
   state.projects = d.projects === undefined ? [] : d.projects;
   state.files = d.files === undefined ? [] : d.files;
   state.messages = d.messages === undefined ? [] : d.messages; // null: the chat table isn't set up yet
@@ -190,7 +193,7 @@ export async function updateTask(id, patch) {
 // ---------------------------------------------------------------------------
 
 // The fields every copy of an assignment shares.
-export const SHARED_TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "category", "milestone_id", "estimated_minutes", "notes"];
+export const SHARED_TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "category", "milestone_id", "project_id", "estimated_minutes", "notes"];
 const pickShared = (t) => Object.fromEntries(SHARED_TASK_FIELDS.filter((k) => k in t).map((k) => [k, t[k]]));
 // group_id is only kept once the database has the column (any loaded task shows it).
 const groupsSupported = () => [...state.tasks, ...state.teamTasks].some((t) => "group_id" in t) || state.store?.mode !== "supabase";
@@ -371,6 +374,47 @@ export function editsTasksOf(m) {
   if (!m || m.user_id === state.me || state.isOwner) return true;
   return state.isAdmin && m.role === "member" && can("edit_tasks");
 }
+/* Project groups ------------------------------------------------------------ */
+async function loadGroups(store = state.store) {
+  state.groups = null; state.projectAccess = [];
+  if (!state.team || !store.loadGroups) return;
+  try {
+    const d = await store.loadGroups(state.team.id);
+    if (d) { state.groups = d.groups; state.projectAccess = d.access; }
+  } catch (e) { console.warn("project groups:", e.message); }
+}
+/**
+ * The projects someone works on (ids). The owner and admins: every project;
+ * a colleague: their groups' projects and extra access (all of them until
+ * project groups are set up).
+ */
+export function projectsOf(userId) {
+  const all = (state.projects || []).map((p) => p.id);
+  const m = state.members.find((x) => x.user_id === userId);
+  if (!m || m.role !== "member" || state.groups == null) return all;
+  const mine = new Set([
+    ...state.groups.filter((g) => g.members.includes(userId)).map((g) => g.project_id),
+    ...state.projectAccess.filter((a) => a.user_id === userId).map((a) => a.project_id),
+  ]);
+  return all.filter((id) => mine.has(id));
+}
+export async function saveGroup(g) {
+  const saved = await guard(() => state.store.saveGroup(state.team.id, g), "Couldn't save the group");
+  await loadGroups();
+  emit();
+  return saved;
+}
+export async function deleteGroup(id) {
+  await guard(() => state.store.deleteGroup(id), "Couldn't delete the group");
+  await loadGroups();
+  emit();
+}
+export async function setProjectAccess(userId, projectIds) {
+  await guard(() => state.store.setProjectAccess(userId, projectIds), "Couldn't save project access");
+  await loadGroups();
+  emit();
+}
+
 /** Owner: what an admin may do (null: every admin). */
 export async function setAdminPermissions(memberId, permissions) {
   await guard(() => state.store.setAdminPermissions(memberId, permissions), "Couldn't save the permissions");
@@ -433,6 +477,7 @@ export async function saveProject(p) {
 export async function deleteProject(id) {
   await guard(() => state.store.deleteProject(id), "Couldn't delete the project");
   state.projects = state.projects.filter((x) => x.id !== id);
+  await loadGroups(); // its groups and access go with it
   emit();
 }
 /** Moves a project one place up (-1) or down (+1). */

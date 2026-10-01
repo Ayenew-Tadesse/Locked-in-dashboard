@@ -70,7 +70,9 @@ git-ignored).
    [`supabase/migrations/20261011000000_access_requests.sql`](../supabase/migrations/20261011000000_access_requests.sql)
    (people who aren't invited can ask to join; the owner approves on the Team page), then
    [`supabase/migrations/20261012000000_admin_permissions.sql`](../supabase/migrations/20261012000000_admin_permissions.sql)
-   (Team → Admin management: what each admin may do). Run the files in this order.
+   (Team → Admin management: what each admin may do), then
+   [`supabase/migrations/20261013000000_project_groups.sql`](../supabase/migrations/20261013000000_project_groups.sql)
+   (project groups: colleagues work only on their groups' projects). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.
@@ -105,6 +107,14 @@ goals and milestones, and deleting team chat messages. **Copy to all admins**
 and **Reset to defaults** (today's admin access) are there too. The database
 enforces each box; admins see their own list, read only, on the Team page.
 Nobody but the owner can make or remove admins or change these settings.
+
+### Project groups
+Team → **Project groups** (owner, and admins with "Create and manage project
+groups"): **+ New group** → a name, one project, members and an optional
+lead. Colleagues see and are assigned tasks only on their groups' projects;
+give someone another project on their page (**Give access…**). The owner and
+admins see every project. Tasks have a **Project** field that offers only
+projects the person works on; the database enforces it.
 
 ### Inviting colleagues
 1. Team → **Invite colleagues** → enter their email → **Invite**.

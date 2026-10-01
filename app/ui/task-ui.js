@@ -1,5 +1,5 @@
 // Task rows (with quick actions) and the add/edit task form.
-import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES, assignTask, assignsTo } from "../state.js";
+import { state, saveTask, updateTask, deleteTask, toast, findTask, memberName, filesFor, needsFiles, uploadFiles, deleteFile, MAX_FILE_BYTES, assignTask, assignsTo, projectsOf } from "../state.js";
 import { effectiveStatus, STATUSES, PRIORITIES, categoriesOf, STORED_STATUSES, countdownText } from "../core/tasks.js";
 import { formatDay, formatMinutes, relativeDay } from "../core/dates.js";
 import { esc, statusPill, priorityPill, openModal, closeModal, confirmDialog, options } from "./dom.js";
@@ -121,6 +121,7 @@ export function openTaskForm(task = {}) {
       <label class="li-field">Status<select name="status">${options(STORED_STATUSES.map((s) => [s, STATUSES[s]]), t.status)}</select></label>
       <label class="li-field">Category<input name="category" list="li-cats" maxlength="60" value="${esc(t.category || "")}" placeholder="e.g. Work"><datalist id="li-cats">${cats.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></label>
       <label class="li-field">Milestone<select name="milestone_id">${options(ms.map((m) => [m.id, m.title]), t.milestone_id, { empty: "None" })}</select></label>
+      ${(state.projects || []).length ? `<label class="li-field">Project<select name="project_id"></select></label>` : ""}
       ${!assignable ? "" : editing ? `<label class="li-field full">Assign to<select name="user_id">${options(people, t.user_id || state.me)}</select></label>`
         : `<fieldset class="full li-assignees"><legend>Assign to <small class="li-muted">(one or more; each person gets their own copy)</small></legend>
           ${people.map(([id, label]) => `<label class="li-check-row"><input type="checkbox" name="assignees[]" value="${esc(id)}"${id === (t.user_id || state.me) ? " checked" : ""}> ${esc(label)}</label>`).join("")}
@@ -134,6 +135,19 @@ export function openTaskForm(task = {}) {
         ${learningFields(t)}
       </fieldset>`,
     onReady(form) {
+      // Project: only those everyone it's for works on (colleagues: their groups' projects).
+      const projectSel = form.elements.project_id;
+      const drawProjects = () => {
+        if (!projectSel) return;
+        const who = form.querySelectorAll('[name="assignees[]"]').length
+          ? [...form.querySelectorAll('[name="assignees[]"]:checked')].map((x) => x.value)
+          : [form.elements.user_id?.value || t.user_id || state.me];
+        const allowed = who.reduce((ids, u) => ids.filter((id) => projectsOf(u).includes(id)), (state.projects || []).map((p) => p.id));
+        const keep = projectSel.value || t.project_id || "";
+        projectSel.innerHTML = options((state.projects || []).filter((p) => allowed.includes(p.id)).map((p) => [p.id, p.name]), allowed.includes(keep) ? keep : "", { empty: "None" });
+      };
+      drawProjects();
+      form.addEventListener("change", (e) => { if (e.target.matches('[name="assignees[]"], [name="user_id"]')) drawProjects(); });
       const range = form.elements.completion_percentage, out = form.elements.pct_out, status = form.elements.status;
       range.addEventListener("input", () => {
         out.value = range.value + "%";

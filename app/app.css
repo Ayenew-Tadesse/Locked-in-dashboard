@@ -872,3 +872,13 @@ html.li-has-chat body{padding-bottom:84px;}
 }
 /* A short page still leaves room for the tab row to stay where it was. */
 html.app-mode:not(.li-page) .li-view{min-height:100vh;min-height:100dvh;}
+.li-groups{list-style:none;margin:0;padding:0;}
+.li-groups > li{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.li-groups > li:last-child{border-bottom:0;}
+.li-group-main{min-width:0;flex:1;}
+.li-group-main b{font-size:15px;}
+.li-group-people{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.li-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font-size:12.5px;}
+.li-chip.lead{border-color:var(--accent);color:var(--accent);}
+#li-groups .li-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+#li-member-projects .li-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}

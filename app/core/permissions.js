@@ -20,6 +20,7 @@ export const ADMIN_PERMISSION_GROUPS = [
     ["edit_projects", "Add and edit projects", true],
     ["delete_projects", "Delete projects", true],
     ["edit_goals", "Edit team goals and milestones", false],
+    ["manage_groups", "Create and manage project groups", false],
   ]],
   ["Messages", [
     ["moderate_chat", "Delete other people's team chat messages", false],

@@ -5,7 +5,7 @@ import { computeMilestone, computeGoal } from "./core/insights.js";
 import { displayName } from "./core/people.js";
 
 const TASK_FIELDS = ["title", "description", "date", "due_date", "priority", "status", "category", "estimated_minutes",
-  "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved", "group_id"];
+  "actual_minutes", "completion_percentage", "notes", "milestone_id", "learning_changed", "learning_how", "learning_solved", "group_id", "project_id"];
 const MILESTONE_FIELDS = ["title", "description", "category", "start_date", "deadline", "target", "current_progress",
   "progress_mode", "status", "priority", "notes", "goal_id", "team_id"];
 const PROJECT_FIELDS = ["name", "code", "description", "category", "stage", "status", "facts", "links", "checklist", "position"];
@@ -190,6 +190,34 @@ export function supabaseStoreFromClient(sb) {
       if (error) throw new Error(error.message);
     },
     async revokeInvite(id) { check(await sb.from("team_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
+    /** Project groups and extra project access; null until 20261013000000_project_groups.sql has been run. */
+    async loadGroups(teamId) {
+      const g = await sb.from("project_groups").select("id, team_id, project_id, name, lead_id, created_at, project_group_members(user_id)").eq("team_id", teamId).order("created_at");
+      if (g.error) { if (/project_groups|schema cache|does not exist/.test(g.error.message)) return null; throw new Error(g.error.message); }
+      const a = await sb.from("project_access").select("project_id, user_id");
+      return {
+        groups: g.data.map(({ project_group_members: m, ...x }) => ({ ...x, members: (m || []).map((r) => r.user_id) })),
+        access: a.error ? [] : a.data,
+      };
+    },
+    async saveGroup(teamId, g) {
+      const row = { team_id: teamId, project_id: g.project_id, name: g.name, lead_id: g.lead_id || null };
+      const saved = check(g.id ? await sb.from("project_groups").update(row).eq("id", g.id).select().single()
+        : await sb.from("project_groups").insert({ ...row, created_by: userId }).select().single());
+      const had = g.id ? check(await sb.from("project_group_members").select("user_id").eq("group_id", saved.id)).map((r) => r.user_id) : [];
+      const gone = had.filter((u) => !g.members.includes(u)), added = g.members.filter((u) => !had.includes(u));
+      if (gone.length) check(await sb.from("project_group_members").delete().eq("group_id", saved.id).in("user_id", gone));
+      if (added.length) check(await sb.from("project_group_members").insert(added.map((user_id) => ({ group_id: saved.id, user_id }))));
+      return { ...saved, members: [...g.members] };
+    },
+    async deleteGroup(id) { check(await sb.from("project_groups").delete().eq("id", id)); },
+    /** The extra projects someone works on (beyond their groups'), replaced by projectIds. */
+    async setProjectAccess(memberId, projectIds) {
+      const had = check(await sb.from("project_access").select("project_id").eq("user_id", memberId)).map((r) => r.project_id);
+      const gone = had.filter((p) => !projectIds.includes(p)), added = projectIds.filter((p) => !had.includes(p));
+      if (gone.length) check(await sb.from("project_access").delete().eq("user_id", memberId).in("project_id", gone));
+      if (added.length) check(await sb.from("project_access").insert(added.map((project_id) => ({ project_id, user_id: memberId, granted_by: userId }))));
+    },
     /** Owner: people who asked for access, waiting for an answer; null until 20261011000000_access_requests.sql has been run. */
     async loadAccessRequests() {
       const { data, error } = await sb.from("access_requests").select("id, email, name, note, created_at").is("decided_at", null).order("created_at");
@@ -217,6 +245,11 @@ export function supabaseStoreFromClient(sb) {
       // Before 20261003000000_task_groups.sql, save without linking copies of an assignment.
       if (res.error && "group_id" in row && /group_id/.test(res.error.message)) {
         const { group_id, ...rest } = row;
+        res = await write(rest);
+      }
+      // Before 20261013000000_project_groups.sql, save without the project.
+      if (res.error && "project_id" in row && /project_id/.test(res.error.message) && !/work on that project/.test(res.error.message)) {
+        const { project_id, ...rest } = row;
         res = await write(rest);
       }
       return check(res);
@@ -334,6 +367,8 @@ export function createMemoryStore(seed) {
   db.members = db.members || [{ user_id: db.me, role: "owner", name: db.profile?.name || "You", email: db.profile?.email || "" }];
   db.invites = db.invites || [];
   db.requests = db.requests || [];
+  db.groups = db.groups || [];
+  db.access = db.access || [];
   db.projects = db.projects || [];
   db.files = db.files || [];
   db.messages = db.messages || [];
@@ -399,7 +434,11 @@ export function createMemoryStore(seed) {
       db.projects.push(saved);
       return { ...saved };
     },
-    async deleteProject(id) { db.projects = db.projects.filter((x) => x.id !== id); },
+    async deleteProject(id) {
+      db.projects = db.projects.filter((x) => x.id !== id);
+      db.groups = db.groups.filter((g) => g.project_id !== id);
+      db.access = db.access.filter((a) => a.project_id !== id);
+    },
     async loadFiles() { return db.files.map((f) => ({ ...f })); },
     async uploadTaskFile(task, file) {
       const f = { id: uuid(), task_id: task.id, user_id: db.me, path: `${db.me}/${task.id}/${file.name}`, name: file.name, size: file.size, mime: file.type || null,
@@ -429,6 +468,18 @@ export function createMemoryStore(seed) {
     },
     async revokeInvite(id) { db.invites = db.invites.filter((i) => i.id !== id); },
     async loadAccessRequests() { return db.requests.map((r) => ({ ...r })); },
+    async loadGroups() { return JSON.parse(JSON.stringify({ groups: db.groups, access: db.access })); },
+    async saveGroup(teamId, g) {
+      const row = { team_id: teamId, project_id: g.project_id, name: g.name, lead_id: g.lead_id || null, members: [...g.members] };
+      if (g.id) { const i = db.groups.findIndex((x) => x.id === g.id); db.groups[i] = { ...db.groups[i], ...row }; return { ...db.groups[i] }; }
+      const saved = { id: uuid(), created_at: now(), ...row };
+      db.groups.push(saved);
+      return { ...saved };
+    },
+    async deleteGroup(id) { db.groups = db.groups.filter((g) => g.id !== id); },
+    async setProjectAccess(memberId, projectIds) {
+      db.access = db.access.filter((a) => a.user_id !== memberId).concat(projectIds.map((project_id) => ({ project_id, user_id: memberId })));
+    },
     async decideAccessRequest(id, approve) {
       const r = db.requests.find((x) => x.id === id);
       if (!r) throw new Error("That request was already answered.");

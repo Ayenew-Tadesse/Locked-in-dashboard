@@ -1,6 +1,6 @@
 // Team page (owner only): everyone's progress, invitations, and each
 // person's work, learning logs and daily report.
-import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, assignsTo, can, setAdminPermissions, ROLE_LABELS, decideAccessRequest } from "../state.js";
+import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, assignsTo, can, setAdminPermissions, ROLE_LABELS, decideAccessRequest, saveGroup, deleteGroup, setProjectAccess, projectsOf } from "../state.js";
 import { ADMIN_PERMISSION_GROUPS, ADMIN_DEFAULTS, adminPermissions, permissionChanges } from "../core/permissions.js";
 import { scoreDay, scorePeriod } from "../core/scoring.js";
 import { addDays, weekRange, formatDay, relativeDay, dayOf, formatMinutes } from "../core/dates.js";
@@ -71,6 +71,7 @@ export function renderTeam(el, params, id) {
         </tr>`).join("")}</tbody>
       </table></div>
     </section>
+    ${groupsCard()}
     ${state.isAdmin ? myPermissionsCard() : ""}
     ${can("access_requests") && state.accessRequests?.length ? `<section class="li-card" id="li-access-requests">
       <div class="li-card-head"><span class="card-label">Access requests <span class="li-nav-dot">${state.accessRequests.length}</span></span></div>
@@ -106,6 +107,13 @@ export function renderTeam(el, params, id) {
       () => toast(approve ? `Approved: ${r.email} is invited. Let them know they can sign up now.` : "Request declined"), () => { b.disabled = false; });
   }));
   el.querySelector("#li-admin-management")?.addEventListener("click", openAdminManagement);
+  el.querySelector("[data-group-new]")?.addEventListener("click", () => openGroupForm());
+  el.querySelectorAll("[data-group-edit]").forEach((b) => b.addEventListener("click", () => openGroupForm(state.groups.find((g) => g.id === b.dataset.groupEdit))));
+  el.querySelectorAll("[data-group-delete]").forEach((b) => b.addEventListener("click", async () => {
+    const g = state.groups.find((x) => x.id === b.dataset.groupDelete);
+    if (await confirmDialog(`Delete the group "${g.name}"? Its members lose access to the project unless they have it another way; their tasks stay.`, "Delete group"))
+      await deleteGroup(g.id).then(() => toast("Group deleted"), () => {});
+  }));
   el.querySelectorAll("[data-assign]").forEach((b) => b.addEventListener("click", () => openTaskForm({ user_id: b.dataset.assign, date: today })));
   wireRoleButtons(el);
   el.querySelector("#li-rename-team")?.addEventListener("click", async () => {
@@ -158,6 +166,7 @@ function renderMember(el, userId) {
       ${tile("30-day completion", s.month.totals.completion_rate == null ? "—" : `${s.month.totals.completion_rate}<small>%</small>`, `${formatMinutes(s.month.totals.minutes)} logged`, scoreTone(s.month.totals.completion_rate))}
       ${tile("Overdue", String(s.overdue), "", s.overdue ? "red" : "green")}
     </div>
+    ${memberProjectsCard(m)}
     <section class="li-card">
       <div class="li-card-head"><span class="card-label">Open work (next 7 days and overdue)</span></div>
       ${taskList(open, { showDate: true, empty: "Nothing open. Assign something?" })}
@@ -179,6 +188,7 @@ function renderMember(el, userId) {
     finally { btn.disabled = false; }
   });
   el.querySelector("#li-remove-member")?.addEventListener("click", () => confirmRemoval(m));
+  el.querySelector("[data-access-edit]")?.addEventListener("click", () => openAccessForm(m));
   wireRoleButtons(el);
 }
 
@@ -274,5 +284,92 @@ function openAdminManagement() {
     const chosen = permissionChanges(read());
     if (!(await confirmDialog(`Give all ${admins.length} admins exactly these permissions?`, "Copy to all"))) return;
     await setAdminPermissions(null, chosen).then(() => toast(`Saved for all ${admins.length} admins`), () => {});
+  });
+}
+
+// Project groups --------------------------------------------------------------
+const projectName = (id) => (state.projects || []).find((p) => p.id === id)?.name || "A project";
+const groupsReady = () => Array.isArray(state.groups);
+
+function groupsCard() {
+  if (!state.isManager) return "";
+  const manage = can("manage_groups");
+  if (!groupsReady()) {
+    return manage && state.isOwner ? `<section class="li-card" id="li-groups"><div class="li-card-head"><span class="card-label">Project groups</span></div>
+      <p class="li-empty">Project groups need one more database update: run <code>supabase/migrations/20261013000000_project_groups.sql</code> in Supabase's SQL Editor, then refresh.</p></section>` : "";
+  }
+  const groups = state.groups;
+  return `<section class="li-card" id="li-groups">
+    <div class="li-card-head"><span class="card-label">Project groups</span>${manage ? `<button type="button" class="li-btn small primary" data-group-new>+ New group</button>` : ""}</div>
+    <p class="li-sub">Each group works on one project. Colleagues see and are assigned tasks only on their groups' projects (plus any extra project you give them on their page).</p>
+    ${groups.length ? `<ul class="li-groups">${groups.map((g) => `<li data-group="${esc(g.id)}">
+      <div class="li-group-main"><b>${esc(g.name)}</b> <span class="li-pill">${esc(projectName(g.project_id))}</span>
+        <div class="li-group-people">${g.members.map((u) => `<span class="li-chip${u === g.lead_id ? " lead" : ""}">${esc(memberName(u))}${u === g.lead_id ? " · lead" : ""}</span>`).join("") || `<small class="li-muted">No members yet</small>`}</div></div>
+      ${manage ? `<span class="li-btn-row"><button type="button" class="li-btn small" data-group-edit="${esc(g.id)}">Edit</button>
+        <button type="button" class="li-btn small danger-ghost" data-group-delete="${esc(g.id)}">Delete</button></span>` : ""}
+    </li>`).join("")}</ul>` : `<p class="li-empty">No groups yet.${manage ? " Create one for each project you want people to work on together." : ""}</p>`}
+  </section>`;
+}
+
+const memberName = (id) => state.members.find((m) => m.user_id === id)?.name || "Someone";
+
+function openGroupForm(g = {}) {
+  const projects = state.projects || [];
+  if (!projects.length) { toast("Add a project first (☰ → Projects).", "error"); return; }
+  const people = state.members.filter((m) => m.role !== "owner" || m.user_id === state.me);
+  const members = new Set(g.members || []);
+  const form = openModal({
+    eyebrow: g.id ? "Edit group" : "New group", title: g.id ? g.name : "Create a project group", submitLabel: g.id ? "Save group" : "Create group", wide: true,
+    body: `<label class="li-field">Group name<input name="name" required maxlength="80" value="${esc(g.name || "")}" placeholder="e.g. Flights crew"></label>
+      <label class="li-field">Project<select name="project_id" required>${projects.map((p) => `<option value="${esc(p.id)}"${p.id === g.project_id ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+      <fieldset class="full li-perm-group"><legend>Members</legend>
+        ${people.map((m) => `<label class="li-check-row"><input type="checkbox" name="members[]" value="${esc(m.user_id)}"${members.has(m.user_id) ? " checked" : ""}><span>${esc(m.name)} <small class="li-muted">${esc(ROLE_LABELS[m.role] || "")}</small></span></label>`).join("")}
+      </fieldset>
+      <label class="li-field">Group lead <small class="li-muted">(optional)</small><select name="lead_id"><option value="">None</option>${people.map((m) => `<option value="${esc(m.user_id)}"${m.user_id === g.lead_id ? " selected" : ""}>${esc(m.name)}</option>`).join("")}</select></label>`,
+    async onSubmit(v) {
+      if (!v.name.trim()) throw new Error("Give the group a name.");
+      const chosen = v.members || [];
+      if (v.lead_id && !chosen.includes(v.lead_id)) chosen.push(v.lead_id);
+      await saveGroup({ ...(g.id ? { id: g.id } : {}), name: v.name.trim(), project_id: v.project_id, lead_id: v.lead_id || null, members: chosen });
+      toast(g.id ? "Group saved" : `Created ${v.name.trim()}`);
+    },
+  });
+  return form;
+}
+
+// A person's page: the projects they work on.
+function memberProjectsCard(m) {
+  if (!groupsReady() || !(state.projects || []).length) return "";
+  if (m.role !== "member") {
+    return `<section class="li-card" id="li-member-projects"><div class="li-card-head"><span class="card-label">Projects</span></div>
+      <p class="li-sub">${m.role === "owner" ? "The owner" : "Admins"} work on every project.</p></section>`;
+  }
+  const viaGroups = state.groups.filter((g) => g.members.includes(m.user_id));
+  const extra = state.projectAccess.filter((a) => a.user_id === m.user_id).map((a) => a.project_id);
+  const ids = projectsOf(m.user_id);
+  return `<section class="li-card" id="li-member-projects">
+    <div class="li-card-head"><span class="card-label">Projects they work on</span>${can("manage_groups") ? `<button type="button" class="li-btn small" data-access-edit>Give access…</button>` : ""}</div>
+    ${ids.length ? `<ul class="li-mini">${ids.map((id) => {
+      const g = viaGroups.find((x) => x.project_id === id);
+      return `<li><span><b>${esc(projectName(id))}</b> <small class="li-muted">${g ? `via ${esc(g.name)}` : extra.includes(id) ? "extra access" : ""}</small></span></li>`;
+    }).join("")}</ul>` : `<p class="li-empty">None yet: add them to a group, or give them access.</p>`}
+  </section>`;
+}
+
+function openAccessForm(m) {
+  const viaGroups = new Set(state.groups.filter((g) => g.members.includes(m.user_id)).map((g) => g.project_id));
+  const extra = new Set(state.projectAccess.filter((a) => a.user_id === m.user_id).map((a) => a.project_id));
+  openModal({
+    eyebrow: "Project access", title: `Projects ${m.name} works on`, submitLabel: "Save access",
+    body: `<p class="li-sub full">Their groups' projects come with the group. Tick any other project they may also work on.</p>
+      <fieldset class="full li-perm-group"><legend>Projects</legend>
+      ${(state.projects || []).map((p) => viaGroups.has(p.id)
+        ? `<label class="li-check-row"><input type="checkbox" checked disabled><span>${esc(p.name)} <small class="li-muted">via their group</small></span></label>`
+        : `<label class="li-check-row"><input type="checkbox" name="extra[]" value="${esc(p.id)}"${extra.has(p.id) ? " checked" : ""}><span>${esc(p.name)}</span></label>`).join("")}
+      </fieldset>`,
+    async onSubmit(v) {
+      await setProjectAccess(m.user_id, v.extra || []);
+      toast(`Saved ${m.name}'s projects`);
+    },
   });
 }
