@@ -2226,7 +2226,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const icons = [...document.querySelectorAll(".pf-s-figure .pf-social")].map((a) => [a.getAttribute("aria-label"), !!a.querySelector("svg"), a.textContent.trim(), a.getAttribute("href")]);
       const stripBg = getComputedStyle(document.querySelector(".pf-s-stats")).backgroundColor;
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
-      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
+      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, resume: (() => { const b = document.querySelector(".pf-s-actions .pf-btn--icon"); return b && [b.getAttribute("aria-label"), b.title, !!b.querySelector("svg"), b.textContent.trim(), b.getAttribute("href").slice(0, 7)]; })(), icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
         stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
         firstBarAfterStats: document.querySelector(".pf-s-stats").nextElementSibling.className };
@@ -2236,6 +2236,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     assert.equal(m.drift, "pf-bars-drift", "the bars drift");
     assert.deepEqual(m.icons.map(([l, svg, text]) => [l, svg, text]), [["Instagram", true, ""], ["LinkedIn", true, ""], ["Behance", true, ""], ["GitHub", true, ""]], "icon buttons (named for screen readers), GitHub added from the profile");
     assert.equal(m.icons[3][3], "https://github.com/someone");
+    assert.deepEqual(m.resume, ["Resume", "Resume", true, "", "mailto:"], "the resume button is the document icon, still linking to the resume");
     assert.equal(Math.round(m.iconGap), 8, "8px under the photo");
     assert.ok(Math.abs(m.iconRight) < 1, "lined up with the photo's right edge");
     assert.match(m.barLines, / 6px, rgba\(0, 0, 0, 0\) 6px, rgba\(0, 0, 0, 0\) 13px\)$/, `6px bars, 7px gaps: ${m.barLines}`);
