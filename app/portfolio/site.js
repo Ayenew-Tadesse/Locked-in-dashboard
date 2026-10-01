@@ -64,12 +64,6 @@ function openLine(h) {
   return parts.length ? `<p class="pf-s-open">${parts.map((x) => `<span>${esc(x)}</span>`).join("")}</p>` : "";
 }
 
-// The name on two lines: first name, then the rest.
-function nameLines(name) {
-  const [first, ...rest] = String(name).trim().split(/\s+/);
-  return rest.length ? `<span>${esc(first)}</span> <span>${esc(rest.join(" "))}</span>` : esc(name);
-}
-
 // The "broken level" strip: thin bars fading in, then a solid block. Decorative.
 const BARS = `<div class="pf-bars" aria-hidden="true"></div>`;
 /** The sections that have content, with the strip before each one. */
@@ -82,7 +76,7 @@ function home(data, live) {
   <section class="pf-s-hero" id="pf-top">
     <div class="pf-s-hero__text">
       ${h.eyebrow ? `<p class="pf-s-eyebrow">${esc(h.eyebrow)}</p>` : ""}
-      <h1>${nameLines(name)}</h1>
+      <h1>${esc(name)}</h1>
       ${h.role || h.location ? `<p class="pf-s-role"><b>${esc(h.role || "")}</b>${h.location ? `${h.role ? "," : ""} based in ${esc(h.location)}` : ""}</p>` : ""}
       ${h.description ? `<p class="pf-s-desc">${esc(h.description)}</p>` : ""}
       ${openLine(h)}
