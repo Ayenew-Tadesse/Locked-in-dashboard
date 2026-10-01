@@ -64,6 +64,13 @@ export function supabaseStoreFromClient(sb) {
       async resetPassword(email) { check(await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname })); },
       async updatePassword(password) { check(await sb.auth.updateUser({ password })); },
       async signOut() { await sb.auth.signOut(); },
+      /** Not invited yet: ask the team owner for access (20261011000000_access_requests.sql). 'requested' or 'invited'. */
+      async requestAccess(email, name, note) {
+        const { data, error } = await sb.rpc("request_access", { p_email: email, p_name: name || null, p_note: note || null });
+        if (error && /request_access|schema cache/.test(error.message)) throw new Error("Access requests aren't switched on yet. Ask the team owner to invite you.");
+        if (error) throw new Error(error.message);
+        return data;
+      },
     },
 
     async load() {
@@ -172,6 +179,14 @@ export function supabaseStoreFromClient(sb) {
       if (error) throw new Error(error.message);
     },
     async revokeInvite(id) { check(await sb.from("team_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id)); },
+    /** Owner: people who asked for access, waiting for an answer; null until 20261011000000_access_requests.sql has been run. */
+    async loadAccessRequests() {
+      const { data, error } = await sb.from("access_requests").select("id, email, name, note, created_at").is("decided_at", null).order("created_at");
+      if (error) { if (/access_requests|schema cache|does not exist/.test(error.message)) return null; throw new Error(error.message); }
+      return data;
+    },
+    /** Owner: approve (they're invited as a colleague) or decline. */
+    async decideAccessRequest(id, approve) { check(await sb.rpc("decide_access_request", { p_id: id, p_approve: !!approve })); },
     /** Deletes the member's account and all their data (owner only; see 20260928000000_remove_member.sql). */
     async removeMember(teamId, memberId) {
       // Their shared files go too (the owner may delete members' files).
@@ -307,6 +322,7 @@ export function createMemoryStore(seed) {
   db.team = db.team || { id: "team-preview", name: "My team", role: "owner" };
   db.members = db.members || [{ user_id: db.me, role: "owner", name: db.profile?.name || "You", email: db.profile?.email || "" }];
   db.invites = db.invites || [];
+  db.requests = db.requests || [];
   db.projects = db.projects || [];
   db.files = db.files || [];
   db.messages = db.messages || [];
@@ -346,7 +362,7 @@ export function createMemoryStore(seed) {
     auth: {
       async session() { return { user: { id: "demo", email: "demo@example.com" } }; },
       onChange() {}, async signIn() {}, async signUp() { return {}; }, async magicLink() {}, async resetPassword() {},
-      async updatePassword() {}, async signOut() { location.search = ""; },
+      async updatePassword() {}, async signOut() { location.search = ""; }, async requestAccess() { return "requested"; },
     },
     async load() { recalc(); return JSON.parse(JSON.stringify({ ...db })); },
     async sendMessage(m) {
@@ -396,6 +412,13 @@ export function createMemoryStore(seed) {
       return { ...inv };
     },
     async revokeInvite(id) { db.invites = db.invites.filter((i) => i.id !== id); },
+    async loadAccessRequests() { return db.requests.map((r) => ({ ...r })); },
+    async decideAccessRequest(id, approve) {
+      const r = db.requests.find((x) => x.id === id);
+      if (!r) throw new Error("That request was already answered.");
+      db.requests = db.requests.filter((x) => x !== r);
+      if (approve && !db.invites.some((i) => i.email === r.email)) db.invites.push({ id: uuid(), team_id: db.team.id, email: r.email, role: "member", created_at: now() });
+    },
     async removeMember(teamId, memberId) {
       db.members = db.members.filter((m) => m.user_id !== memberId);
       db.tasks = db.tasks.filter((t) => t.user_id !== memberId); // their data is deleted

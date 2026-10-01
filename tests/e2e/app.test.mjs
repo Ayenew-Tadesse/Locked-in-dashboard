@@ -658,24 +658,34 @@ test("my year: quarters follow the plan year everywhere (Tasks card, Quarter pag
   // Move a goal into Q1 (the goal form lists your plan quarters).
   const goalsBefore = await page.locator(".li-goals li").count();
   const q1Label = await page.textContent(".li-view-head .card-label");
-  // Edit "Ship Guxo Flights publicly" (demo, stored in the calendar quarter) from whichever quarter shows it.
-  const found = await page.evaluate(async () => {
+  // Move a demo goal (stored by calendar quarter) into this Q1 from another quarter:
+  // "Ship Guxo Flights publicly" (g1) when it's elsewhere (then it's in Q1 for
+  // the Objective card below either way), otherwise any other goal.
+  const found = await page.evaluate(async (q1) => {
+    let other = null;
     for (let y = new Date().getFullYear() - 1; y <= new Date().getFullYear() + 1; y++) for (let q = 1; q <= 4; q++) {
       location.hash = `#/quarter?q=${q}&y=${y}`;
       await new Promise((r) => setTimeout(r, 30));
-      if (document.querySelector('[data-goal="g1"]')) return location.hash;
+      if (document.querySelector(".li-view-head .card-label")?.textContent === q1) continue;
+      if (document.querySelector('[data-goal="g1"]')) return "g1";
+      other = other || document.querySelector("[data-goal]")?.dataset.goal || null;
     }
-    return null;
-  });
-  assert.ok(found, "the demo goal is in one of the quarters");
-  await page.click('[data-goal="g1"]');
-  const opt = await page.locator('#li-modal select[name=pq] option', { hasText: q1Label.split(" · Year")[0] }).first().getAttribute("value");
-  await page.selectOption("#li-modal select[name=pq]", opt);
-  await page.click("#li-modal button[type=submit]");
-  await page.waitForSelector("#li-modal", { state: "detached" });
-  await page.evaluate(() => { location.hash = "#/quarter"; });
-  await page.waitForSelector('[data-goal="g1"]');
-  assert.equal(await page.locator(".li-goals li").count(), goalsBefore + 1, "the goal is now in Q1");
+    return other;
+  }, q1Label);
+  if (found) {
+    await page.click(`[data-goal="${found}"]`);
+    const opt = await page.locator('#li-modal select[name=pq] option', { hasText: q1Label.split(" · Year")[0] }).first().getAttribute("value");
+    await page.selectOption("#li-modal select[name=pq]", opt);
+    await page.click("#li-modal button[type=submit]");
+    await page.waitForSelector("#li-modal", { state: "detached" });
+    await page.evaluate(() => { location.hash = "#/quarter"; });
+    await page.waitForSelector(`[data-goal="${found}"]`);
+    assert.equal(await page.locator(".li-goals li").count(), goalsBefore + 1, "the goal is now in Q1");
+  } else {
+    // Early in a calendar quarter every demo goal is already in this Q1.
+    await page.evaluate(() => { location.hash = "#/quarter"; });
+    await page.waitForSelector('[data-goal="g1"]');
+  }
   // The Objective card: Q1 is Now, with the goal's milestones.
   await page.click('#li-nav a[href="#/"]');
   await page.waitForSelector("#obj-track .obj-step.now");
@@ -1422,6 +1432,7 @@ export function createClient() {
     // portfolio_view: what a hiring manager's page gets (the headline counts the calls).
     rpc: async (name, args) => {
       window.__rpc.push([name, args]);
+      if (name === "request_access") return { data: "requested", error: null };
       if (name !== "portfolio_view") return { data: null, error: null };
       const n = window.__rpc.filter((c) => c[0] === name).length;
       return { data: { generated_at: today, about: { name: "Aye", headline: "Version " + n, links: {}, details: {} }, activity: null, projects: null, milestones: null, plan: null, work: null }, error: null };
@@ -1434,7 +1445,12 @@ export function createClient() {
     auth: {
       getSession: async () => ({ data: { session: ${signedIn ? '{ user: { id: "u1" } }' : "null"} } }),
       onAuthStateChange() {},
-      signUp: async (args) => { window.__fakeSignUps.push(args); return { data: { session: null }, error: null }; },
+      signUp: async (args) => {
+        window.__fakeSignUps.push(args);
+        // As the database answers an email nobody invited.
+        if (/^stranger@/.test(args.email)) return { data: null, error: { message: "Database error saving new user" } };
+        return { data: { session: null }, error: null };
+      },
     },
   };
 }`;
@@ -1505,6 +1521,57 @@ test("admins: their resume and portfolio start blank, with the owner's structure
   assert.equal(await page.locator("#li-pf-cases [data-case-card]").count(), 0, "no case studies");
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("access requests: someone not invited asks to join from the sign-up screen", async () => {
+  const page = await dbPage({ signedIn: false });
+  await page.waitForSelector("#li-auth .gate-card", { state: "visible" });
+  await page.getByRole("button", { name: "Create an account" }).click();
+  await page.fill('#li-auth input[name="name"]', "Sam");
+  await page.selectOption('#li-auth select[name="greeting"]', { index: 1 });
+  await page.fill('#li-auth input[type="email"]', "stranger@example.com");
+  await page.fill('#li-auth input[type="password"]', "long enough password");
+  await page.click('#li-auth button[type="submit"]');
+  await page.waitForSelector("#li-auth [data-request]:not([hidden])");
+  assert.match(await page.textContent("#li-auth .gate-error"), /hasn't been invited yet\. Request access/);
+  await page.click("#li-auth [data-request]");
+  assert.equal(await page.textContent("#li-auth .gate-sub"), "Ask the team owner for access");
+  assert.equal(await page.inputValue('#li-auth input[type="email"]'), "stranger@example.com", "the email carries over");
+  assert.equal(await page.inputValue('#li-auth input[name="name"]'), "Sam", "and the name");
+  await page.fill('#li-auth textarea[name="note"]', "I work on Guxo with you.");
+  await page.click('#li-auth button[type="submit"]');
+  await page.waitForSelector("#li-auth .li-auth-ok:not([hidden])");
+  assert.match(await page.textContent("#li-auth .li-auth-ok"), /Request sent\. The team owner has been notified/);
+  assert.deepEqual(await page.evaluate(() => window.__rpc.filter((c) => c[0] === "request_access").map((c) => c[1])),
+    [{ p_email: "stranger@example.com", p_name: "Sam", p_note: "I work on Guxo with you." }]);
+  // Also from the sign-in screen.
+  await page.click('#li-auth [data-mode="signin"]');
+  assert.equal(await page.locator('#li-auth [data-mode="request"]').count(), 1, "Not invited? Request access");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("access requests: the owner sees them on the Team tab and approves or declines", async () => {
+  const page = await open("team", { width: 1280, height: 900 });
+  const badge = page.locator('#li-nav [data-view="team"] .li-nav-dot');
+  assert.equal(await badge.innerText(), "1", "the Team tab shows one request");
+  await page.waitForSelector("#li-access-requests");
+  const card = page.locator("#li-access-requests");
+  assert.match(await card.innerText(), /Sam \(sample\)[\s\S]*sam\.sample@example\.com[\s\S]*help test Guxo Flights/);
+  await card.locator("[data-approve]").click();
+  await page.waitForSelector("#li-access-requests", { state: "detached" });
+  assert.match(await page.locator("#li-invites").innerText(), /sam\.sample@example\.com/, "approving invites them");
+  assert.ok(await badge.isHidden(), "the badge goes away");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+  // Declining asks first and invites nobody.
+  const p2 = await open("team", { width: 390, height: 844 });
+  await p2.locator("#li-access-requests [data-decline]").click();
+  await p2.click("#li-modal button[type=submit]");
+  await p2.waitForSelector("#li-access-requests", { state: "detached" });
+  assert.doesNotMatch(await p2.locator("#li-invites").innerText(), /sam\.sample/);
+  assert.deepEqual(p2.errors, []);
+  await p2.close();
 });
 
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {

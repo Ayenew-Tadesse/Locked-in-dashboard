@@ -2,7 +2,7 @@
 // Supabase config (config.js) or is a preview (?demo=1 for sample data,
 // ?demo=history for the original dashboard's tracking history); otherwise
 // the original dashboard runs exactly as before.
-import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile, seedProjects } from "./state.js";
+import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile, seedProjects, toast, refreshAccessRequests } from "./state.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
 import { demoSeed, emptySeed } from "./demo.js";
 import { buildYearSetup } from "./plan/setup.js";
@@ -92,6 +92,30 @@ function updateMessagesBadge() {
   tab.setAttribute("aria-label", n ? `Messages, ${n} unread` : "Messages");
 }
 
+// Access requests waiting for the owner, on the Team tab.
+function updateTeamBadge() {
+  const tab = document.querySelector('#li-nav [data-view="team"]');
+  if (!tab) return;
+  const n = state.isOwner ? (state.accessRequests || []).length : 0;
+  let dot = tab.querySelector(".li-nav-dot");
+  if (!dot) { dot = document.createElement("span"); dot.className = "li-nav-dot"; tab.append(dot); }
+  dot.hidden = !n;
+  dot.textContent = n > 99 ? "99+" : String(n);
+  tab.setAttribute("aria-label", n ? `Team, ${n} access request${n === 1 ? "" : "s"}` : "Team");
+}
+// Owner: say so when people are waiting, and check again every few minutes.
+function watchAccessRequests() {
+  if (!state.isOwner || state.accessRequests == null) return;
+  const say = () => {
+    const n = state.accessRequests?.length || 0;
+    if (n) toast(`${n} ${n === 1 ? "person asked" : "people asked"} for access. Open Team to approve or decline.`);
+  };
+  say();
+  const check = () => refreshAccessRequests().then((changed) => { if (changed) say(); }, () => {});
+  setInterval(() => { if (!document.hidden) check(); }, 3 * 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+}
+
 function renderNav(active) {
   // Messages (the team chat) sits right after Tasks for everyone on a team; Team is for the owner and admins.
   const tabs = NAV.flatMap((k) => (k === "tasks" && state.team ? [k, "messages"] : [k]));
@@ -120,6 +144,7 @@ function renderNav(active) {
     tasksTab.setAttribute("aria-label", open.length ? `Tasks, ${open.length} unfinished${late ? ", some overdue" : ""}` : "Tasks");
   }
   updateMessagesBadge();
+  updateTeamBadge();
   sc.querySelectorAll(".li-nav-link").forEach((a) => {
     const on = a.dataset.view === active;
     a.classList.toggle("active", on);
@@ -443,6 +468,7 @@ async function start(store) {
   setInterval(() => { if (state.today !== day) { day = state.today; render(); } }, 60000);
   render();
   try { startMessages(updateMessagesBadge); } catch (e) { console.error(e); }
+  watchAccessRequests();
   // GitHub commits turn Activity days green (fetched now and every 10 minutes).
   startGithub(() => { feedLegacy(); window.dispatchEvent(new Event("li:github")); });
   syncPortfolioGithub().catch((e) => console.warn("portfolio GitHub:", e.message));

@@ -64,6 +64,7 @@ export function demoSeed(today = todayKey()) {
     team: { id: "team-preview", name: "Demo team", role: "owner" },
     members: [{ user_id: "demo", role: "owner", name: "Demo user", email: "demo@example.com" }, ...team.members],
     invites: [],
+    requests: [{ id: "request-sample", email: "sam.sample@example.com", name: "Sam (sample)", note: "I'd like to help test Guxo Flights.", created_at: new Date(Date.now() - 3 * 3600e3).toISOString() }],
     tasks: [...tasks, ...team.tasks], milestones, goals, messages: team.messages,
     daily: [{ date: addDays(today, -1), notes: "Lost the afternoon to a build issue." }],
     weekly: [],
@@ -80,6 +81,7 @@ export function emptySeed(today = todayKey()) {
     team: { id: "team-preview", name: "Guxo team", role: "owner" },
     members: [{ user_id: "preview", role: "owner", name: "Ayenew Shiferaw", email: "" }, ...team.members],
     invites: [],
+    requests: [{ id: "request-sample", email: "sam.sample@example.com", name: "Sam (sample)", note: "I'd like to help test Guxo Flights.", created_at: new Date(Date.now() - 3 * 3600e3).toISOString() }],
     tasks: team.tasks, milestones: [], goals: [], daily: [], weekly: [], messages: team.messages,
   };
 }
