@@ -30,6 +30,26 @@ const tryLink = (c, label, cls) => {
 };
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
 const SOCIAL = { linkedin: "LinkedIn", behance: "Behance", dribbble: "Dribbble", instagram: "Instagram", github: "GitHub", website: "Website" };
+// Outline icons for the social links (24 × 24, drawn in the text colour).
+const svg = (body) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const SOCIAL_ICONS = {
+  instagram: svg('<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/>'),
+  linkedin: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 10.5V17M8 7.2v.1M12 17v-3.8a2.2 2.2 0 0 1 4.4 0V17M12 10.5V17"/>'),
+  behance: svg('<path d="M3 6.5h5a2.6 2.6 0 0 1 0 5.2H3zM3 11.7h5.6a2.9 2.9 0 0 1 0 5.8H3zM3 6.5v11"/><path d="M14.5 13.6h6.3a3.2 3.2 0 1 0-.9 2.5M15.2 7.5h4.6"/>'),
+  github: svg('<path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>'),
+  dribbble: svg('<circle cx="12" cy="12" r="9"/><path d="M19.1 6.6C15.5 9.4 9 10 3.3 9.6M8.6 3.7c3 3.6 6.2 10.6 7.2 16.5M3.4 13.9c5-1.6 11.6-1.5 17.4.5"/>'),
+  website: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
+};
+const LINK_ICON = svg('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>');
+/** The social links as icon buttons (the site's name is the label for screen readers and the tooltip). */
+function socialIcons(s, about) {
+  const links = { ...(s.social || {}) };
+  if (!links.github && about?.links?.github) links.github = about.links.github;
+  return Object.entries(links).map(([k, v]) => {
+    const name = esc(SOCIAL[k] || k);
+    return link(v, SOCIAL_ICONS[k] || LINK_ICON, "pf-social").replace("<a ", `<a aria-label="${name}" title="${name}" `);
+  }).filter(Boolean).join("");
+}
 
 // The dashboard project a case study belongs to (by name), for live progress.
 function projectFor(c, projects) {
@@ -71,7 +91,8 @@ const withBars = (sections) => sections.filter(Boolean).map((x) => BARS + x).joi
 
 function home(data, live) {
   const s = data.site, h = s.hero || {}, name = h.name || data.about?.name || "";
-  const social = Object.entries(s.social || {}).map(([k, v]) => link(v, esc(SOCIAL[k] || k), "pf-social")).filter(Boolean).join("");
+  const icons = socialIcons(s, data.about), portrait = img(s.portrait, `Portrait of ${name}`, "pf-s-portrait");
+  const social = icons ? `<nav class="pf-socials" aria-label="Social">${icons}</nav>` : "";
   return `
   <section class="pf-s-hero" id="pf-top">
     <div class="pf-s-hero__text">
@@ -85,9 +106,9 @@ function home(data, live) {
         ${s.contact?.length ? `<a class="pf-btn pf-btn--outline" href="#pf-contact" data-scroll="pf-contact">Contact me</a>` : ""}
         ${hasResume(s) ? `<a class="pf-btn pf-btn--outline" href="#page=resume" data-resume>Resume</a>` : link(s.resume, "Resume")}
       </div>
-      ${social ? `<nav class="pf-socials" aria-label="Social">${social}</nav>` : ""}
+      ${portrait ? "" : social}
     </div>
-    ${img(s.portrait, `Portrait of ${name}`, "pf-s-portrait")}
+    ${portrait ? `<div class="pf-s-figure">${portrait}${social}</div>` : ""}
   </section>
   ${s.stats?.length ? `<div class="pf-s-stats">${s.stats.map((x, i) => `<div${i === Math.floor((s.stats.length - 1) / 2) ? ' class="is-hi"' : ""}><b>${esc(x.num)}</b><span>${esc(x.label)}</span></div>`).join("")}</div>` : ""}
   ${withBars([
