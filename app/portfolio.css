@@ -99,10 +99,15 @@
 
 /* ---- Site layout (like your portfolio website) ------------------------- */
 .pf--site{max-width:1200px;}
-.pf-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:999px;border:1.5px solid var(--accent);
-  font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;line-height:1.2;}
-.pf-btn--solid{background:var(--accent);color:var(--surface);}
-.pf-btn--outline{background:transparent;color:var(--accent);}
+/* Buttons are navy (#03045E, from the mockup) on light pages and keep the
+   light-blue accent on dark pages, where navy would disappear. */
+.pf-btn{--pf-btn:var(--accent);--pf-btn-ink:var(--surface);display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:999px;border:1.5px solid var(--pf-btn);
+  font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;line-height:1.2;transition:background-color .15s, border-color .15s, color .15s;}
+@supports (color: light-dark(#000, #fff)){ .pf-btn{--pf-btn:light-dark(#03045E, var(--accent));--pf-btn-ink:light-dark(#FFFFFF, var(--surface));} }
+.pf-btn--solid{background:var(--pf-btn);color:var(--pf-btn-ink);}
+.pf-btn--outline{background:transparent;color:var(--pf-btn);}
+a.pf-btn--solid:hover, button.pf-btn--solid:hover{background:color-mix(in srgb, var(--pf-btn) 82%, #fff);border-color:color-mix(in srgb, var(--pf-btn) 82%, #fff);}
+a.pf-btn--outline:hover, button.pf-btn--outline:hover{background:color-mix(in srgb, var(--pf-btn) 8%, transparent);}
 .pf-btn--disabled{border-color:var(--line);color:var(--ink-3);cursor:default;}
 .pf-s-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center;padding:12px 0 28px;}
 .pf-s-eyebrow{margin:0 0 6px;font-size:16px;color:var(--ink-2);}
@@ -290,7 +295,7 @@ html.pf-phone-open{overflow:hidden;}
 .pf-phone__cap{margin:0;color:#dbe3f0;font-size:13.5px;}
 .pf-phone__cap b{color:#fff;}
 .pf-phone__actions{display:flex;gap:8px;}
-.pf-phone__actions .pf-btn{padding:8px 16px;font-size:13px;}
+.pf-phone__actions .pf-btn{--pf-btn:var(--accent);--pf-btn-ink:var(--surface);padding:8px 16px;font-size:13px;}
 .pf-phone__actions .pf-btn--outline{color:#fff;border-color:rgba(255,255,255,.55);}
 .pf-phone__actions .pf-btn--outline:hover{border-color:#fff;}
 @media (prefers-reduced-motion: reduce){.pf-phone-overlay{animation:none;}.pf-phone__loading span{animation-duration:2s;}}
