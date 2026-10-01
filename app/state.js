@@ -21,6 +21,7 @@ export const state = {
   team: null,     // { id, name, role }
   members: [],    // [{ user_id, role, name, email }]
   invites: [],
+  accessRequests: null, // owner: people who asked to join (null: not set up / not the owner)
   get isOwner() { return this.team?.role === "owner"; },
   // Colleagues work on the tasks the owner gives them; only the owner (or
   // someone without a team) adds new ones. The database enforces the same.
@@ -73,6 +74,7 @@ export async function loadAll(store) {
   state.team = d.team || null;
   state.members = d.members || [];
   state.invites = d.invites || [];
+  state.accessRequests = await loadRequests(store);
   state.projects = d.projects === undefined ? [] : d.projects;
   state.files = d.files === undefined ? [] : d.files;
   state.messages = d.messages === undefined ? [] : d.messages; // null: the chat table isn't set up yet
@@ -325,6 +327,26 @@ export async function reload() { await loadAll(state.store); }
 async function refreshTeam() {
   const t = await state.store.loadTeam();
   state.team = t.team; state.members = t.members; state.invites = t.invites;
+}
+// Only the team owner sees access requests.
+async function loadRequests(store = state.store) {
+  if (!state.team || state.team.role !== "owner" || !store.loadAccessRequests) return null;
+  try { return await store.loadAccessRequests(); } catch (e) { console.warn("access requests:", e.message); return null; }
+}
+/** Check for new access requests (the Team tab's badge follows); true when the list changed. */
+export async function refreshAccessRequests() {
+  const before = JSON.stringify(state.accessRequests);
+  state.accessRequests = await loadRequests();
+  if (JSON.stringify(state.accessRequests) === before) return false;
+  emit();
+  return true;
+}
+/** Owner: approve (they're invited) or decline someone who asked for access. */
+export async function decideAccessRequest(id, approve) {
+  await guard(() => state.store.decideAccessRequest(id, approve), approve ? "Couldn't approve" : "Couldn't decline");
+  await refreshTeam();
+  state.accessRequests = await loadRequests();
+  emit();
 }
 /** People you manage: everyone for the owner; colleagues (and yourself) for an admin. */
 export function managesPerson(m) {

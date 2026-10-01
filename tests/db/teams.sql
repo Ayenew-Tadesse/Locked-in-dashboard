@@ -483,3 +483,59 @@ do $$ declare r jsonb; begin
   raise notice 'ok - the portfolio sends the site, minus hidden sections';
 end $$;
 reset role;
+
+-- 16. Access requests: strangers ask, only the owner sees and answers --------
+set role anon;
+select pg_temp.check(public.request_access('  Visitor@Example.com ', 'Vi', 'I work on Guxo') = 'requested', 'a stranger can ask for access');
+select pg_temp.check(public.request_access('visitor@example.com', null, 'Updated note') = 'requested', 'asking again keeps one open request');
+select pg_temp.check(public.request_access('owner@example.com') = 'requested', 'an existing account gets the same answer (no hints)');
+do $$ begin
+  perform public.request_access('not an email');
+  raise exception 'FAILED: a bad email was accepted';
+exception when invalid_parameter_value then raise notice 'ok - emails are checked';
+end $$;
+do $$ declare n int; begin
+  select count(*) into n from public.access_requests;
+  raise exception 'FAILED: anon read access requests';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot read requests';
+end $$;
+do $$ begin
+  perform public.decide_access_request(gen_random_uuid(), true);
+  raise exception 'FAILED: anon answered a request';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot answer requests';
+end $$;
+reset role;
+select pg_temp.check((select count(*) = 1 and bool_and(note = 'Updated note' and name = 'Vi') from access_requests), 'one request, with the latest note');
+select pg_temp.act_as(:ana);
+select pg_temp.check((select count(*) from access_requests) = 0, 'colleagues and admins don''t see requests');
+do $$ begin
+  perform public.decide_access_request((select id from public.access_requests limit 1), true);
+  raise exception 'FAILED: a non-owner answered a request';
+exception when insufficient_privilege then raise notice 'ok - only the owner answers requests';
+end $$;
+reset role;
+select pg_temp.act_as(:owner);
+select pg_temp.check((select count(*) from access_requests) = 1, 'the owner sees the request');
+do $$ begin
+  insert into public.access_requests (email) values ('direct@example.com');
+  raise exception 'FAILED: wrote the table directly';
+exception when insufficient_privilege then raise notice 'ok - requests can''t be written directly';
+end $$;
+select pg_temp.check((public.decide_access_request((select id from access_requests where email = 'visitor@example.com'), true) ->> 'decision') = 'approved', 'the owner approves');
+select pg_temp.check((select count(*) from team_invites where email = 'visitor@example.com' and accepted_at is null and revoked_at is null) = 1, 'approving invites them');
+reset role;
+set role anon;
+select pg_temp.check(public.request_access('visitor@example.com') = 'invited', 'once approved, asking again says they''re invited');
+select pg_temp.check(public.request_access('nope@example.com') = 'requested', 'another stranger asks');
+reset role;
+select pg_temp.act_as(:owner);
+select pg_temp.check((public.decide_access_request((select id from access_requests where email = 'nope@example.com'), false) ->> 'decision') = 'declined', 'the owner declines');
+select pg_temp.check((select count(*) from team_invites where email = 'nope@example.com') = 0, 'declining invites nobody');
+do $$ begin
+  perform public.decide_access_request((select id from public.access_requests where email = 'nope@example.com'), true);
+  raise exception 'FAILED: answered twice';
+exception when no_data_found then raise notice 'ok - a request is answered once';
+end $$;
+reset role;
+insert into auth.users (id, email) values ('88888888-0000-0000-0000-000000000008', 'visitor@example.com');
+select pg_temp.check((select count(*) from team_members where user_id = '88888888-0000-0000-0000-000000000008') = 1, 'the approved visitor signs up and joins the team');

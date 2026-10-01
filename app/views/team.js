@@ -1,6 +1,6 @@
 // Team page (owner only): everyone's progress, invitations, and each
 // person's work, learning logs and daily report.
-import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, ROLE_LABELS } from "../state.js";
+import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, ROLE_LABELS, decideAccessRequest } from "../state.js";
 import { scoreDay, scorePeriod } from "../core/scoring.js";
 import { addDays, weekRange, formatDay, relativeDay, dayOf, formatMinutes } from "../core/dates.js";
 import { isOverdue, sortTasks } from "../core/tasks.js";
@@ -67,6 +67,16 @@ export function renderTeam(el, params, id) {
         </tr>`).join("")}</tbody>
       </table></div>
     </section>
+    ${state.isOwner && state.accessRequests?.length ? `<section class="li-card" id="li-access-requests">
+      <div class="li-card-head"><span class="card-label">Access requests <span class="li-nav-dot">${state.accessRequests.length}</span></span></div>
+      <p class="li-sub">People who tried to join without an invitation. Approve to invite them as a colleague (they then sign up with that email), or decline.</p>
+      <ul class="li-mini li-requests">${state.accessRequests.map((r) => `<li>
+        <span><b>${esc(r.name || r.email)}</b>${r.name ? ` <small class="li-muted">${esc(r.email)}</small>` : ""}
+          <small class="li-muted">asked ${esc(relativeDay(dayOf(r.created_at, state.timeZone) || today, today))}</small>
+          ${r.note ? `<br><span class="li-request-note">${esc(r.note)}</span>` : ""}</span>
+        <span class="li-btn-row"><button type="button" class="li-btn small primary" data-approve="${esc(r.id)}">Approve</button>
+          <button type="button" class="li-btn small danger-ghost" data-decline="${esc(r.id)}">Decline</button></span></li>`).join("")}</ul>
+    </section>` : ""}
     <section class="li-card" id="li-invites">
       <div class="li-card-head"><span class="card-label">Invite ${state.isOwner ? "people" : "colleagues"}</span></div>
       <p class="li-sub">Sign-up is by invitation only. Add their email, then send them the sign-up link. They create their account with that email and join ${state.isOwner ? "as a colleague or an admin" : "as a colleague"}.</p>
@@ -81,6 +91,15 @@ export function renderTeam(el, params, id) {
         : `<p class="li-empty">No pending invitations.</p>`}
     </section>`;
 
+  el.querySelectorAll("[data-approve], [data-decline]").forEach((b) => b.addEventListener("click", async () => {
+    const approve = b.hasAttribute("data-approve"), id = b.dataset.approve || b.dataset.decline;
+    const r = (state.accessRequests || []).find((x) => x.id === id);
+    if (!r) return;
+    if (!approve && !(await confirmDialog(`Decline ${r.name || r.email}'s request?`, "Decline"))) return;
+    b.disabled = true;
+    await decideAccessRequest(id, approve).then(
+      () => toast(approve ? `Approved: ${r.email} is invited. Let them know they can sign up now.` : "Request declined"), () => { b.disabled = false; });
+  }));
   el.querySelectorAll("[data-assign]").forEach((b) => b.addEventListener("click", () => openTaskForm({ user_id: b.dataset.assign, date: today })));
   wireRoleButtons(el);
   el.querySelector("#li-rename-team")?.addEventListener("click", async () => {

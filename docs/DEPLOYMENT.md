@@ -63,7 +63,12 @@ git-ignored).
    [`supabase/migrations/20261007000000_team_admins.sql`](../supabase/migrations/20261007000000_team_admins.sql)
    (team admins), then
    [`supabase/migrations/20261008000000_portfolio_site.sql`](../supabase/migrations/20261008000000_portfolio_site.sql)
-   (portfolio site layout and the public `portfolio-media` image bucket). Run the files in this order.
+   (portfolio site layout and the public `portfolio-media` image bucket), then
+   [`supabase/migrations/20261009000000_api_complete_task.sql`](../supabase/migrations/20261009000000_api_complete_task.sql)
+   and [`20261010000000_api_complete_task_header.sql`](../supabase/migrations/20261010000000_api_complete_task_header.sql)
+   (tokens that mark tasks complete), then
+   [`supabase/migrations/20261011000000_access_requests.sql`](../supabase/migrations/20261011000000_access_requests.sql)
+   (people who aren't invited can ask to join; the owner approves on the Team page). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.
@@ -82,6 +87,13 @@ git-ignored).
    becomes the team **owner**; every later sign-up needs an invitation.
 4. Leave **Allow new users to sign up** switched on: the database itself
    refuses any email you haven't invited (Team page → Invite colleagues).
+
+### Access requests
+Someone who isn't invited can press **Request access** (on the sign-up error,
+or "Not invited? Request access" on the sign-in screen). The team owner sees a
+badge on the **Team** tab and a notice when the dashboard opens; **Approve**
+invites them as a colleague (they then sign up with that email), **Decline**
+drops the request. Only the owner can see requests.
 
 ### Inviting colleagues
 1. Team → **Invite colleagues** → enter their email → **Invite**.
