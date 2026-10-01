@@ -5,6 +5,7 @@ import { renderPortfolio } from "./portfolio/render.js";
 import { buildPortfolioData } from "./core/portfolio.js";
 import { printResume } from "./portfolio/resume.js";
 import { tryInPhone } from "./portfolio/phone.js";
+import { countStats } from "./portfolio/count.js";
 import { mergeCommits } from "./core/portfolio.js";
 import { fetchCommits, commitsByDay, githubUser } from "./core/github.js";
 
@@ -129,6 +130,7 @@ function render(data, keepScroll = false) {
   document.title = view === "resume" ? `${data.site?.cv?.name || name} · Resume` : c ? `${c.title} · ${name}` : `${name} · Portfolio`;
   root.innerHTML = renderPortfolio(data, { view });
   root.removeAttribute("aria-busy");
+  countStats(root);
   if (keepScroll) window.scrollTo(0, y);
 }
 window.addEventListener("hashchange", () => { if (current) { render(current); window.scrollTo(0, 0); } });

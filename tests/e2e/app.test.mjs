@@ -2254,3 +2254,38 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     await page.close();
   }
 });
+
+test("portfolio page: the numbers count up when seen, then every 10 seconds", async () => {
+  for (const reducedMotion of ["no-preference", "reduce"]) {
+    const page = await browser.newPage({ viewport: { width: 1080, height: 900 }, reducedMotion });
+    await page.clock.install();
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
+    await page.goto(BASE + "portfolio.html?demo=1");
+    await page.evaluate(async (site) => {
+      const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
+      const { countStats } = await import(new URL("app/portfolio/count.js", location.href).href);
+      const root = document.getElementById("pf-root");
+      root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
+      countStats(root);
+    }, PORTFOLIO_SITE);
+    const shown = () => page.locator(".pf-s-stats b").evaluateAll((bs) => bs.map((b) => (b.querySelector("[aria-hidden]") || b).textContent));
+    const read = () => page.locator(".pf-s-stats b").evaluateAll((bs) => bs.map((b) => b.querySelector(".pf-sr")?.textContent ?? null));
+    await page.clock.runFor(700);
+    const mid = await shown();
+    if (reducedMotion === "reduce") {
+      assert.deepEqual(mid, ["3+", "50+", "35+"], "reduced motion: no counting");
+      assert.deepEqual(await read(), [null, null, null]);
+    } else {
+      assert.ok(Number.parseInt(mid[1]) < 50 && /\+$/.test(mid[1]), `counting mid-way: ${mid}`);
+      assert.deepEqual(await read(), ["3+", "50+", "35+"], "screen readers get the final numbers");
+      await page.clock.runFor(1000);
+      assert.deepEqual(await shown(), ["3+", "50+", "35+"], "lands on the numbers");
+      await page.clock.runFor(10000 - 1700 + 500);
+      assert.ok(Number.parseInt((await shown())[1]) < 50, "counts again after 10 seconds");
+      await page.clock.runFor(2000);
+      assert.deepEqual(await shown(), ["3+", "50+", "35+"]);
+    }
+    await page.close();
+  }
+});
