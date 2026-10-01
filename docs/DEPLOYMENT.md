@@ -111,13 +111,17 @@ Click **Deploy**. Vercel builds `dist/` (the page, `app/` and a generated
 `config.js`) and deploys the `/api/v1/*` functions from `api/`.
 
 After that, every push to `main` deploys automatically, and pull requests
-get preview URLs. Then:
+get preview URLs. (This project is live at
+https://locked-in-dashboard-nnym.vercel.app/; Supabase's Site URL points there,
+and the GitHub Pages address stays in its Redirect URLs.) Then:
 
 1. Put the production URL into Supabase's Site URL and Redirect URLs (step 4).
 2. Open the site, sign in, and go to **Settings → Set up my year** once. This
    copies your daily checklists and reports from the original dashboard and
    loads the year plan (quarterly goals, milestones and daily tickets).
 3. Check the API: `https://<your-site>/api/v1` should list the endpoints.
+4. **Settings → GitHub username**: set it once. On GitHub Pages the account
+   is read from the `<user>.github.io` address; on Vercel it isn't.
 
 Local preview: `npm run dev` (serves `dist/` at http://localhost:5173). Add
 `?demo=1` to try it with sample data, or `?demo=history` to see your
