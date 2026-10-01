@@ -2220,11 +2220,13 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
       const root = document.getElementById("pf-root");
       root.removeAttribute("aria-busy");
-      root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
+      root.innerHTML = renderPortfolio({ site, about: { name: "Test", links: { github: "https://github.com/someone" } }, projects: [], tasks: [] }, {});
       const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const photo = r(".pf-s-portrait"), row = r(".pf-s-figure .pf-socials");
+      const icons = [...document.querySelectorAll(".pf-s-figure .pf-social")].map((a) => [a.getAttribute("aria-label"), !!a.querySelector("svg"), a.textContent.trim(), a.getAttribute("href")]);
       const stripBg = getComputedStyle(document.querySelector(".pf-s-stats")).backgroundColor;
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
-      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, barLines: lines.backgroundImage, stripBg,
+      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
         stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
         firstBarAfterStats: document.querySelector(".pf-s-stats").nextElementSibling.className };
@@ -2232,6 +2234,10 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     assert.ok(Math.abs(m.left - side) < 1 && Math.abs(m.right - side) < 1, `side margins at ${width}px: ${m.left}/${m.right}`);
     assert.match(m.barColor, /0\.1\)$/, `the strips are 10% navy: ${m.barColor}`);
     assert.equal(m.drift, "pf-bars-drift", "the bars drift");
+    assert.deepEqual(m.icons.map(([l, svg, text]) => [l, svg, text]), [["Instagram", true, ""], ["LinkedIn", true, ""], ["Behance", true, ""], ["GitHub", true, ""]], "icon buttons (named for screen readers), GitHub added from the profile");
+    assert.equal(m.icons[3][3], "https://github.com/someone");
+    assert.equal(Math.round(m.iconGap), 8, "8px under the photo");
+    assert.ok(Math.abs(m.iconRight) < 1, "lined up with the photo's right edge");
     assert.match(m.barLines, / 6px, rgba\(0, 0, 0, 0\) 6px, rgba\(0, 0, 0, 0\) 13px\)$/, `6px bars, 7px gaps: ${m.barLines}`);
     assert.equal(m.statsGap, "0px", "stats are one joined strip");
     const [white, navy] = ["rgb(255, 255, 255)", "rgb(3, 4, 94)"];
