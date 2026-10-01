@@ -945,7 +945,7 @@ test("portfolio site: the editor, preview and share page follow your portfolio's
   // The preview: introduction, stats, projects, about, key skills, contact.
   const preview = page.locator("#li-pf-preview");
   const home = await preview.innerText();
-  assert.match(home, /Hello there, I am[\s\S]*Ayenew Shiferaw[\s\S]*Product Designer, based in USA[\s\S]*3\+\s*Years of Experience[\s\S]*Featured projects[\s\S]*Hid-Go Flight Booking App[\s\S]*In progress[\s\S]*About me[\s\S]*architecture[\s\S]*Key skills[\s\S]*Figma \(auto-layout[\s\S]*Contact me[\s\S]*shiferawayenew0@gmail\.com/i);
+  assert.match(home, /Hello there, I am[\s\S]*Ayenew\s+Shiferaw[\s\S]*Product Designer, based in USA[\s\S]*3\+\s*Years of Experience[\s\S]*Featured projects[\s\S]*Hid-Go Flight Booking App[\s\S]*In progress[\s\S]*About me[\s\S]*architecture[\s\S]*Key skills[\s\S]*Figma \(auto-layout[\s\S]*Contact me[\s\S]*shiferawayenew0@gmail\.com/i);
   assert.equal(await preview.locator(".pf-s-portrait").count(), 1, "the portrait came across");
   // Open a case study, then go back.
   await preview.locator('[data-case="hidgo"]').first().click();
@@ -2207,4 +2207,33 @@ test("files: a colleague must share a file to finish a task the owner assigned",
   assert.deepEqual(await page.locator("#li-modal .li-files [data-open-file]").allInnerTexts(), ["📎 payment-screen.png", "📎 notes.pdf"]);
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("portfolio page: side margins, hero spacing, joined stats and the bar strips", async () => {
+  for (const [width, side] of [[1080, 116], [390, 16]]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
+    await page.goto(BASE + "portfolio.html?demo=1");
+    const m = await page.evaluate(async (site) => {
+      const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
+      const root = document.getElementById("pf-root");
+      root.removeAttribute("aria-busy");
+      root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const pf = r(".pf"), eb = r(".pf-s-eyebrow"), h1 = r(".pf-s-hero h1"), role = r(".pf-s-role"), desc = r(".pf-s-desc"), act = r(".pf-s-actions");
+      return { left: pf.left, right: innerWidth - pf.right, gaps: [h1.top - eb.bottom, role.top - h1.bottom, desc.top - role.bottom, act.top - desc.bottom],
+        nameLines: document.querySelectorAll(".pf-s-hero h1 span").length, statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
+        bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
+        firstBarAfterStats: document.querySelector(".pf-s-stats").nextElementSibling.className };
+    }, PORTFOLIO_SITE);
+    assert.ok(Math.abs(m.left - side) < 1 && Math.abs(m.right - side) < 1, `side margins at ${width}px: ${m.left}/${m.right}`);
+    assert.deepEqual(m.gaps.map(Math.round), [24, 30, 32, 40], "greeting → name → role → intro → buttons");
+    assert.equal(m.nameLines, 2, "first and last name on their own lines");
+    assert.equal(m.statsGap, "0px", "stats are one joined strip");
+    assert.equal(m.bars.length, m.sections, "a strip before every section");
+    assert.ok(m.bars.every((x) => x === "true"), "the strips are decorative");
+    assert.equal(m.firstBarAfterStats, "pf-bars");
+    await page.close();
+  }
 });
