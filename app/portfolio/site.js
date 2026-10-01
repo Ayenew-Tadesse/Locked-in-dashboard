@@ -95,7 +95,9 @@ function home(data, live) {
   const s = data.site, h = s.hero || {}, name = h.name || data.about?.name || "";
   const icons = socialIcons(s, data.about), portrait = img(s.portrait, `Portrait of ${name}`, "pf-s-portrait");
   const social = icons ? `<nav class="pf-socials" aria-label="Social">${icons}</nav>` : "";
+  const resume = hasResume(s) ? `<a class="pf-resume-icon" href="#page=resume" data-resume>${RESUME_ICON}<span>Resume</span></a>` : link(s.resume, `${RESUME_ICON}<span>Resume</span>`, "pf-resume-icon");
   return `
+  ${resume ? `<div class="pf-s-top">${resume}</div>` : ""}
   <section class="pf-s-hero" id="pf-top">
     <div class="pf-s-hero__text">
       ${h.eyebrow ? `<p class="pf-s-eyebrow">${esc(h.eyebrow)}</p>` : ""}
@@ -103,9 +105,6 @@ function home(data, live) {
       ${h.role || h.location ? `<p class="pf-s-role"><b>${esc(h.role || "")}</b>${h.location ? `${h.role ? "," : ""} based in ${esc(h.location)}` : ""}</p>` : ""}
       ${h.description ? `<p class="pf-s-desc">${esc(h.description)}</p>` : ""}
       ${openLine(h)}
-      <div class="pf-s-actions">
-        ${hasResume(s) ? `<a class="pf-resume-icon" href="#page=resume" data-resume>${RESUME_ICON}<span>Resume</span></a>` : link(s.resume, `${RESUME_ICON}<span>Resume</span>`, "pf-resume-icon")}
-      </div>
       ${portrait ? "" : social}
     </div>
     ${portrait ? `<div class="pf-s-figure">${portrait}${social}</div>` : ""}
