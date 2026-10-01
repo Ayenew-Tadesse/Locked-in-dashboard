@@ -1,6 +1,6 @@
 // Projects page (☰ menu). The team owner adds, edits, reorders and deletes
 // the team's projects; everyone else sees them read-only.
-import { state, saveProject, deleteProject, moveProject, toast } from "../state.js";
+import { state, saveProject, deleteProject, moveProject, toast, can } from "../state.js";
 import { esc, openModal, confirmDialog, progressBar } from "../ui/dom.js";
 import { PROJECT_STATUSES, LINK_LABELS, projectProgress } from "../core/projects.js";
 import { projectCard } from "./project-cards.js";
@@ -12,7 +12,7 @@ export function renderProjects(el) {
     return;
   }
   const list = state.projects;
-  if (!state.isManager) {
+  if (!state.isManager || (!can("edit_projects") && !can("delete_projects"))) {
     el.innerHTML = `<header class="li-view-head"><div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2></div></header>
       ${list.length ? list.map((p) => projectCard(p)).join("") : `<p class="li-empty">No projects yet.</p>`}`;
     return;
@@ -20,8 +20,8 @@ export function renderProjects(el) {
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2>
-        <span class="li-sub">Shown as cards on the Overview, in this order. Your team sees them; only you can change them.</span></div>
-      <button type="button" class="li-btn primary" id="li-project-add">+ New project</button>
+        <span class="li-sub">Shown as cards on the Overview, in this order. Your team sees them.</span></div>
+      ${can("edit_projects") ? `<button type="button" class="li-btn primary" id="li-project-add">+ New project</button>` : ""}
     </header>
     ${list.length ? `<ul class="li-project-list">${list.map((p, i) => {
       const prog = projectProgress(p);
@@ -32,20 +32,20 @@ export function renderProjects(el) {
           <div class="li-progress-line">${progressBar(prog.pct, "Checklist")}<span>${prog.total ? `${prog.done}/${prog.total}` : "No checklist"}</span></div>
         </div>
         <div class="li-btn-row">
-          <button type="button" class="li-btn small" data-move="-1" aria-label="Move ${esc(p.name)} up"${i === 0 ? " disabled" : ""}>↑</button>
+          ${can("edit_projects") ? `<button type="button" class="li-btn small" data-move="-1" aria-label="Move ${esc(p.name)} up"${i === 0 ? " disabled" : ""}>↑</button>
           <button type="button" class="li-btn small" data-move="1" aria-label="Move ${esc(p.name)} down"${i === list.length - 1 ? " disabled" : ""}>↓</button>
-          <button type="button" class="li-btn small" data-edit>Edit</button>
-          <button type="button" class="li-btn small danger-ghost" data-delete>Delete</button>
+          <button type="button" class="li-btn small" data-edit>Edit</button>` : ""}
+          ${can("delete_projects") ? `<button type="button" class="li-btn small danger-ghost" data-delete>Delete</button>` : ""}
         </div>
       </li>`;
     }).join("")}</ul>` : `<p class="li-empty">No projects yet. Add your first one.</p>`}`;
 
-  el.querySelector("#li-project-add").addEventListener("click", () => openProjectForm());
+  el.querySelector("#li-project-add")?.addEventListener("click", () => openProjectForm());
   el.querySelectorAll("[data-project]").forEach((row) => {
     const p = list.find((x) => x.id === row.dataset.project);
-    row.querySelector("[data-edit]").addEventListener("click", () => openProjectForm(p));
+    row.querySelector("[data-edit]")?.addEventListener("click", () => openProjectForm(p));
     row.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => moveProject(p.id, Number(b.dataset.move)).catch(() => {})));
-    row.querySelector("[data-delete]").addEventListener("click", async () => {
+    row.querySelector("[data-delete]")?.addEventListener("click", async () => {
       if (!(await confirmDialog(`Delete the project "${p.name}"? Its card and checklist go; tasks aren't affected.`, "Delete"))) return;
       await deleteProject(p.id).then(() => toast(`${p.name} deleted`), () => {});
     });

@@ -1,6 +1,7 @@
 // Team page (owner only): everyone's progress, invitations, and each
 // person's work, learning logs and daily report.
-import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, ROLE_LABELS, decideAccessRequest } from "../state.js";
+import { state, inviteMember, revokeInvite, removeMember, renameTeam, toast, setMemberRole, managesPerson, assignsTo, can, setAdminPermissions, ROLE_LABELS, decideAccessRequest } from "../state.js";
+import { ADMIN_PERMISSION_GROUPS, ADMIN_DEFAULTS, adminPermissions, permissionChanges } from "../core/permissions.js";
 import { scoreDay, scorePeriod } from "../core/scoring.js";
 import { addDays, weekRange, formatDay, relativeDay, dayOf, formatMinutes } from "../core/dates.js";
 import { isOverdue, sortTasks } from "../core/tasks.js";
@@ -42,7 +43,10 @@ export function renderTeam(el, params, id) {
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Team</span><h2 class="li-h2">${esc(state.team.name)}</h2></div>
-      ${state.isOwner ? `<button type="button" class="li-btn small" id="li-rename-team">Rename</button>` : ""}
+      <span class="li-btn-row">
+        ${state.isOwner ? `<button type="button" class="li-btn small" id="li-admin-management">Admin management</button>` : ""}
+        ${can("rename_team") ? `<button type="button" class="li-btn small" id="li-rename-team">Rename</button>` : ""}
+      </span>
     </header>
     <div class="li-kpis">
       ${tile("People", String(people.length), `${people.length - 1} colleague${people.length - 1 === 1 ? "" : "s"} · ${state.invites.length} invited`)}
@@ -62,12 +66,13 @@ export function renderTeam(el, params, id) {
           <td>${s.month.totals.completion_rate == null ? "—" : s.month.totals.completion_rate + "%"}</td>
           <td class="${s.overdue ? "tone-red" : ""}">${s.overdue}</td>
           <td>${s.lastDone ? esc(relativeDay(s.lastDone, today)) : "—"}</td>
-          <td><span class="li-btn-row"><button type="button" class="li-btn small" data-assign="${esc(m.user_id)}">Assign task</button>
+          <td><span class="li-btn-row">${assignsTo(m) ? `<button type="button" class="li-btn small" data-assign="${esc(m.user_id)}">Assign task</button>` : ""}
             ${roleButton(m)}</span></td>
         </tr>`).join("")}</tbody>
       </table></div>
     </section>
-    ${state.isOwner && state.accessRequests?.length ? `<section class="li-card" id="li-access-requests">
+    ${state.isAdmin ? myPermissionsCard() : ""}
+    ${can("access_requests") && state.accessRequests?.length ? `<section class="li-card" id="li-access-requests">
       <div class="li-card-head"><span class="card-label">Access requests <span class="li-nav-dot">${state.accessRequests.length}</span></span></div>
       <p class="li-sub">People who tried to join without an invitation. Approve to invite them as a colleague (they then sign up with that email), or decline.</p>
       <ul class="li-mini li-requests">${state.accessRequests.map((r) => `<li>
@@ -77,19 +82,19 @@ export function renderTeam(el, params, id) {
         <span class="li-btn-row"><button type="button" class="li-btn small primary" data-approve="${esc(r.id)}">Approve</button>
           <button type="button" class="li-btn small danger-ghost" data-decline="${esc(r.id)}">Decline</button></span></li>`).join("")}</ul>
     </section>` : ""}
-    <section class="li-card" id="li-invites">
+    ${can("invite") || can("cancel_invites") ? `<section class="li-card" id="li-invites">
       <div class="li-card-head"><span class="card-label">Invite ${state.isOwner ? "people" : "colleagues"}</span></div>
       <p class="li-sub">Sign-up is by invitation only. Add their email, then send them the sign-up link. They create their account with that email and join ${state.isOwner ? "as a colleague or an admin" : "as a colleague"}.</p>
-      <form class="li-quick-add today-add" id="li-invite-form" autocomplete="off">
+      ${can("invite") ? `<form class="li-quick-add today-add" id="li-invite-form" autocomplete="off">
         <input type="email" name="email" placeholder="colleague@example.com" aria-label="Their email" required>
         ${state.isOwner ? `<select name="role" aria-label="Join as"><option value="member">as a colleague</option><option value="admin">as an admin</option></select>` : ""}
         <button type="submit">Invite</button>
-      </form>
+      </form>` : ""}
       ${state.invites.length ? `<ul class="li-mini">${state.invites.map((i) => `<li><span>${esc(i.email)}${i.role === "admin" ? ` <span class="li-pill admin">Admin</span>` : ""} <small class="li-muted">invited ${esc(formatDay(dayOf(i.created_at, state.timeZone) || today))}</small></span>
         <span class="li-btn-row"><button type="button" class="li-btn small" data-copy-link>Copy sign-up link</button>
-        <button type="button" class="li-btn small danger-ghost" data-revoke-invite="${esc(i.id)}">Cancel</button></span></li>`).join("")}</ul>`
+        ${can("cancel_invites") ? `<button type="button" class="li-btn small danger-ghost" data-revoke-invite="${esc(i.id)}">Cancel</button>` : ""}</span></li>`).join("")}</ul>`
         : `<p class="li-empty">No pending invitations.</p>`}
-    </section>`;
+    </section>` : ""}`;
 
   el.querySelectorAll("[data-approve], [data-decline]").forEach((b) => b.addEventListener("click", async () => {
     const approve = b.hasAttribute("data-approve"), id = b.dataset.approve || b.dataset.decline;
@@ -100,6 +105,7 @@ export function renderTeam(el, params, id) {
     await decideAccessRequest(id, approve).then(
       () => toast(approve ? `Approved: ${r.email} is invited. Let them know they can sign up now.` : "Request declined"), () => { b.disabled = false; });
   }));
+  el.querySelector("#li-admin-management")?.addEventListener("click", openAdminManagement);
   el.querySelectorAll("[data-assign]").forEach((b) => b.addEventListener("click", () => openTaskForm({ user_id: b.dataset.assign, date: today })));
   wireRoleButtons(el);
   el.querySelector("#li-rename-team")?.addEventListener("click", async () => {
@@ -107,7 +113,7 @@ export function renderTeam(el, params, id) {
       body: `<label class="li-field full">Team name<input name="name" maxlength="80" required value="${esc(state.team.name)}"></label>`,
       async onSubmit(v) { if (!v.name.trim()) throw new Error("Give the team a name."); await renameTeam(v.name.trim()); toast("Team renamed"); } });
   });
-  el.querySelector("#li-invite-form").addEventListener("submit", async (e) => {
+  el.querySelector("#li-invite-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = e.target.elements.email.value.trim();
     const role = e.target.elements.role?.value === "admin" ? "admin" : "member";
@@ -139,10 +145,10 @@ function renderMember(el, userId) {
     <header class="li-view-head">
       <div><a class="li-link" href="#/team">&#8249; Team</a><h2 class="li-h2">${esc(m.name)}</h2><span class="li-sub">${esc(m.email)} · ${esc(ROLE_LABELS[m.role] || "Colleague")}</span></div>
       <div class="li-btn-row">
-        <button type="button" class="li-btn primary" data-assign>${self ? "+ New task" : "Assign task"}</button>
+        ${assignsTo(m) ? `<button type="button" class="li-btn primary" data-assign>${self ? "+ New task" : "Assign task"}</button>` : ""}
         <button type="button" class="li-btn" id="li-member-pdf">Today's report (PDF)</button>
         ${roleButton(m)}
-        ${self || !state.isOwner ? "" : `<button type="button" class="li-btn danger-ghost" id="li-remove-member">Remove from team</button>`}
+        ${self || !(state.isOwner || (m.role === "member" && can("remove_colleagues"))) ? "" : `<button type="button" class="li-btn danger-ghost" id="li-remove-member">Remove from team</button>`}
       </div>
     </header>
     <div class="li-kpis">
@@ -163,7 +169,7 @@ function renderMember(el, userId) {
         : `<p class="li-empty">Nothing completed in the last 14 days.</p>`}
     </section>`;
 
-  el.querySelector("[data-assign]").addEventListener("click", () => openTaskForm({ user_id: userId, date: today }));
+  el.querySelector("[data-assign]")?.addEventListener("click", () => openTaskForm({ user_id: userId, date: today }));
   el.querySelector("#li-member-pdf").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     btn.disabled = true;
@@ -210,9 +216,63 @@ function wireRoleButtons(el) {
     const m = state.members.find((x) => x.user_id === b.dataset.person);
     const admin = b.dataset.role === "admin";
     const text = admin
-      ? `Make ${m.name} an admin? They'll be able to see colleagues' work, assign and manage their tasks, invite colleagues and manage projects. They won't see your own tasks.`
+      ? `Make ${m.name} an admin? They'll get the default admin permissions (see colleagues' work, assign and manage their tasks, invite colleagues, manage projects); change them any time under Admin management. They won't see your own tasks.`
       : `Make ${m.name} a colleague again? They'll only see and work on their own tasks.`;
     if (!(await confirmDialog(text, admin ? "Make admin" : "Remove admin"))) return;
     await setMemberRole(m.user_id, b.dataset.role).then(() => toast(admin ? `${m.name} is now an admin` : `${m.name} is a colleague again`), () => {});
   }));
+}
+
+// An admin's own permissions (read only).
+function myPermissionsCard() {
+  const p = adminPermissions(state.team?.permissions);
+  return `<section class="li-card" id="li-my-permissions">
+    <div class="li-card-head"><span class="card-label">Your admin permissions</span></div>
+    <p class="li-sub">Set by the team owner.</p>
+    <div class="li-perm-groups">${ADMIN_PERMISSION_GROUPS.map(([group, list]) => `<div class="li-perm-group"><h3>${esc(group)}</h3><ul class="li-perm-list">
+      ${list.map(([k, label]) => `<li class="${p[k] ? "on" : "off"}"><span aria-hidden="true">${p[k] ? "&#10003;" : "&#8212;"}</span> ${esc(label)}<span class="li-visually-hidden">: ${p[k] ? "allowed" : "not allowed"}</span></li>`).join("")}
+    </ul></div>`).join("")}</div>
+  </section>`;
+}
+
+// Owner: Admin management. Pick an admin, tick what they may do, save (or
+// save the same for every admin, or go back to the defaults).
+function openAdminManagement() {
+  const admins = state.members.filter((m) => m.role === "admin");
+  if (!admins.length) {
+    openModal({ eyebrow: "Team", title: "Admin management", submitLabel: "OK",
+      body: `<p class="li-sub full">No admins yet. Use <b>Make admin</b> next to someone in the table, then come back to choose what they may do.</p>`, async onSubmit() {} });
+    return;
+  }
+  if (state.team?.permissionsReady === false) {
+    openModal({ eyebrow: "Team", title: "Admin management", submitLabel: "OK",
+      body: `<p class="li-sub full">Admin permissions need one more database update: run <code>supabase/migrations/20261012000000_admin_permissions.sql</code> in Supabase's SQL Editor, then refresh.</p>`, async onSubmit() {} });
+    return;
+  }
+  let who = admins[0].user_id;
+  const checklist = (perms) => ADMIN_PERMISSION_GROUPS.map(([group, list]) => `<fieldset class="li-perm-group"><legend>${esc(group)}</legend>
+    ${list.map(([k, label, on]) => `<label class="li-check-row"><input type="checkbox" name="perm_${k}"${perms[k] ? " checked" : ""}><span>${esc(label)}${on ? "" : `<small class="li-muted">Off by default</small>`}</span></label>`).join("")}
+  </fieldset>`).join("");
+  const form = openModal({
+    eyebrow: "Team", title: "Admin management", submitLabel: "Save for this admin", wide: true,
+    extraButtons: `${admins.length > 1 ? `<button type="button" class="li-btn" data-perm-all>Copy to all admins</button>` : ""}<button type="button" class="li-btn ghost" data-perm-reset>Reset to defaults</button>`,
+    body: `<p class="li-sub full">Choose what each admin may do. Only you see this; the database enforces it. Admins can never make or remove admins, change these settings, or see your own tasks, portfolio, resume or tokens.</p>
+      <label class="li-field full">Admin<select name="admin">${admins.map((m) => `<option value="${esc(m.user_id)}">${esc(m.name)}${m.email ? ` · ${esc(m.email)}` : ""}</option>`).join("")}</select></label>
+      <div class="li-perm-groups full" data-perm-list>${checklist(adminPermissions(admins[0].permissions))}</div>`,
+    async onSubmit() {
+      const chosen = read();
+      await setAdminPermissions(who, permissionChanges(chosen));
+      toast(`Saved ${state.members.find((m) => m.user_id === who)?.name || "the admin"}'s permissions`);
+    },
+  });
+  const read = () => Object.fromEntries(Object.keys(ADMIN_DEFAULTS).map((k) => [k, !!form.querySelector(`[name="perm_${k}"]`)?.checked]));
+  const draw = (perms) => { form.querySelector("[data-perm-list]").innerHTML = checklist(perms); };
+  form.querySelector("[name=admin]").addEventListener("change", (e) => { who = e.target.value; draw(adminPermissions(state.members.find((m) => m.user_id === who)?.permissions)); });
+  form.querySelector("[data-perm-reset]").addEventListener("click", () => draw(ADMIN_DEFAULTS));
+  // The confirmation replaces this window; the choices are read before it opens.
+  form.querySelector("[data-perm-all]")?.addEventListener("click", async () => {
+    const chosen = permissionChanges(read());
+    if (!(await confirmDialog(`Give all ${admins.length} admins exactly these permissions?`, "Copy to all"))) return;
+    await setAdminPermissions(null, chosen).then(() => toast(`Saved for all ${admins.length} admins`), () => {});
+  });
 }

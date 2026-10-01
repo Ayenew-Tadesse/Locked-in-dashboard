@@ -68,7 +68,9 @@ git-ignored).
    and [`20261010000000_api_complete_task_header.sql`](../supabase/migrations/20261010000000_api_complete_task_header.sql)
    (tokens that mark tasks complete), then
    [`supabase/migrations/20261011000000_access_requests.sql`](../supabase/migrations/20261011000000_access_requests.sql)
-   (people who aren't invited can ask to join; the owner approves on the Team page). Run the files in this order.
+   (people who aren't invited can ask to join; the owner approves on the Team page), then
+   [`supabase/migrations/20261012000000_admin_permissions.sql`](../supabase/migrations/20261012000000_admin_permissions.sql)
+   (Team → Admin management: what each admin may do). Run the files in this order.
 3. Check **Table Editor**. You should see `profiles`, `user_settings`, `tasks`,
    `milestones`, `quarterly_goals`, `daily_scores`, `weekly_scores` and
    `api_tokens`, each marked with RLS enabled.
@@ -94,6 +96,15 @@ or "Not invited? Request access" on the sign-in screen). The team owner sees a
 badge on the **Team** tab and a notice when the dashboard opens; **Approve**
 invites them as a colleague (they then sign up with that email), **Decline**
 drops the request. Only the owner can see requests.
+
+### Admin management
+Team → **Admin management** (owner only): pick an admin and tick what they may
+do: invitations, access requests, removing colleagues, renaming the team,
+seeing and assigning colleagues' work, other admins' work, projects, team
+goals and milestones, and deleting team chat messages. **Copy to all admins**
+and **Reset to defaults** (today's admin access) are there too. The database
+enforces each box; admins see their own list, read only, on the Team page.
+Nobody but the owner can make or remove admins or change these settings.
 
 ### Inviting colleagues
 1. Team → **Invite colleagues** → enter their email → **Invite**.
