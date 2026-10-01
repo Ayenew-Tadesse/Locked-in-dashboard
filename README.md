@@ -3,6 +3,11 @@
 A personal build dashboard for the sibling-app network (Guxo Flights, Guxo, Gexi),
 extended into a productivity and milestone tracker backed by a real database.
 
+**Live:** https://locked-in-dashboard-nnym.vercel.app/ (Vercel, with the
+`/api/v1` assistant API). The same site is also published on GitHub Pages at
+https://ayenew-tadesse.github.io/Locked-in-dashboard/ (no API there). Both use
+the same Supabase project and update on every merge to `main`.
+
 ## The original dashboard (unchanged)
 
 - Daily motivation quote (365 quotes, one per day, animated)
