@@ -456,6 +456,41 @@ test("messages: a chat button (bottom right) with the unread count; team and one
   await page.close();
 });
 
+test("messages: a ding for new messages from others (not your own, not on load); the 🔔 turns it off and is remembered", async () => {
+  const page = await open("", { width: 1280, height: 800 });
+  await page.evaluate(() => { window.__chimes = 0; window.addEventListener("li:chime", () => window.__chimes++); });
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => window.__chimes), 0, "no ding for messages already there");
+  const arrive = (m) => page.evaluate(async (m) => {
+    const { incomingMessage } = await import(new URL("app/views/messages.js", location.href).href);
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    incomingMessage({ team_id: state.team.id, recipient_id: null, created_at: new Date().toISOString(), ...m, sender_id: m.sender_id === "me" ? state.me : m.sender_id });
+  }, m);
+  await arrive({ id: "live-1", sender_id: "sample-ana", body: "Live from Ana" });
+  assert.equal(await page.evaluate(() => window.__chimes), 1, "someone else's new message dings");
+  assert.equal(await page.locator("#li-chat-fab .li-nav-dot").innerText(), "4", "and counts as unread");
+  await page.waitForTimeout(1600);
+  await arrive({ id: "live-1", sender_id: "sample-ana", body: "Live from Ana" });
+  await arrive({ id: "live-2", sender_id: "me", body: "My own" });
+  assert.equal(await page.evaluate(() => window.__chimes), 1, "no ding for a repeat or your own message");
+  // Turn it off in the chat window: no ding, and it stays off after a reload.
+  await page.click("#li-chat-fab");
+  const bell = page.locator("#li-chat-panel [data-dock-sound]");
+  assert.equal(await bell.getAttribute("aria-pressed"), "true");
+  await bell.click();
+  assert.equal(await bell.getAttribute("aria-pressed"), "false");
+  assert.equal(await bell.innerText(), "🔕");
+  await page.waitForTimeout(1600);
+  await arrive({ id: "live-3", sender_id: "sample-ben", body: "Live from Ben" });
+  assert.equal(await page.evaluate(() => window.__chimes), 1, "muted: no ding");
+  await page.reload();
+  await page.waitForSelector("#li-chat-fab");
+  await page.click("#li-chat-fab");
+  assert.equal(await page.locator("#li-chat-panel [data-dock-sound]").getAttribute("aria-pressed"), "false", "remembered on this device");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("messages: with no colleagues yet, the chat says who to invite", async () => {
   const page = await dbPage({ signedIn: true });
   await page.waitForSelector("#li-nav .li-nav-link");
