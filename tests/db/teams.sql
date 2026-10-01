@@ -735,3 +735,28 @@ select pg_temp.check(not exists (select 1 from tasks where title = 'Ana, private
 update tasks set title = 'Changed by Ben' where title = 'Ana on Flights';
 reset role;
 select pg_temp.check(exists (select 1 from tasks where title = 'Ana on Flights'), 'read only: Ben can''t change Ana''s task');
+
+-- 20. Group chat: members (and the owner) read and write their group's chat --
+select pg_temp.act_as(:ben);
+insert into messages (team_id, sender_id, group_id, body)
+  select g.team_id, :ben, g.id, 'Crew: standup at 10' from project_groups g where g.name = 'Flights crew';
+reset role;
+select pg_temp.check(exists (select 1 from messages where body = 'Crew: standup at 10'), 'a group member writes in the group chat');
+select pg_temp.act_as(:owner);
+select pg_temp.check(exists (select 1 from messages where body = 'Crew: standup at 10'), 'the owner reads every group chat');
+reset role;
+-- Someone outside the group: a new colleague.
+insert into team_invites (team_id, email) select team_id, 'cleo@example.com' from team_members where user_id = :owner;
+insert into auth.users (id, email) values ('44444444-0000-0000-0000-000000000004', 'cleo@example.com');
+select set_config('test.flights_group', (select id::text from project_groups where name = 'Flights crew'), false);
+select pg_temp.act_as('44444444-0000-0000-0000-000000000004');
+select pg_temp.check(not exists (select 1 from messages where body = 'Crew: standup at 10'), 'people outside the group don''t see its chat');
+do $$ declare tid uuid; begin
+  select team_id into tid from public.team_members where user_id = auth.uid();
+  insert into public.messages (team_id, sender_id, group_id, body)
+    values (tid, auth.uid(), current_setting('test.flights_group')::uuid, 'Let me in');
+  raise exception 'FAILED: wrote into another group''s chat';
+exception when insufficient_privilege then raise notice 'ok - people outside the group can''t write in its chat';
+end $$;
+reset role;
+select pg_temp.check(not exists (select 1 from messages where body = 'Let me in'), 'nothing was written from outside the group');

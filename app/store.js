@@ -135,7 +135,7 @@ export function supabaseStoreFromClient(sb) {
       return check({ data, error }).reverse();
     },
     async sendMessage(m) {
-      return check(await sb.from("messages").insert({ team_id: m.team_id, recipient_id: m.recipient_id || null, body: m.body }).select().single());
+      return check(await sb.from("messages").insert({ team_id: m.team_id, recipient_id: m.recipient_id || null, body: m.body, ...(m.group_id ? { group_id: m.group_id } : {}) }).select().single());
     },
     async deleteMessage(id) { check(await sb.from("messages").delete().eq("id", id)); },
     /** New and deleted messages as they happen (Supabase Realtime). Returns a stop function. */
@@ -414,7 +414,7 @@ export function createMemoryStore(seed) {
     },
     async load() { recalc(); return JSON.parse(JSON.stringify({ ...db })); },
     async sendMessage(m) {
-      const row = { id: uuid(), team_id: db.team.id, sender_id: db.me, recipient_id: m.recipient_id || null, body: m.body, created_at: now() };
+      const row = { id: uuid(), team_id: db.team.id, sender_id: db.me, recipient_id: m.recipient_id || null, group_id: m.group_id || null, body: m.body, created_at: now() };
       db.messages.push(row);
       return { ...row };
     },
