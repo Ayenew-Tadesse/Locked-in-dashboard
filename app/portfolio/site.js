@@ -64,6 +64,17 @@ function openLine(h) {
   return parts.length ? `<p class="pf-s-open">${parts.map((x) => `<span>${esc(x)}</span>`).join("")}</p>` : "";
 }
 
+// The name on two lines: first name, then the rest.
+function nameLines(name) {
+  const [first, ...rest] = String(name).trim().split(/\s+/);
+  return rest.length ? `<span>${esc(first)}</span> <span>${esc(rest.join(" "))}</span>` : esc(name);
+}
+
+// The "broken level" strip: thin bars fading in, then a solid block. Decorative.
+const BARS = `<div class="pf-bars" aria-hidden="true"></div>`;
+/** The sections that have content, with the strip before each one. */
+const withBars = (sections) => sections.filter(Boolean).map((x) => BARS + x).join("");
+
 function home(data, live) {
   const s = data.site, h = s.hero || {}, name = h.name || data.about?.name || "";
   const social = Object.entries(s.social || {}).map(([k, v]) => link(v, esc(SOCIAL[k] || k), "pf-social")).filter(Boolean).join("");
@@ -71,7 +82,7 @@ function home(data, live) {
   <section class="pf-s-hero" id="pf-top">
     <div class="pf-s-hero__text">
       ${h.eyebrow ? `<p class="pf-s-eyebrow">${esc(h.eyebrow)}</p>` : ""}
-      <h1>${esc(name)}</h1>
+      <h1>${nameLines(name)}</h1>
       ${h.role || h.location ? `<p class="pf-s-role"><b>${esc(h.role || "")}</b>${h.location ? `${h.role ? "," : ""} based in ${esc(h.location)}` : ""}</p>` : ""}
       ${h.description ? `<p class="pf-s-desc">${esc(h.description)}</p>` : ""}
       ${openLine(h)}
@@ -85,19 +96,21 @@ function home(data, live) {
     ${img(s.portrait, `Portrait of ${name}`, "pf-s-portrait")}
   </section>
   ${s.stats?.length ? `<div class="pf-s-stats">${s.stats.map((x) => `<div><b>${esc(x.num)}</b><span>${esc(x.label)}</span></div>`).join("")}</div>` : ""}
-  ${live.highlights || ""}
-  ${s.cases?.length ? `<section class="pf-section" id="pf-cases"><h2>Featured projects</h2><div class="pf-cards">${s.cases.map((c) => caseCard(c, data.projects)).join("")}</div></section>` : ""}
-  ${live.experience || ""}
-  ${s.about?.length ? `<section class="pf-section" id="pf-about"><h2>About me</h2><div class="pf-s-about">${s.about.map((p) => `<p>${esc(p)}</p>`).join("")}</div></section>` : ""}
-  ${s.skills?.length ? `<section class="pf-section" id="pf-keyskills"><h2>Key skills</h2><div class="pf-s-skills">${s.skills.map((g) => `<div class="pf-s-skill"><h3>${esc(g.title)}</h3><ul>${(g.items || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>`).join("")}</div></section>` : ""}
-  ${live.work || ""}
-  ${live.activity || ""}
-  ${live.milestones || ""}
-  ${live.plan || ""}
-  ${s.contact?.length ? `<section class="pf-section" id="pf-contact"><h2>Contact me</h2><div class="pf-s-contact">${s.contact.map((c) => {
+  ${withBars([
+    live.highlights || "",
+    s.cases?.length ? `<section class="pf-section" id="pf-cases"><h2>Featured projects</h2><div class="pf-cards">${s.cases.map((c) => caseCard(c, data.projects)).join("")}</div></section>` : "",
+    live.experience || "",
+    s.about?.length ? `<section class="pf-section" id="pf-about"><h2>About me</h2><div class="pf-s-about">${s.about.map((p) => `<p>${esc(p)}</p>`).join("")}</div></section>` : "",
+    s.skills?.length ? `<section class="pf-section" id="pf-keyskills"><h2>Key skills</h2><div class="pf-s-skills">${s.skills.map((g) => `<div class="pf-s-skill"><h3>${esc(g.title)}</h3><ul>${(g.items || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>`).join("")}</div></section>` : "",
+    live.work || "",
+    live.activity || "",
+    live.milestones || "",
+    live.plan || "",
+    s.contact?.length ? `<section class="pf-section" id="pf-contact"><h2>Contact me</h2><div class="pf-s-contact">${s.contact.map((c) => {
       const href = /^(mailto:|tel:)/i.test(c.href || "") ? c.href : safeUrl(c.href);
       return `<div><span>${esc(c.label)}</span>${href ? `<a href="${esc(href)}"${/^https?:/i.test(href) ? ' target="_blank" rel="noopener"' : ""}>${esc(c.value)}</a>` : `<b>${esc(c.value)}</b>`}</div>`;
-    }).join("")}</div></section>` : ""}`;
+    }).join("")}</div></section>` : "",
+  ])}`;
 }
 
 // A persona's photo in a circle, or their initials when there's none.
@@ -119,7 +132,7 @@ function casePage(data, c) {
   const all = data.site.cases || [];
   const i = all.indexOf(c), next = all.slice(i + 1).concat(all.slice(0, i)).find((x) => x.status !== "progress" && x !== c);
   const p = projectFor(c, data.projects), prog = p ? projectProgress(p) : null;
-  const block = (title, body, id = "") => body ? `<section class="pf-case-block"${id ? ` id="${id}"` : ""}><h2>${esc(title)}</h2>${body}</section>` : "";
+  const block = (title, body, id = "") => body ? `${BARS}<section class="pf-case-block"${id ? ` id="${id}"` : ""}><h2>${esc(title)}</h2>${body}</section>` : "";
   const intro = (t) => (t ? `<p class="pf-intro">${esc(t)}</p>` : "");
   return `
   <article class="pf-case" id="pf-case-${esc(c.id)}">
