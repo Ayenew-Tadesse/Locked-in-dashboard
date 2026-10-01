@@ -27,6 +27,7 @@
     --orange:#F59A3C;
     --red:#E46464;
     --miss:#5B2A33;
+    --noday:#5E5426;
     color-scheme:dark;
   }
   html[data-theme="light"]{
@@ -53,6 +54,7 @@
     --orange:#C9661A;
     --red:#C43D3D;
     --miss:#F1C6CC;
+    --noday:#F6E7A1;
     color-scheme:light;
   }
 
@@ -627,6 +629,7 @@
     outline-offset:-1px;
   }
   .heat-cell.missed{background:var(--miss);}
+  .heat-cell.noday{background:var(--noday);}
   .heat-cell.l1{background:var(--heat-1);}
   .heat-cell.l2{background:var(--heat-2);}
   .heat-cell.l3{background:var(--heat-3);}
@@ -993,6 +996,7 @@
     .heat-foot{flex-wrap:nowrap;gap:8px;}
     .heat-foot #heat-streak{white-space:nowrap;}
     .heat-legend .lbl{display:none;}
+    .heat-legend .lbl.keep{display:inline;margin:0 6px 0 3px;font-size:11px;white-space:nowrap;}
     .heat-arrow{width:24px;height:24px;font-size:14px;}
     .month-left{min-height:0;white-space:nowrap;font-size:11px;}
     .ring-title{white-space:nowrap;font-size:12.5px;}
@@ -1021,9 +1025,9 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="app/app.css?v=abb8693b7a">
+<link rel="stylesheet" href="app/app.css?v=f08f136c7c">
 <link rel="stylesheet" href="app/portfolio.css?v=79b4ee48c1">
-<script type="importmap" id="li-versions">{"imports":{"./app/core/dates.js":"./app/core/dates.js?v=ae6f14c4c2","./app/core/github.js":"./app/core/github.js?v=cfa26901d2","./app/core/insights.js":"./app/core/insights.js?v=460c10312f","./app/core/people.js":"./app/core/people.js?v=7c04639ff4","./app/core/permissions.js":"./app/core/permissions.js?v=9dd69d06d9","./app/core/portfolio.js":"./app/core/portfolio.js?v=760b25fd8b","./app/core/projects.js":"./app/core/projects.js?v=2ce6e6c5b7","./app/core/quarters.js":"./app/core/quarters.js?v=d6c9183de1","./app/core/scoring.js":"./app/core/scoring.js?v=2ed42ca2b5","./app/core/tasks.js":"./app/core/tasks.js?v=bfd5eafa41","./app/demo.js":"./app/demo.js?v=b3c40c84e6","./app/github.js":"./app/github.js?v=fde5925bef","./app/legacy-import.js":"./app/legacy-import.js?v=d2fdca0d7a","./app/main.js":"./app/main.js?v=dfac6836a1","./app/plan/setup.js":"./app/plan/setup.js?v=277dcb19e7","./app/plan/year-plan.js":"./app/plan/year-plan.js?v=761f28ff38","./app/portfolio-page.js":"./app/portfolio-page.js?v=d25b9c26d4","./app/portfolio/phone.js":"./app/portfolio/phone.js?v=2cb4a547e0","./app/portfolio/render.js":"./app/portfolio/render.js?v=956eec6901","./app/portfolio/resume.js":"./app/portfolio/resume.js?v=6b9d1fc248","./app/portfolio/site.js":"./app/portfolio/site.js?v=26628c3b5c","./app/report/daily-report.js":"./app/report/daily-report.js?v=330fed8a5c","./app/report/download.js":"./app/report/download.js?v=72dfdda97d","./app/state.js":"./app/state.js?v=5ab312b6c6","./app/store.js":"./app/store.js?v=42a7b47389","./app/ui/auth.js":"./app/ui/auth.js?v=1f7adfa013","./app/ui/charts.js":"./app/ui/charts.js?v=b7af1eed91","./app/ui/chat-dock.js":"./app/ui/chat-dock.js?v=0be44d6c44","./app/ui/chime.js":"./app/ui/chime.js?v=7b94c5120d","./app/ui/dom.js":"./app/ui/dom.js?v=0886e2824f","./app/ui/menu.js":"./app/ui/menu.js?v=d61c79ef05","./app/ui/sortable.js":"./app/ui/sortable.js?v=af60675f58","./app/ui/task-ui.js":"./app/ui/task-ui.js?v=6075fe1111","./app/vendor/jspdf.umd.min.js":"./app/vendor/jspdf.umd.min.js?v=e6551fcdc3","./app/views/analytics.js":"./app/views/analytics.js?v=2a4803f1f7","./app/views/calendar.js":"./app/views/calendar.js?v=3fe9306cae","./app/views/messages.js":"./app/views/messages.js?v=bb3499aff3","./app/views/milestones.js":"./app/views/milestones.js?v=e5f4a6399a","./app/views/overview.js":"./app/views/overview.js?v=47556ad705","./app/views/portfolio-site.js":"./app/views/portfolio-site.js?v=7273de21d7","./app/views/portfolio.js":"./app/views/portfolio.js?v=58d780bdf1","./app/views/profile.js":"./app/views/profile.js?v=e7b48f329a","./app/views/project-cards.js":"./app/views/project-cards.js?v=e8b84d6727","./app/views/projects.js":"./app/views/projects.js?v=b93866ab6c","./app/views/quarter.js":"./app/views/quarter.js?v=d37b3a1d92","./app/views/resume.js":"./app/views/resume.js?v=292131744b","./app/views/settings.js":"./app/views/settings.js?v=2a386d0cc7","./app/views/tasks-card.js":"./app/views/tasks-card.js?v=8c376f41ee","./app/views/tasks.js":"./app/views/tasks.js?v=0a1a4dbbb8","./app/views/team-card.js":"./app/views/team-card.js?v=8bf113f83e","./app/views/team.js":"./app/views/team.js?v=2a0ebf9aba","./app/views/today.js":"./app/views/today.js?v=2d5dbe0b9f","./app/views/week.js":"./app/views/week.js?v=e69e36ed77"}}</script>
+<script type="importmap" id="li-versions">{"imports":{"./app/core/dates.js":"./app/core/dates.js?v=ae6f14c4c2","./app/core/github.js":"./app/core/github.js?v=cfa26901d2","./app/core/insights.js":"./app/core/insights.js?v=460c10312f","./app/core/people.js":"./app/core/people.js?v=7c04639ff4","./app/core/permissions.js":"./app/core/permissions.js?v=9dd69d06d9","./app/core/portfolio.js":"./app/core/portfolio.js?v=760b25fd8b","./app/core/projects.js":"./app/core/projects.js?v=2ce6e6c5b7","./app/core/quarters.js":"./app/core/quarters.js?v=d6c9183de1","./app/core/scoring.js":"./app/core/scoring.js?v=2ed42ca2b5","./app/core/tasks.js":"./app/core/tasks.js?v=bfd5eafa41","./app/core/teamdays.js":"./app/core/teamdays.js?v=2211f277f3","./app/demo.js":"./app/demo.js?v=b3c40c84e6","./app/github.js":"./app/github.js?v=fde5925bef","./app/legacy-import.js":"./app/legacy-import.js?v=d2fdca0d7a","./app/main.js":"./app/main.js?v=51b3acb3e2","./app/plan/setup.js":"./app/plan/setup.js?v=277dcb19e7","./app/plan/year-plan.js":"./app/plan/year-plan.js?v=761f28ff38","./app/portfolio-page.js":"./app/portfolio-page.js?v=d25b9c26d4","./app/portfolio/phone.js":"./app/portfolio/phone.js?v=2cb4a547e0","./app/portfolio/render.js":"./app/portfolio/render.js?v=956eec6901","./app/portfolio/resume.js":"./app/portfolio/resume.js?v=6b9d1fc248","./app/portfolio/site.js":"./app/portfolio/site.js?v=26628c3b5c","./app/report/daily-report.js":"./app/report/daily-report.js?v=330fed8a5c","./app/report/download.js":"./app/report/download.js?v=72dfdda97d","./app/state.js":"./app/state.js?v=5ab312b6c6","./app/store.js":"./app/store.js?v=42a7b47389","./app/ui/auth.js":"./app/ui/auth.js?v=1f7adfa013","./app/ui/charts.js":"./app/ui/charts.js?v=b7af1eed91","./app/ui/chat-dock.js":"./app/ui/chat-dock.js?v=0be44d6c44","./app/ui/chime.js":"./app/ui/chime.js?v=7b94c5120d","./app/ui/dom.js":"./app/ui/dom.js?v=0886e2824f","./app/ui/menu.js":"./app/ui/menu.js?v=d61c79ef05","./app/ui/sortable.js":"./app/ui/sortable.js?v=af60675f58","./app/ui/task-ui.js":"./app/ui/task-ui.js?v=6075fe1111","./app/vendor/jspdf.umd.min.js":"./app/vendor/jspdf.umd.min.js?v=e6551fcdc3","./app/views/analytics.js":"./app/views/analytics.js?v=2a4803f1f7","./app/views/calendar.js":"./app/views/calendar.js?v=3fe9306cae","./app/views/messages.js":"./app/views/messages.js?v=bb3499aff3","./app/views/milestones.js":"./app/views/milestones.js?v=e5f4a6399a","./app/views/overview.js":"./app/views/overview.js?v=47556ad705","./app/views/portfolio-site.js":"./app/views/portfolio-site.js?v=7273de21d7","./app/views/portfolio.js":"./app/views/portfolio.js?v=58d780bdf1","./app/views/profile.js":"./app/views/profile.js?v=e7b48f329a","./app/views/project-cards.js":"./app/views/project-cards.js?v=e8b84d6727","./app/views/projects.js":"./app/views/projects.js?v=b93866ab6c","./app/views/quarter.js":"./app/views/quarter.js?v=d37b3a1d92","./app/views/resume.js":"./app/views/resume.js?v=292131744b","./app/views/settings.js":"./app/views/settings.js?v=2a386d0cc7","./app/views/tasks-card.js":"./app/views/tasks-card.js?v=8c376f41ee","./app/views/tasks.js":"./app/views/tasks.js?v=0a1a4dbbb8","./app/views/team-card.js":"./app/views/team-card.js?v=8bf113f83e","./app/views/team.js":"./app/views/team.js?v=2a0ebf9aba","./app/views/today.js":"./app/views/today.js?v=2d5dbe0b9f","./app/views/week.js":"./app/views/week.js?v=e69e36ed77"}}</script>
 <!-- config.js is generated at deploy time (public Supabase URL + anon key).
      Without it the page runs as the original dashboard. -->
 <script src="config.js?v=b7168425ee"></script>
@@ -1297,7 +1301,7 @@
         <button type="button" class="heat-arrow" id="heat-prev" aria-label="Show earlier months">&#8249;</button>
         <button type="button" class="heat-arrow" id="heat-next" aria-label="Show later months">&#8250;</button>
       </span>
-      <span class="heat-legend" aria-hidden="true"><span class="lbl">Less</span><i class="heat-cell"></i><i class="heat-cell l1"></i><i class="heat-cell l2"></i><i class="heat-cell l3"></i><i class="heat-cell l4"></i><span class="lbl">More</span></span>
+      <span class="heat-legend" id="heat-legend" aria-hidden="true"><span class="lbl">Less</span><i class="heat-cell"></i><i class="heat-cell l1"></i><i class="heat-cell l2"></i><i class="heat-cell l3"></i><i class="heat-cell l4"></i><span class="lbl">More</span></span>
     </div>
     <div class="app-chips" id="app-chips" role="list" aria-label="Apps"></div>
     <div class="app-panel" id="app-panel" hidden></div>
@@ -1766,7 +1770,12 @@
   var heatData = FALLBACK_CONTRIBUTIONS;
   var heatUnit = ["commit", "commits"];
   // Activity tracking starts here: scores and missed days count from this date.
-  var ACTIVITY_START = "2026-09-22";
+  var OWNER_START = "2026-09-22";
+  var ACTIVITY_START = OWNER_START;
+  // Everyone on a team except its owner (from app/main.js): the map starts the
+  // day they joined and colours each day by deadlines:
+  // { start, status: { "YYYY-MM-DD": { s: "ontime" | "late" | "none" | "pending", text } } }.
+  var teamDays = null;
   // A day counts toward the scores only when its daily checklist exists and
   // every task on it is done (Claude ticks tasks after checking the work).
   function checklistComplete(key){
@@ -1776,7 +1785,10 @@
   }
   // GitHub commits per day (from app/github.js): any commit makes a day active too.
   var commitDays = {};
-  function dayActive(key){ return checklistComplete(key) || !!commitDays[key]; }
+  function dayActive(key){
+    if (teamDays) return !!(teamDays.status[key] && teamDays.status[key].s === "ontime");
+    return checklistComplete(key) || !!commitDays[key];
+  }
   function countsAsActive(d){
     var key = isoDay(d);
     return key >= ACTIVITY_START && dayActive(key);
@@ -1827,6 +1839,15 @@
         var entry = heatData[key];
         var n = entry && entry.count ? entry.count : 0;
         total += n;
+        if (teamDays){
+          // Before joining: neutral. Then green on time, red late, light yellow with no tasks.
+          var st = key >= teamDays.start && teamDays.status[key] ? teamDays.status[key].s : "";
+          if (st === "ontime") activeDays++;
+          var cls = st === "ontime" ? " l3" : st === "late" ? " missed" : st === "none" ? " noday" : "";
+          cells.push('<i class="heat-cell' + cls + '" data-day="' + key + '"></i>');
+          if (dow === 6) col++;
+          continue;
+        }
         var tracked = key >= firstTracked;
         var complete = tracked && dayActive(key);
         if (complete) activeDays++;
@@ -1839,6 +1860,9 @@
     }
     document.getElementById("heat-cells").innerHTML = cells.join("");
     document.getElementById("heat-months").innerHTML = months.join("");
+    document.getElementById("heat-legend").innerHTML = teamDays
+      ? '<i class="heat-cell l3"></i><span class="lbl keep">On time</span><i class="heat-cell missed"></i><span class="lbl keep">Late</span><i class="heat-cell noday"></i><span class="lbl keep">No tasks</span>'
+      : '<span class="lbl">Less</span><i class="heat-cell"></i><i class="heat-cell l1"></i><i class="heat-cell l2"></i><i class="heat-cell l3"></i><i class="heat-cell l4"></i><span class="lbl">More</span>';
 
     // Streak of completed days, ending today (or yesterday while today is still open).
     var streak = 0;
@@ -1888,8 +1912,11 @@
           return '<li>' + (it.repo ? '<span class="muted">' + esc(it.repo) + ':</span> ' : '') + esc(it.text) + '</li>';
         }).join("") + (items.length > shown.length ? '<li class="muted">+' + (items.length - shown.length) + ' more</li>' : '') + '</ul>'
       : "";
-    heatTip.innerHTML = "<b>" + (n ? n + " " + (n === 1 ? heatUnit[0] : heatUnit[1]) : "No " + heatUnit[1]) + "</b> on " + label +
-      (repos ? '<br><span class="muted">' + repos + "</span>" : "") + list;
+    var td = teamDays && (key < teamDays.start ? { text: "Before you joined" } : teamDays.status[key]);
+    heatTip.innerHTML = td
+      ? "<b>" + esc(td.text || "") + "</b> on " + label + list
+      : "<b>" + (n ? n + " " + (n === 1 ? heatUnit[0] : heatUnit[1]) : "No " + heatUnit[1]) + "</b> on " + label +
+        (repos ? '<br><span class="muted">' + repos + "</span>" : "") + list;
     heatTip.hidden = false;
     var r = cell.getBoundingClientRect();
     var tw = heatTip.offsetWidth, th = heatTip.offsetHeight;
@@ -1922,8 +1949,10 @@
     var dayNo = Math.max(1, Math.round((today - start) / 86400000) + 1);
     var totalDays = Math.round((JOURNEY_END - start) / 86400000) + 1;
     var left = Math.max(0, Math.round((JOURNEY_END - today) / 86400000));
-    document.getElementById("greet-journey").innerHTML =
-      'Day <b>' + dayNo + '</b> of ' + totalDays + '<span class="sep" aria-hidden="true"></span><b>' + left + '</b> days to go';
+    // On a team (not its owner): days since joining, no countdown.
+    document.getElementById("greet-journey").innerHTML = teamDays
+      ? 'Day <b>' + dayNo + '</b> on the team'
+      : 'Day <b>' + dayNo + '</b> of ' + totalDays + '<span class="sep" aria-hidden="true"></span><b>' + left + '</b> days to go';
 
     var key = isoDay(today);
     var tasks = dailyTasks(key);
@@ -2748,6 +2777,8 @@
       reportData = d.reports;
       if (d.unit) heatUnit = d.unit;
       commitDays = d.commitDays || {};
+      teamDays = d.teamDays || null;
+      ACTIVITY_START = teamDays ? teamDays.start : OWNER_START;
       externalScores = d.scores;
       document.querySelector(".today-note").textContent = "Tick a task to complete it. Open Today for deadlines, time and notes.";
       renderToday();
@@ -2836,6 +2867,6 @@
   }).catch(function(){ /* no db this view — static fallback stands */ });
 })();
 </script>
-<script type="module" src="app/main.js?v=dfac6836a1"></script>
+<script type="module" src="app/main.js?v=51b3acb3e2"></script>
 
 </body></html>

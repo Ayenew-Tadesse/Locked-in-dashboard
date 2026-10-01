@@ -33,6 +33,7 @@ import { renderProjectCards } from "./views/project-cards.js";
 import { setupMenu, renderMenuBar } from "./ui/menu.js";
 import { renderMessages, startMessages } from "./views/messages.js";
 import { setupChatDock, openChat, updateChatBadge } from "./ui/chat-dock.js";
+import { buildTeamDays } from "./core/teamdays.js";
 import { renderTeam } from "./views/team.js";
 import { renderTasksCard } from "./views/tasks-card.js";
 import { renderTeamCard } from "./views/team-card.js";
@@ -253,6 +254,8 @@ function render() {
     // Colleagues: no adding tasks and no year countdown (their tasks count down
     // instead); their Tasks card is read-only.
     document.documentElement.classList.toggle("li-colleague", state.isColleague);
+    // The year countdown is the owner's: hidden for everyone else on the team.
+    document.documentElement.classList.toggle("li-not-owner", !state.isSiteOwner);
     try { renderTasksCard($("#li-tasks-card")); } catch (e) { console.error(e); }
     try { renderTeamCard($("#li-team-card")); } catch (e) { console.error(e); }
     try { renderProjectCards($("#li-projects")); } catch (e) { console.error(e); }
@@ -365,7 +368,13 @@ function feedLegacy() {
       range: [q.long, q.title] },
   };
   const unit = Object.keys(commitDays).length ? ["task or commit", "tasks and commits"] : ["task completed", "tasks completed"];
-  L.update({ daily, contributions, reports, scores, commitDays, unit });
+  // Everyone on a team except its owner: the map starts the day they joined, coloured by deadlines.
+  let teamDays = null;
+  if (!state.isSiteOwner) {
+    const joined = state.members.find((m) => m.user_id === state.me)?.joined_at;
+    teamDays = buildTeamDays(state.tasks, dayOf(joined, state.timeZone) || today, today, state.timeZone);
+  }
+  L.update({ daily, contributions, reports, scores, commitDays, unit, teamDays });
   if (L.objective && !state.isColleague) L.objective(objectiveData());
 }
 
