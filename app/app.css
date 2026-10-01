@@ -883,3 +883,4 @@ html.app-mode:not(.li-page) .li-view{min-height:100vh;min-height:100dvh;}
 #li-groups .li-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
 #li-member-projects .li-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .li-view-head .li-link + .card-label{display:block;margin-top:8px;}
+.li-avatar-group{background:var(--accent-soft);color:var(--accent);font-size:13px;}

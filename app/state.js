@@ -544,11 +544,11 @@ export function forgetMessage(id) {
   state.messages = state.messages.filter((x) => x.id !== id);
   chatChanged();
 }
-export async function sendMessage(body, recipientId = null) {
+export async function sendMessage(body, recipientId = null, groupId = null) {
   const text = String(body || "").trim();
   if (!text) return null;
   if (text.length > 2000) throw new Error("Keep messages under 2,000 characters.");
-  const saved = await guard(() => state.store.sendMessage({ team_id: state.team.id, recipient_id: recipientId, body: text }), "Couldn't send the message");
+  const saved = await guard(() => state.store.sendMessage({ team_id: state.team.id, recipient_id: recipientId, group_id: groupId, body: text }), "Couldn't send the message");
   receiveMessage(saved);
   return saved;
 }

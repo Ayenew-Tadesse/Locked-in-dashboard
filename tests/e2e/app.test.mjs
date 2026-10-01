@@ -1816,6 +1816,31 @@ test("project groups: the group page shows the project, its people and everyone'
   await page.close();
 });
 
+test("project groups: each group has its own chat in the chat window", async () => {
+  const page = await open("", { width: 1280, height: 800 });
+  await page.evaluate(async () => {
+    const S = await import(new URL("app/state.js", location.href).href);
+    await S.saveGroup({ name: "Flights crew", project_id: S.state.projects[0].id, members: ["sample-ana"] });
+  });
+  await page.click("#li-chat-fab");
+  const panel = page.locator("#li-chat-panel");
+  await panel.locator(".li-msgs-convo").first().waitFor();
+  const names = await panel.locator(".li-msgs-convo .li-msgs-who b").allInnerTexts();
+  assert.deepEqual(names.slice(0, 2), ["Team", "Flights crew"], "the group's chat comes right after Team");
+  await panel.locator(".li-msgs-convo", { hasText: "Flights crew" }).click();
+  assert.equal(await panel.locator(".li-msgs-title").innerText(), "Flights crew · project group");
+  await panel.locator(".li-chat-form textarea").fill("Crew: standup at 10");
+  await panel.locator(".li-chat-form textarea").press("Enter");
+  await panel.locator(".li-chat-msg.mine", { hasText: "Crew: standup at 10" }).waitFor();
+  const saved = await page.evaluate(async () => (await import(new URL("app/state.js", location.href).href)).state.messages.find((m) => m.body === "Crew: standup at 10"));
+  assert.ok(saved.group_id && !saved.recipient_id, "saved to the group");
+  await panel.locator(".li-msgs-back").click();
+  await panel.locator('.li-msgs-convo[data-convo="group"]').click();
+  assert.equal((await panel.locator(".li-chat-log").innerText()).includes("Crew: standup at 10"), false, "not in the Team chat");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {
   const page = await dbPage({ signedIn: false });
   await page.waitForSelector("#li-auth .gate-card", { state: "visible" });

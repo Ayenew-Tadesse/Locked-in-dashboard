@@ -16,7 +16,10 @@ let stopLive = null, host = null, badgeChanged = () => {};
 /** Is there a team chat? (a team and the messages table) */
 export const messagesAvailable = () => !!state.team && Array.isArray(state.messages);
 const others = () => state.members.filter((m) => m.user_id !== state.me);
-const keys = () => ["group", ...others().map((m) => m.user_id)];
+// Project groups you're in (the owner: every group), each with its own chat: "g:<id>".
+const myGroups = () => (Array.isArray(state.groups) ? state.groups : []).filter((g) => g.members.includes(state.me) || state.isOwner);
+const groupOf = (key) => (key.startsWith("g:") ? myGroups().find((g) => "g:" + g.id === key) : null);
+const keys = () => ["group", ...myGroups().map((g) => "g:" + g.id), ...others().map((m) => m.user_id)];
 
 function lastRead() { try { return JSON.parse(localStorage.getItem(READ_KEY) || "{}"); } catch { return {}; } }
 function markRead(key) {
@@ -29,7 +32,8 @@ function markRead(key) {
 /** Messages of a conversation: "group", or a person's user id (your one-to-one chat). */
 function messagesIn(key) {
   const all = state.messages || [];
-  if (key === "group") return all.filter((m) => !m.recipient_id);
+  if (key === "group") return all.filter((m) => !m.recipient_id && !m.group_id);
+  if (key.startsWith("g:")) return all.filter((m) => m.group_id === key.slice(2));
   return all.filter((m) => (m.sender_id === state.me && m.recipient_id === key) || (m.sender_id === key && m.recipient_id === state.me));
 }
 function unread(key) {
@@ -72,7 +76,7 @@ export function renderMessages(el, opts = {}) {
       <section class="li-card"><p class="li-empty">${state.team ? "Messages need a small database update: run the team chat SQL (20261004000000_team_chat.sql) in Supabase." : "Messages are for teams."}</p></section>`;
     return;
   }
-  if (convo !== "group" && !others().some((m) => m.user_id === convo)) convo = "group";
+  if (convo !== "group" && !groupOf(convo) && !others().some((m) => m.user_id === convo)) convo = "group";
   el.innerHTML = `
     ${head}
     <section class="li-card li-msgs${phoneThread ? " thread-open" : ""}" aria-label="Messages">
@@ -136,7 +140,7 @@ function wire(el) {
     const btn = form.querySelector("button");
     btn.disabled = true;
     try {
-      await sendMessage(text, convo === "group" ? null : convo);
+      await sendMessage(text, convo === "group" || groupOf(convo) ? null : convo, groupOf(convo)?.id || null);
       box.value = "";
       box.style.height = "auto";
       markRead(convo);
@@ -148,7 +152,8 @@ function wire(el) {
 
 function time(iso) { return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
 function dayKey(iso) { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
-const label = (k) => (k === "group" ? "Team" : memberName(k));
+const label = (k) => (k === "group" ? "Team" : groupOf(k) ? groupOf(k).name : memberName(k));
+const isRoom = (k) => k === "group" || !!groupOf(k);
 
 /** Draw the conversation list and the open conversation (the message box keeps what you've typed). */
 function paint() {
@@ -158,12 +163,12 @@ function paint() {
     const last = messagesIn(k).at(-1);
     const n = k === convo && (!isPhone() || phoneThread) ? 0 : unread(k);
     return `<button type="button" class="li-msgs-convo${k === convo ? " on" : ""}" data-convo="${esc(k)}" aria-current="${k === convo}">
-      <span class="li-avatar" aria-hidden="true">${k === "group" ? "#" : esc(initials(memberName(k)))}</span>
-      <span class="li-msgs-who"><b>${esc(label(k))}</b><small>${last ? esc((last.sender_id === state.me ? "You: " : k === "group" ? memberName(last.sender_id) + ": " : "") + last.body) : k === "group" ? "The whole team" : "No messages yet"}</small></span>
+      <span class="li-avatar${groupOf(k) ? " li-avatar-group" : ""}" aria-hidden="true">${k === "group" ? "#" : groupOf(k) ? "&#9670;" : esc(initials(memberName(k)))}</span>
+      <span class="li-msgs-who"><b>${esc(label(k))}</b><small>${last ? esc((last.sender_id === state.me ? "You: " : isRoom(k) ? memberName(last.sender_id) + ": " : "") + last.body) : k === "group" ? "The whole team" : groupOf(k) ? "Project group" : "No messages yet"}</small></span>
       ${n ? `<span class="li-nav-dot">${n > 99 ? "99+" : n}</span>` : ""}
     </button>`;
   }).join("");
-  host.querySelector(".li-msgs-title").textContent = convo === "group" ? "Team · everyone" : memberName(convo);
+  host.querySelector(".li-msgs-title").textContent = convo === "group" ? "Team · everyone" : groupOf(convo) ? `${groupOf(convo).name} · project group` : memberName(convo);
   const msgs = messagesIn(convo);
   let lastDay = null;
   const log = host.querySelector(".li-chat-log");
@@ -172,13 +177,13 @@ function paint() {
     const sep = d !== lastDay ? `<li class="li-chat-day">${esc(d === state.today ? "Today" : formatDay(d, { weekday: "short", month: "short", day: "numeric" }))}</li>` : "";
     lastDay = d;
     return `${sep}<li class="li-chat-msg${mine ? " mine" : ""}">
-      ${!mine && convo === "group" ? `<span class="li-chat-from">${esc(memberName(m.sender_id))}</span>` : ""}
+      ${!mine && isRoom(convo) ? `<span class="li-chat-from">${esc(memberName(m.sender_id))}</span>` : ""}
       <span class="li-chat-body">${esc(m.body)}</span>
-      <span class="li-chat-meta">${esc(time(m.created_at))}${mine || (convo === "group" && can("moderate_chat")) ? ` <button type="button" class="li-chat-del" data-delete-msg="${esc(m.id)}" aria-label="Delete message" title="Delete">✕</button>` : ""}</span>
+      <span class="li-chat-meta">${esc(time(m.created_at))}${mine || (isRoom(convo) && can("moderate_chat")) ? ` <button type="button" class="li-chat-del" data-delete-msg="${esc(m.id)}" aria-label="Delete message" title="Delete">✕</button>` : ""}</span>
     </li>`;
-  }).join("") : `<li class="li-chat-empty">${convo === "group" ? "No messages yet. Say hello to the team." : `No messages with ${esc(memberName(convo))} yet.`}</li>`;
+  }).join("") : `<li class="li-chat-empty">${convo === "group" ? "No messages yet. Say hello to the team." : groupOf(convo) ? `No messages yet. Say hello to ${esc(groupOf(convo).name)}.` : `No messages with ${esc(memberName(convo))} yet.`}</li>`;
   log.scrollTop = log.scrollHeight;
-  host.querySelector("textarea").placeholder = convo === "group" ? "Message the team…" : `Message ${memberName(convo)}…`;
+  host.querySelector("textarea").placeholder = convo === "group" ? "Message the team…" : groupOf(convo) ? `Message ${groupOf(convo).name}…` : `Message ${memberName(convo)}…`;
 }
 
 function initials(name) {
