@@ -1459,7 +1459,7 @@ test("without a database the original dashboard runs unchanged", async () => {
 // A stand-in for supabase-js, served in place of the CDN module. `signedIn`
 // decides whether there's a session; the profile starts without a greeting.
 // `oldDb` imitates a database without the greeting migration.
-function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0, assigned = false, perms = {} }) {
+function fakeSupabase({ signedIn, oldDb = false, role = "owner", slow = 0, assigned = false, perms = {}, history = false }) {
   return `
 const oldDb = ${oldDb};
 const slow = ${slow};
@@ -1467,6 +1467,11 @@ const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toIS
 // A task the owner ("o1") assigned to this user.
 const tasks = ${assigned} ? [{ id: "t-assigned", user_id: "u1", assigned_by: "o1", title: "Design the payment screen", date: today,
   status: "not_started", priority: "high", completion_percentage: 0, due_date: today, created_at: today + "T08:00:00Z" }] : [];
+// A few past days (history): yesterday done on time, two days ago never done.
+const ago = (n) => { const d = new Date(today + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+if (${history}) tasks.push(
+  { id: "t-h1", user_id: "u1", title: "Yesterday's task", date: ago(1), status: "completed", completed_at: ago(1) + "T15:00:00Z", priority: "medium", completion_percentage: 100, created_at: ago(1) + "T08:00:00Z" },
+  { id: "t-h2", user_id: "u1", title: "Missed task", date: ago(2), status: "not_started", priority: "medium", completion_percentage: 0, created_at: ago(2) + "T08:00:00Z" });
 const files = [];
 const pfLinks = [];
 window.__uploads = [];
@@ -1559,7 +1564,7 @@ async function seedPortfolio(page) {
 }
 const openAllSections = (page) => page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
 
-async function dbPage({ signedIn, oldDb, role, slow, assigned, perms }) {
+async function dbPage({ signedIn, oldDb, role, slow, assigned, perms, history }) {
   const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(e.message));
@@ -1568,7 +1573,7 @@ async function dbPage({ signedIn, oldDb, role, slow, assigned, perms }) {
   // On the context, so a tab this page opens (Preview on web) gets the same fakes.
   await page.context().route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript",
     body: 'window.LOCKEDIN_CONFIG = { supabaseUrl: "https://example.supabase.co", supabaseAnonKey: "sb_publishable_test" };' }));
-  await page.context().route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned, perms }) }));
+  await page.context().route("https://cdn.jsdelivr.net/**", (r) => r.fulfill({ contentType: "application/javascript", body: fakeSupabase({ signedIn, oldDb, role, slow, assigned, perms, history }) }));
   await page.goto(BASE);
   return page;
 }
@@ -1700,6 +1705,36 @@ test("admin management: an admin sees their permissions and only the matching bu
   assert.equal(await page.locator("#li-admin-management").count(), 0, "only the owner manages admins");
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("activity map on a team (not the owner): starts the day you joined; on time green, late red, no tasks yellow; no countdown", async () => {
+  for (const role of ["member", "admin"]) {
+    const page = await dbPage({ signedIn: true, role, history: true });
+    await page.waitForSelector("#li-nav .li-nav-link");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.querySelectorAll("#heat-cells .heat-cell[data-day]").length > 300);
+    const cell = (n) => page.evaluate((n) => {
+      const d = new Date(); d.setDate(d.getDate() - n);
+      const key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      return document.querySelector(`#heat-cells [data-day="${key}"]`).className;
+    }, n);
+    assert.match(await cell(1), /\bl3\b/, `${role}: yesterday, done on time: green`);
+    assert.match(await cell(2), /\bmissed\b/, `${role}: two days ago, never done: red`);
+    assert.match(await cell(3), /\bnoday\b/, `${role}: a day with no tasks: light yellow`);
+    const before = await page.evaluate(() => document.querySelector('#heat-cells [data-day="2026-09-25"]').className);
+    assert.equal(before, "heat-cell", `${role}: before joining (Sep 26): neutral`);
+    assert.match(await page.textContent("#heat-legend"), /On time\s*Late\s*No tasks/);
+    const journey = await page.textContent("#greet-journey");
+    assert.match(journey, /^Day \d+ on the team$/, `${role}: days on the team, no countdown`);
+    assert.ok(await page.locator(".cd-pin").isHidden(), "no countdown box");
+    assert.deepEqual(page.errors, []);
+    await page.close();
+  }
+  // The owner keeps theirs.
+  const owner = await open("", { width: 1280, height: 900 });
+  assert.match(await owner.textContent("#greet-journey"), /of \d+.*days to go/);
+  assert.match(await owner.textContent("#heat-legend"), /Less\s*More/);
+  await owner.close();
 });
 
 test("with a database configured, the Supabase sign-in screen is shown (not a blank page)", async () => {

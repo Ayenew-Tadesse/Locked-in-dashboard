@@ -240,3 +240,25 @@ test("admin permissions: defaults, saved choices, and what gets saved", async ()
   assert.deepEqual(permissionChanges({ ...ADMIN_DEFAULTS, see_work: false, rename_team: true }), { see_work: false, rename_team: true });
   assert.deepEqual(permissionChanges(ADMIN_DEFAULTS), {});
 });
+
+test("team activity map: on time, late, no tasks, pending; from the join day", async () => {
+  const { teamDayStatus, buildTeamDays } = await import("../../app/core/teamdays.js");
+  const today = "2026-10-05";
+  const t = (date, status, extra = {}) => ({ date, status, ...extra });
+  const tasks = [
+    t("2026-10-01", "completed", { completed_at: "2026-10-01T15:00:00Z" }),
+    t("2026-10-01", "completed", { completed_at: "2026-10-02T09:00:00Z", due_date: "2026-10-03" }), // before its due date
+    t("2026-10-02", "completed", { completed_at: "2026-10-03T10:00:00Z" }),                          // a day late
+    t("2026-10-03", "not_started"),                                                                    // never done, past
+    t("2026-10-05", "in_progress"),                                                                    // today, time left
+    t("2026-10-04", "cancelled"),
+  ];
+  assert.deepEqual(teamDayStatus(tasks, "2026-10-01", today, "UTC"), { s: "ontime", text: "2 of 2 done on time" });
+  assert.equal(teamDayStatus(tasks, "2026-10-02", today, "UTC").s, "late");
+  assert.equal(teamDayStatus(tasks, "2026-10-03", today, "UTC").s, "late", "unfinished past the deadline is late");
+  assert.deepEqual(teamDayStatus(tasks, "2026-10-04", today, "UTC"), { s: "none", text: "No tasks" }, "cancelled tasks don't count");
+  assert.equal(teamDayStatus(tasks, "2026-10-05", today, "UTC").s, "pending");
+  const map = buildTeamDays(tasks, "2026-10-02", today, "UTC");
+  assert.equal(map.start, "2026-10-02");
+  assert.deepEqual(Object.keys(map.status), ["2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05"], "from the join day to today");
+});

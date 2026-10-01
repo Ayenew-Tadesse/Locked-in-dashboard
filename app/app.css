@@ -30,7 +30,7 @@ html.app-mode .dash-col-a{position:static;}
 html:not(.app-mode) .li-tasks-card{display:none;}
 /* Colleagues don't add tasks (hide the old checklist's add box too), and
    their assigned tasks count down instead of the year countdown. */
-html.li-colleague #today-add,html.li-colleague .cd-pin{display:none;}
+html.li-colleague #today-add,html.li-colleague .cd-pin,html.li-not-owner .cd-pin{display:none;}
 .li-status-tabs{margin:0 0 14px;}
 .li-status-tabs .li-btn{text-decoration:none;}
 .li-status-tabs .li-count{font-size:11px;opacity:.7;margin-left:2px;font-variant-numeric:tabular-nums;}
