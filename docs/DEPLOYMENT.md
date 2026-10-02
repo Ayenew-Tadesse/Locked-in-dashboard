@@ -151,8 +151,11 @@ phone just means signing in again. Nothing is lost.
 Click **Deploy**. Vercel builds `dist/` (the page, `app/` and a generated
 `config.js`) and deploys the `/api/v1/*` functions from `api/`.
 
-After that, every push to `main` deploys automatically, and pull requests
-get preview URLs. (This project is live at
+After that, every push to `main` deploys automatically. Pushes to the
+`claude/…` working branches don't build (`git.deploymentEnabled` in
+`vercel.json`): Vercel's free plan caps builds per day, and only `main` goes
+live. Keep one Vercel project linked to this repo; a second one doubles
+every build. (This project is live at
 https://locked-in-dashboard-nnym.vercel.app/; Supabase's Site URL points there,
 and the GitHub Pages address stays in its Redirect URLs.) Then:
 
