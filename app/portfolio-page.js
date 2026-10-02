@@ -6,6 +6,7 @@ import { buildPortfolioData } from "./core/portfolio.js";
 import { printResume } from "./portfolio/resume.js";
 import { tryInPhone } from "./portfolio/phone.js";
 import { countStats } from "./portfolio/count.js";
+import { setupRails } from "./portfolio/rail.js";
 import { mergeCommits } from "./core/portfolio.js";
 import { fetchCommits, commitsByDay, githubUser } from "./core/github.js";
 
@@ -131,6 +132,7 @@ function render(data, keepScroll = false) {
   root.innerHTML = renderPortfolio(data, { view });
   root.removeAttribute("aria-busy");
   countStats(root);
+  setupRails(root);
   if (keepScroll) window.scrollTo(0, y);
 }
 window.addEventListener("hashchange", () => { if (current) { render(current); window.scrollTo(0, 0); } });
