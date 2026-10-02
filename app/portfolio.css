@@ -103,11 +103,11 @@
   font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;line-height:1.2;}
 .pf-btn--solid{background:var(--accent);color:var(--surface);}
 .pf-btn--outline{background:transparent;color:var(--accent);}
-/* The resume link: in the page's top-right corner, the document icon with "Resume" to its right. */
+/* The resume button: top-right of the page, an outline button with the document icon and "Resume". */
 .pf-s-top{display:flex;justify-content:flex-end;margin:0 0 8px;}
-.pf-resume-icon{display:inline-flex;align-items:center;gap:6px;color:var(--accent);border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;line-height:1.2;transition:color .15s;}
-.pf-resume-icon svg{width:22px;height:22px;flex:none;}
-.pf-resume-icon:hover{color:color-mix(in srgb, var(--accent) 75%, var(--ink));}
+.pf-resume-btn{gap:8px;min-height:40px;padding:8px 16px;transition:background-color .15s;}
+.pf-resume-btn svg{width:18px;height:18px;flex:none;}
+.pf-resume-btn:hover{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .pf-btn--disabled{border-color:var(--line);color:var(--ink-3);cursor:default;}
 .pf-s-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center;padding:12px 0 28px;}
 .pf-s-eyebrow{margin:0 0 6px;font-size:16px;color:var(--ink-2);}

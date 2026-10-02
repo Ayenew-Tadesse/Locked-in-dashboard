@@ -2226,8 +2226,9 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const icons = [...document.querySelectorAll(".pf-s-figure .pf-social")].map((a) => [a.getAttribute("aria-label"), !!a.querySelector("svg"), a.textContent.trim(), a.getAttribute("href")]);
       const stripBg = getComputedStyle(document.querySelector(".pf-s-stats")).backgroundColor;
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
-      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-icon"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
-          return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), l.left >= i.right, Math.abs(Math.round((l.top + l.height / 2) - (i.top + i.height / 2))) <= 1, Math.abs(Math.round(page.right - b.getBoundingClientRect().right)), b.getBoundingClientRect().bottom <= hero.top]; })(),
+      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-btn"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
+          const st = getComputedStyle(b);
+          return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), st.borderTopStyle, st.borderTopLeftRadius === "999px", b.getBoundingClientRect().height >= 40, l.left >= i.right, Math.abs(Math.round((l.top + l.height / 2) - (i.top + i.height / 2))) <= 1, Math.abs(Math.round(page.right - b.getBoundingClientRect().right)), b.getBoundingClientRect().bottom <= hero.top]; })(),
         heroButtons: document.querySelectorAll(".pf-s-actions .pf-btn").length, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
         stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
@@ -2238,7 +2239,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     assert.equal(m.drift, "pf-bars-drift", "the bars drift");
     assert.deepEqual(m.icons.map(([l, svg, text]) => [l, svg, text]), [["Instagram", true, ""], ["LinkedIn", true, ""], ["Behance", true, ""], ["GitHub", true, ""]], "icon buttons (named for screen readers), GitHub added from the profile");
     assert.equal(m.icons[3][3], "https://github.com/someone");
-    assert.deepEqual(m.resume, ["Resume", 22, "mailto:", true, true, 0, true], "the resume link: top-right of the page, a 22px icon with Resume to its right");
+    assert.deepEqual(m.resume, ["Resume", 18, "mailto:", "solid", true, true, true, true, 0, true], "the resume button: top-right of the page, an outlined pill (40px+ tall) with an 18px icon and Resume to its right");
     assert.equal(m.heroButtons, 0, "no View projects / Contact me buttons");
     assert.equal(Math.round(m.iconGap), 8, "8px under the photo");
     assert.ok(Math.abs(m.iconRight) < 1, "lined up with the photo's right edge");
