@@ -2216,6 +2216,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
     await page.goto(BASE + "portfolio.html?demo=1");
+    await page.waitForSelector("#pf-root:not([aria-busy])"); // the page has drawn its own demo first
     const m = await page.evaluate(async (site) => {
       const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
       const root = document.getElementById("pf-root");
@@ -2262,6 +2263,7 @@ test("portfolio page: the numbers count up when seen, then every 10 seconds", as
     await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
     await page.goto(BASE + "portfolio.html?demo=1");
+    await page.waitForSelector("#pf-root:not([aria-busy])"); // the page has drawn its own demo first
     // Draw it the way the page does (and again later, like after GitHub activity loads).
     await page.evaluate(async (site) => {
       const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
@@ -2303,4 +2305,63 @@ test("portfolio page: the numbers count up when seen, then every 10 seconds", as
     }
     await page.close();
   }
+});
+
+test("portfolio page: featured projects slide in one row (arrows, dots, swipe on phones)", async () => {
+  const many = { ...PORTFOLIO_SITE, cases: [...PORTFOLIO_SITE.cases, ...PORTFOLIO_SITE.cases.map((c) => ({ ...c, id: c.id + "-2", title: c.title + " II" }))] };
+  const draw = async (page, site) => page.evaluate(async (site) => {
+    const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
+    const { setupRails } = await import(new URL("app/portfolio/rail.js", location.href).href);
+    const root = document.getElementById("pf-root");
+    root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
+    setupRails(root);
+  }, site);
+  const state = (page) => page.evaluate(() => {
+    const r = document.querySelector(".pf-rail"), items = [...r.children], nav = document.querySelector(".pf-rail-nav");
+    const inView = items.filter((i) => { const b = i.getBoundingClientRect(), v = r.getBoundingClientRect(); return b.left >= v.left - 1 && b.right <= v.right + 1; }).length;
+    return { role: r.getAttribute("role"), items: items.length, inView, scroll: Math.round(r.scrollLeft), step: items[1].offsetLeft - items[0].offsetLeft,
+      nav: !nav.hidden && getComputedStyle(nav).display !== "none", dots: document.querySelectorAll(".pf-rail-dot").length,
+      current: [...document.querySelectorAll(".pf-rail-dot")].findIndex((d) => d.getAttribute("aria-current") === "true"),
+      prev: document.querySelector('[data-rail="prev"]').disabled, next: document.querySelector('[data-rail="next"]').disabled,
+      width: items[0].getBoundingClientRect().width / r.clientWidth };
+  });
+  const open = async (width, height, opts = {}) => {
+    const page = await browser.newPage({ viewport: { width, height }, reducedMotion: "reduce", ...opts });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
+    await page.goto(BASE + "portfolio.html?demo=1");
+    await page.waitForSelector("#pf-root:not([aria-busy])"); // the page has drawn its own demo first
+    return page;
+  };
+
+  // Laptop, six projects: three in view, arrows and dots.
+  const page = await open(1080, 900);
+  await draw(page, many);
+  let s = await state(page);
+  assert.equal(s.role, "list");
+  assert.deepEqual([s.items, s.inView, s.nav, s.dots, s.current, s.prev, s.next], [6, 3, true, 4, 0, true, false], "3 in view, arrows, 4 stops");
+  await page.click('[data-rail="next"]');
+  await page.waitForFunction(() => document.querySelector(".pf-rail").scrollLeft > 0);
+  s = await state(page);
+  assert.ok(Math.abs(s.scroll - s.step) <= 1, `next slides one card: ${s.scroll} vs ${s.step}`);
+  await page.waitForFunction(() => document.querySelectorAll('.pf-rail-dot[aria-current="true"]')[0] === document.querySelectorAll(".pf-rail-dot")[1]);
+  await page.locator(".pf-rail-dot").last().click();
+  await page.waitForFunction(() => document.querySelector('[data-rail="next"]').disabled);
+  s = await state(page);
+  assert.deepEqual([s.current, s.prev, s.next], [3, false, true], "the last dot goes to the end");
+  // Three projects all fit: no arrows or dots.
+  await draw(page, PORTFOLIO_SITE);
+  s = await state(page);
+  assert.deepEqual([s.inView, s.nav, s.dots], [3, false, 0], "nothing to slide");
+  await page.close();
+
+  // Phone: one card with the next peeking, swiped (no arrows), dots follow.
+  const phone = await open(390, 844, { isMobile: true, hasTouch: true });
+  await draw(phone, PORTFOLIO_SITE);
+  s = await state(phone);
+  assert.ok(s.width > 0.8 && s.width < 0.9, `a card is ~85% wide: ${s.width}`);
+  assert.deepEqual([s.inView, s.nav, s.dots, s.current], [1, false, 3, 0], "one in view, no arrows, dots");
+  await phone.evaluate(() => document.querySelector(".pf-rail").scrollBy({ left: 400 }));
+  await phone.waitForFunction(() => document.querySelectorAll(".pf-rail-dot")[1]?.getAttribute("aria-current") === "true");
+  await phone.close();
 });

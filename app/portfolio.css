@@ -137,6 +137,25 @@
 .pf-s-stats .is-hi{background:var(--pf-navy);}
 .pf-s-stats .is-hi b, .pf-s-stats .is-hi span{color:#FFFFFF;}
 .pf-cards{display:grid;grid-template-columns:repeat(auto-fit, minmax(min(260px, 100%), 1fr));gap:16px;}
+/* Featured projects: one sliding row that snaps to a card. 3 in view on a laptop, 2 on a
+   tablet (up to 700px), 1 (up to 520px, with the next one peeking) on a phone. Arrows and dots appear only when it overflows. */
+.pf-rail-head{position:relative;}
+.pf-rail-nav{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;gap:8px;}
+.pf-rail-nav[hidden], .pf-rail-dots[hidden]{display:none;}
+.pf-rail-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;transition:opacity .15s, border-color .15s;}
+.pf-rail-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.pf-rail-btn:disabled{opacity:.35;cursor:default;}
+.pf-rail{--pf-rail-gap:16px;display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 2 * var(--pf-rail-gap)) / 3);gap:var(--pf-rail-gap);
+  overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;padding:2px 0 6px;}
+.pf-rail::-webkit-scrollbar{display:none;}
+.pf-rail__item{scroll-snap-align:start;min-width:0;display:flex;}
+.pf-rail__item > .pf-card{flex:1;}
+.pf-rail-dots{display:flex;justify-content:center;gap:8px;margin-top:12px;}
+.pf-rail-dot{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:var(--line);cursor:pointer;transition:width .2s, background-color .2s;}
+.pf-rail-dot[aria-current="true"]{width:22px;background:var(--accent);}
+@container pf (max-width:700px){ .pf-rail{grid-auto-columns:calc((100% - var(--pf-rail-gap)) / 2);} }
+@container pf (max-width:520px){ .pf-rail{--pf-rail-gap:12px;grid-auto-columns:85%;} .pf-rail-nav{display:none;} }
+@media (prefers-reduced-motion: reduce){ .pf-rail{scroll-behavior:auto;} }
 .pf-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;}
 .pf-card__thumb{aspect-ratio:16/10;background:linear-gradient(135deg, var(--accent-soft), var(--surface-2));display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .pf-card__thumb span{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:34px;color:var(--accent);}

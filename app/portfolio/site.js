@@ -40,6 +40,9 @@ const SOCIAL_ICONS = {
   dribbble: svg('<circle cx="12" cy="12" r="9"/><path d="M19.1 6.6C15.5 9.4 9 10 3.3 9.6M8.6 3.7c3 3.6 6.2 10.6 7.2 16.5M3.4 13.9c5-1.6 11.6-1.5 17.4.5"/>'),
   website: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
 };
+// The featured projects row's arrows (see rail.js).
+const chevron = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const CHEVRON_LEFT = chevron("M15 5l-7 7 7 7"), CHEVRON_RIGHT = chevron("M9 5l7 7-7 7");
 // The resume button's icon: a page with a folded corner and four lines of text.
 const RESUME_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.3 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.3z"/><path d="M14.3 2.5v3.6a1.2 1.2 0 0 0 1.2 1.2H19"/><path d="M8.6 11h6.8M8.6 13.3h6.8M8.6 15.6h6.8M8.6 17.9h4.6"/></svg>`;
 const LINK_ICON = svg('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>');
@@ -113,7 +116,15 @@ function home(data, live) {
   ${s.stats?.length ? `<div class="pf-s-stats">${s.stats.map((x, i) => `<div${i === Math.floor((s.stats.length - 1) / 2) ? ' class="is-hi"' : ""}><b>${esc(x.num)}</b><span>${esc(x.label)}</span></div>`).join("")}</div>` : ""}
   ${withBars([
     live.highlights || "",
-    s.cases?.length ? `<section class="pf-section" id="pf-cases"><h2>Featured projects</h2><div class="pf-cards">${s.cases.map((c) => caseCard(c, data.projects)).join("")}</div></section>` : "",
+    s.cases?.length ? `<section class="pf-section pf-rail-wrap" id="pf-cases">
+      <div class="pf-rail-head"><h2>Featured projects</h2>
+        <div class="pf-rail-nav" hidden>
+          <button type="button" class="pf-rail-btn" data-rail="prev" aria-label="Previous project">${CHEVRON_LEFT}</button>
+          <button type="button" class="pf-rail-btn" data-rail="next" aria-label="Next project">${CHEVRON_RIGHT}</button>
+        </div></div>
+      <div class="pf-rail" role="list" aria-label="Featured projects">${s.cases.map((c) => `<div class="pf-rail__item" role="listitem">${caseCard(c, data.projects)}</div>`).join("")}</div>
+      <div class="pf-rail-dots" hidden></div>
+    </section>` : "",
     live.experience || "",
     s.about?.length ? `<section class="pf-section" id="pf-about"><h2>About me</h2><div class="pf-s-about">${s.about.map((p) => `<p>${esc(p)}</p>`).join("")}</div></section>` : "",
     s.skills?.length ? `<section class="pf-section" id="pf-keyskills"><h2>Key skills</h2><div class="pf-s-skills">${s.skills.map((g) => `<div class="pf-s-skill"><h3>${esc(g.title)}</h3><ul>${(g.items || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>`).join("")}</div></section>` : "",
