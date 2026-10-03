@@ -2239,7 +2239,8 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
       return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, numSize, labelSize,
         contacts: [...document.querySelectorAll("#pf-contact .pf-cc")].map((c) => [c.dataset.icon, !!c.querySelector("svg"), getComputedStyle(c).textAlign, c.tagName]),
-        foot: document.querySelector(".pf-foot--band")?.textContent.trim(), hscroll: document.documentElement.scrollWidth > innerWidth, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-btn"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
+        foot: document.querySelector(".pf-foot--band")?.textContent.trim(),
+        footLook: (() => { const c = getComputedStyle(document.querySelector(".pf-foot--band")); return [c.backgroundColor, c.borderTopStyle, c.textAlign]; })(), hscroll: document.documentElement.scrollWidth > innerWidth, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-btn"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
           const st = getComputedStyle(b);
           return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), b.classList.contains("pf-btn--outline") && st.backgroundColor === "rgba(0, 0, 0, 0)", st.borderTopLeftRadius === "999px", Math.round(b.getBoundingClientRect().height), l.left >= i.right, Math.abs(Math.round((l.top + l.height / 2) - (i.top + i.height / 2))) <= 1, Math.abs(Math.round(page.right - b.getBoundingClientRect().right)), b.getBoundingClientRect().bottom <= hero.top]; })(),
         heroButtons: document.querySelectorAll(".pf-s-actions .pf-btn").length, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
@@ -2270,7 +2271,8 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     assert.equal(m.labelSize, "13px");
     assert.deepEqual(m.contacts, [["phone", true, "center", "A"], ["email", true, "center", "A"], ["linkedin", true, "center", "A"]], "contact cards: icon, centred, a link");
     assert.equal(m.foot, `© ${new Date().getFullYear()} Ayenew Shiferaw. All rights reserved.`);
-    assert.equal(m.hscroll, false, "the full-width footer doesn't scroll the page sideways");
+    assert.deepEqual(m.footLook, ["rgba(0, 0, 0, 0)", "none", "center"], "the footer: no colour, no line, centred");
+    assert.equal(m.hscroll, false, "nothing scrolls the page sideways");
     assert.equal(m.bars.length, m.sections, "a strip before every section");
     assert.ok(m.bars.every((x) => x === "true"), "the strips are decorative");
     assert.equal(m.firstBarAfterStats, "pf-bars");
