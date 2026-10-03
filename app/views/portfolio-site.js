@@ -10,6 +10,7 @@ import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { portfolioGithub } from "../github.js";
 import { openCaseEditor, META } from "./case-editor.js";
+import { openSiteEditor } from "./site-editor.js";
 
 // Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
 const EDITOR_SECTIONS = ["cases", "stats", "about", "skillgroups", "highlights", "experience", "process", "logs", "activity", "milestones", "plan", "contact"];
@@ -39,6 +40,46 @@ const upload = (blob, name) => state.store.uploadPortfolioImage(blob, name);
 function socialKey(label, href) {
   const hit = SOCIAL_HOSTS.find(([k, re]) => re.test(href) || k === String(label).trim().toLowerCase());
   return hit ? hit[0] : "website";
+}
+
+/** Contact rows as stored: no bare mailto:/tel:, a value (the link without its scheme if empty). */
+const cleanContacts = (rows) => rows.map((c) => ({ label: String(c.label || "").trim(), value: String(c.value || "").trim(), href: String(c.href || "").trim() }))
+  .map((c) => ({ ...c, href: /^(mailto|tel):$/i.test(c.href) ? "" : c.href, value: c.value || c.href.replace(/^(mailto|tel):/i, "") })).filter((c) => c.value);
+/** The older profile links (email, LinkedIn, …) from the contact list. */
+function linksOf(contact) {
+  const links = {};
+  for (const c of contact) {
+    if (/^mailto:/i.test(c.href) && !links.email) links.email = c.href.replace(/^mailto:/i, "");
+    else if (/^https?:\/\//i.test(c.href)) { const k = socialKey(c.label, c.href); if (k !== "instagram" && !links[k]) links[k] = c.href; }
+  }
+  return links;
+}
+
+/** Save what the page editor (site-editor.js) changed; the form-only parts stay as they are. */
+export async function savePortfolioPage(m) {
+  const prefs = state.settings.preferences || {}, old = prefs.portfolio || {};
+  const t = (v) => String(v || "").trim();
+  const site = currentSite();
+  site.hero = { ...(site.hero || {}), eyebrow: t(m.hero.eyebrow), name: t(m.hero.name), role: t(m.hero.role), location: t(m.hero.location),
+    description: t(m.hero.description), open: { ...m.hero.open }, roles: t(m.hero.roles) };
+  site.resume = t(m.resume);
+  site.portrait = imgUrl(m.portrait);
+  site.stats = m.stats.map((x) => ({ num: t(x.num), label: t(x.label) })).filter((x) => x.num || x.label).slice(0, 4);
+  site.about = m.about.map((x) => String(x).replace(/\s+/g, " ").trim()).filter(Boolean);
+  site.skills = m.skills.map((g) => ({ title: t(g.title), items: g.items.map(t).filter(Boolean) })).filter((g) => g.title || g.items.length);
+  site.contact = cleanContacts(m.contact);
+  site.social = Object.fromEntries(site.contact.filter((c) => /^https?:\/\//i.test(c.href)).map((c) => [socialKey(c.label, c.href), c.href]));
+  site.cases = site.cases || [];
+  if (state.year) site.year = state.year; else delete site.year;
+  Object.assign(site, portfolioGithub());
+  if (!site.github) delete site.github;
+  const yearsStat = site.stats.find((x) => /year/i.test(x.label));
+  const details = { ...(old.details || {}), title: site.hero.role, location: site.hero.location, open: site.hero.open, roles: site.hero.roles,
+    years: yearsStat ? parseInt(yearsStat.num, 10) || "" : (old.details?.years ?? "") };
+  const portfolio = { ...old, site, details, headline: site.hero.description, bio: site.about.join("\n\n"), links: linksOf(site.contact),
+    show: { ...(old.show || {}), ...m.show } };
+  const s = await state.store.savePreferences({ ...prefs, portfolio });
+  state.settings = { ...state.settings, ...s };
 }
 
 /** What the editor starts from: your site, with anything only the older fields had filled in. */
@@ -77,7 +118,7 @@ export function editorHtml() {
   const stats = [0, 1, 2, 3].map((i) => s.stats[i] || {});
   return `
     <section class="li-card li-pf-editor" id="li-pf-editor">
-      <div class="li-card-head"><span class="card-label">Edit portfolio</span></div>
+      <div class="li-card-head"><span class="card-label">Edit portfolio</span><button type="button" class="li-btn primary small" id="li-pf-onpage">Edit on page</button></div>
       <p class="li-sub">A private page for hiring managers, laid out like your portfolio website and kept live from this dashboard. Only people with one of your links can open it; it shows only <b>your</b> work.</p>
       <form class="li-pf-form li-pf-editor-form" id="li-pf-form" autocomplete="off">
       ${section("intro", "Introduction", `
@@ -210,6 +251,22 @@ export function wireEditor(el, hooks) {
     } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
   });
 
+  // "Edit on page": the portfolio as hiring managers see it, edited in place.
+  el.querySelector("#li-pf-onpage")?.addEventListener("click", async () => {
+    if (dirty && !(await confirmDialog("Discard the changes in this form and edit on the page?", "Discard and continue"))) return;
+    const openEditor = () => openSiteEditor({
+      site: draftSite(), prefs: state.settings.preferences,
+      save: async (m) => { await savePortfolioPage(m); },
+      done: () => hooks.rerender?.(),
+      onClose: () => hooks.reload?.(),
+      openForm: () => { hooks.reload?.(); document.getElementById("li-pf-editor")?.scrollIntoView({ block: "start" }); },
+      // A case study opens in its own editor; back to the page editor afterwards.
+      openCase: (id) => cases.edit(id, openEditor),
+    });
+    setDirty(false);
+    openEditor();
+  });
+
   // Everything on the form as saved preferences.portfolio (nothing is saved here).
   function readForm() {
     const f = form.elements;
@@ -280,7 +337,7 @@ export function wireEditor(el, hooks) {
     } catch (err) { toast("Couldn't save: " + err.message, "error"); }
   });
 
-  wireCaseCards(el, { saved() { hooks.saved(); if (dirty && form.isConnected) hooks.draft?.(readForm()); } });
+  const cases = wireCaseCards(el, { saved() { hooks.saved(); if (dirty && form.isConnected) hooks.draft?.(readForm()); } });
   return { save: () => form.requestSubmit(), isDirty: () => dirty };
 }
 
@@ -293,10 +350,12 @@ function wireCaseCards(el, hooks) {
   const redraw = () => { grid.innerHTML = caseCardsHtml(currentSite().cases || []); };
   const changed = () => { redraw(); hooks.saved(); };
   // Tapping a card opens it on the page to edit; "Edit as a form" there opens the form.
-  const edit = (id) => {
+  // after: what to open once you've saved or cancelled (the page editor, when you came from it).
+  const edit = (id, after) => {
     const c = (currentSite().cases || []).find((x) => x.id === id) || null;
     const onDelete = c ? () => deleteCase(id) : null;
-    openCaseEditor(c, { save: storeCase, onDelete, done: changed, openForm: (draft) => editCase(c ? { ...draft, id: c.id } : draft, changed, onDelete, c) });
+    openCaseEditor(c, { save: storeCase, onDelete, done: () => { changed(); after?.(); }, onClose: () => after?.(),
+      openForm: (draft) => editCase(c ? { ...draft, id: c.id } : draft, changed, onDelete, c) });
   };
   async function deleteCase(id) {
     const site = currentSite();
@@ -380,6 +439,7 @@ function wireCaseCards(el, hooks) {
     const cards = [...grid.querySelectorAll("[data-case-card]")], i = cards.indexOf(card), other = cards[i + step];
     if (other) swap(card.dataset.caseCard, other.dataset.caseCard).then(() => grid.querySelector(`[data-case-card="${CSS.escape(card.dataset.caseCard)}"]`)?.focus());
   });
+  return { edit };
 }
 
 // ---------------------------------------------------------------------------

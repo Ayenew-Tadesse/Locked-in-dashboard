@@ -8,14 +8,14 @@
 // The home-page card (tag, title, description) is shown at the top and
 // edited the same way. "Edit as a form" (in Settings) is still there.
 import { state, toast } from "../state.js";
-import { esc, openModal, closeModal, confirmDialog } from "../ui/dom.js";
+import { esc, openModal, closeModal } from "../ui/dom.js";
+import { openPageEditor, ed, add, del, paraList, getAt, setAt, imgUrl } from "./page-editor.js";
 
 export const META = ["Role", "Type", "Platform", "Tools"];
 const clone = (x) => JSON.parse(JSON.stringify(x ?? {}));
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 const joinParas = (list) => (list || []).map((p) => String(p).trim()).filter(Boolean).join("\n\n");
 const clean = (s) => String(s ?? "").trim();
-const imgUrl = (u) => (typeof u === "string" && /^(https?:|blob:|data:image\/)/i.test(u) ? u : "");
 
 /* ------------------------------------------------------------------ model */
 
@@ -76,28 +76,8 @@ export function fromModel(m) {
   };
 }
 
-// "personas.items.0.needs.2" → read / write / remove in the model.
-const keys = (path) => path.split(".").map((k) => (/^\d+$/.test(k) ? Number(k) : k));
-function getAt(obj, path) { return keys(path).reduce((o, k) => (o == null ? o : o[k]), obj); }
-function setAt(obj, path, value) {
-  const ks = keys(path), last = ks.pop();
-  const parent = ks.reduce((o, k) => o[k], obj);
-  parent[last] = value;
-}
-
 /* ---------------------------------------------------------------- drawing */
 
-const ICON_X = "&#10005;";
-// An editable piece of text. multi: Enter makes a new line (otherwise it finishes).
-const ed = (path, value, { tag = "span", cls = "", ph = "", multi = false, para = false } = {}) =>
-  `<${tag} class="ce-t ${cls}" contenteditable="true" spellcheck="true" role="textbox"${multi ? ' aria-multiline="true" data-multi' : ""}${para ? " data-para" : ""}
-    data-k="${path}" data-ph="${esc(ph)}" aria-label="${esc(ph)}">${esc(value || "")}</${tag}>`;
-const add = (act, path, label) => `<button type="button" class="ce-add" data-act="${act}" data-path="${path}">+ ${esc(label)}</button>`;
-const del = (path, label = "Remove") => `<button type="button" class="ce-del" data-act="del" data-path="${path}" aria-label="${esc(label)}" title="${esc(label)}">${ICON_X}</button>`;
-
-// Paragraphs of one field, each removable, plus "add a paragraph".
-const paraList = (path, list, ph) => `${list.map((p, i) => `<div class="ce-item ce-para">${ed(`${path}.${i}`, p, { tag: "p", ph, multi: true, para: true })}${list.length > 1 ? del(`${path}.${i}`, "Remove paragraph") : ""}</div>`).join("")}
-  ${list.length ? add("para", path, "Paragraph") : add("para", path, ph)}`;
 const block = (title, body, cls = "") => `<section class="pf-case-block ce-block ${cls}"><h2>${esc(title)}</h2>${body}</section>`;
 
 function personaHtml(p, i) {
@@ -200,145 +180,25 @@ function render(m) {
 
 /* ----------------------------------------------------------------- editor */
 
-let open = null;
-
 /**
  * Open the editor. original: the saved case study (null for a new one).
- * opts.save(next): store it; opts.onDelete(): delete it (true when deleted);
+ * opts.save(next, original): store it; opts.onDelete(): delete it (true when deleted);
  * opts.openForm(draft): the form editor with the changes so far; opts.done(): after saving / deleting.
  */
 export function openCaseEditor(original, opts) {
-  open?.close(true);
   const model = toModel(original || { id: "", status: "live", meta: [] });
-  let dirty = false;
 
-  const wrap = document.createElement("div");
-  wrap.id = "li-ce";
-  wrap.setAttribute("role", "dialog");
-  wrap.setAttribute("aria-modal", "true");
-  wrap.setAttribute("aria-label", original ? "Edit case study" : "New case study");
-  wrap.innerHTML = `
-    <header class="ce-bar">
-      <button type="button" class="li-btn ghost" data-act="cancel">Cancel</button>
-      <span class="ce-bar__title">${original ? "Editing on the page" : "New case study"} <small>Tap text to change it · + to add</small></span>
-      <button type="button" class="li-btn ghost" data-act="settings">Settings</button>
-      <button type="button" class="li-btn primary" data-act="save">Save</button>
-    </header>
-    <div class="ce-body"><div class="pf pf--site ce-page"></div></div>
-    <input type="file" accept="image/*" hidden data-file>`;
-  document.body.appendChild(wrap);
-  document.documentElement.classList.add("li-ce-open");
-  const page = wrap.querySelector(".ce-page"), body = wrap.querySelector(".ce-body"), file = wrap.querySelector("[data-file]");
-
-  const draw = (focusPath) => {
-    const y = body.scrollTop;
-    page.innerHTML = render(model);
-    body.scrollTop = y;
-    if (focusPath) {
-      const el = page.querySelector(`[data-k="${CSS.escape(focusPath)}"]`);
-      if (el) { el.focus({ preventScroll: false }); el.scrollIntoView({ block: "nearest" }); }
-    }
-  };
-  draw();
-  page.querySelector('.pf-case [data-k="title"]')?.focus({ preventScroll: true });
-
-  // Typing: keep the model in step (plain text; single-line fields stay one line).
-  page.addEventListener("input", (e) => {
-    const el = e.target.closest("[data-k]");
-    if (!el) return;
-    let v = el.innerText.replace(/ /g, " ");
-    v = el.hasAttribute("data-multi") ? v.replace(/\n+$/, "") : v.replace(/\s*\n\s*/g, " ");
-    setAt(model, el.dataset.k, v);
-    page.querySelectorAll(`[data-k="${CSS.escape(el.dataset.k)}"]`).forEach((o) => { if (o !== el) o.textContent = v; });
-    if (!el.textContent) el.innerHTML = ""; // so the placeholder shows again
-    dirty = true;
-    paintColours();
-  });
   // Colour swatches and the sample button follow the hex codes as you type or pick.
-  const paintColours = () => {
+  const paintColours = ({ page }) => {
     model.style.colors.forEach((x, i) => { const sw = page.querySelector(`[data-swatch="${i}"]`); if (sw) sw.style.background = HEX.test(x.hex.trim()) ? x.hex.trim() : "transparent"; });
     const b = model.style.button.trim(), ok = HEX.test(b);
     const sample = page.querySelector("[data-btn-sample]"), sw = page.querySelector('[data-swatch="button"]');
     if (sample) { sample.style.background = ok ? b : ""; sample.style.borderColor = ok ? b : ""; }
     if (sw) sw.style.background = ok ? b : "transparent";
   };
-  page.addEventListener("change", (e) => {
-    const pick = e.target.closest("[data-color]");
-    if (!pick) return;
-    setAt(model, pick.dataset.color, pick.value);
-    const field = page.querySelector(`[data-k="${CSS.escape(pick.dataset.color)}"]`);
-    if (field) field.textContent = pick.value;
-    dirty = true;
-    paintColours();
-  });
-  page.addEventListener("paste", (e) => {
-    const el = e.target.closest("[data-k]");
-    if (!el) return;
-    e.preventDefault();
-    let text = e.clipboardData?.getData("text/plain") || "";
-    if (!el.hasAttribute("data-multi")) text = text.replace(/\s*\n\s*/g, " ");
-    document.execCommand("insertText", false, text);
-  });
-  page.addEventListener("drop", (e) => { if (e.target.closest?.("[data-k]")) e.preventDefault(); });
-  page.addEventListener("keydown", (e) => {
-    const el = e.target.closest("[data-k]");
-    if (!el || e.key !== "Enter" || e.shiftKey && el.hasAttribute("data-multi")) return;
-    if (el.hasAttribute("data-para")) {
-      // Enter at the end of a paragraph starts the next one.
-      e.preventDefault();
-      const ks = el.dataset.k.split("."), i = Number(ks.pop()), path = ks.join(".");
-      getAt(model, path).splice(i + 1, 0, "");
-      dirty = true;
-      draw(`${path}.${i + 1}`);
-    } else if (!el.hasAttribute("data-multi")) { e.preventDefault(); el.blur(); }
-  });
-
-  // Images: tap one to replace it; "+ Screenshot" adds some.
-  let pickFor = null;
-  file.addEventListener("change", async () => {
-    const files = [...file.files];
-    file.value = "";
-    if (!files.length || !pickFor) return;
-    const target = pickFor;
-    pickFor = null;
-    try {
-      const urls = [];
-      for (const f of files) urls.push(await state.store.uploadPortfolioImage(f, f.name));
-      if (target === "shots") model.shots.push(...urls.map((src) => ({ src, alt: "" })));
-      else setAt(model, target, urls[0]);
-      dirty = true;
-      draw();
-    } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
-  });
-
-  const close = (force) => {
-    wrap.remove();
-    document.documentElement.classList.remove("li-ce-open");
-    document.removeEventListener("keydown", onKey);
-    if (open?.close === close) open = null;
-    if (!force) opts.onClose?.();
-  };
-  const cancel = async () => {
-    if (dirty && !(await confirmDialog("Discard your changes to this case study?", "Discard"))) return;
-    close();
-  };
-  const onKey = (e) => { if (e.key === "Escape" && !document.getElementById("li-modal")) { e.preventDefault(); cancel(); } };
-  document.addEventListener("keydown", onKey);
-
-  const save = async (btn) => {
-    const next = fromModel(model);
-    if (!next.title) { toast("Give the case study a title first.", "error"); page.querySelector('.pf-case [data-k="title"]')?.focus(); return; }
-    btn.disabled = true;
-    try {
-      await opts.save(next, original);
-      toast("Case study saved");
-      close(true);
-      opts.done?.();
-    } catch (err) { toast("Couldn't save: " + err.message, "error"); } finally { btn.disabled = false; }
-  };
 
   // Settings: what isn't visible text on the page.
-  const settings = () => openModal({
+  const settings = (ctx) => openModal({
     eyebrow: "Case study", title: "Settings", submitLabel: "Done",
     extraButtons: `${opts.onDelete ? `<button type="button" class="li-btn danger-ghost" data-case-delete>Delete</button>` : ""}<button type="button" class="li-btn ghost" data-case-form>Edit as a form</button>`,
     body: `
@@ -347,51 +207,66 @@ export function openCaseEditor(original, opts) {
       <label class="li-check-row full"><input type="checkbox" name="phone"${model.phone !== false ? " checked" : ""}> Show "Try the app" in a phone frame on computers</label>
       <label class="li-field full">Dashboard project <small class="li-muted">(shows its live progress)</small><select name="project"><option value="">None</option>${(state.projects || []).map((p) => `<option${model.project === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>`,
     onReady(f) {
-      f.querySelector("[data-case-form]").addEventListener("click", () => { closeModal(); close(true); opts.openForm(fromModel(model)); });
+      f.querySelector("[data-case-form]").addEventListener("click", () => { closeModal(); ctx.close(true); opts.openForm(fromModel(model)); });
       f.querySelector("[data-case-delete]")?.addEventListener("click", async () => {
-        if (await opts.onDelete()) { close(true); opts.done?.(); }
+        if (await opts.onDelete()) { ctx.close(true); opts.done?.(); }
       });
     },
     async onSubmit(v) {
       Object.assign(model, { status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "" });
-      dirty = true;
+      ctx.markDirty();
     },
   });
 
-  wrap.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-act]");
-    if (!b) return;
-    const { act, path } = b.dataset;
-    if (act === "cancel") return cancel();
-    if (act === "save") return save(b);
-    if (act === "settings") return settings();
-    if (act === "form") { close(true); return opts.openForm(fromModel(model)); }
-    if (act === "img" || act === "shots") { pickFor = act === "shots" ? "shots" : path; file.multiple = act === "shots"; return file.click(); }
-    const list = act === "del" ? null : getAt(model, path);
-    if (act === "del") {
+  return openPageEditor({
+    model, label: original ? "Edit case study" : "New case study", title: original ? "Editing on the page" : "New case study",
+    discardText: "Discard your changes to this case study?",
+    focus: '.pf-case [data-k="title"]',
+    render, settings, done: opts.done, onClose: opts.onClose,
+    async save(m, ctx) {
+      const next = fromModel(m);
+      if (!next.title) { toast("Give the case study a title first.", "error"); ctx.page.querySelector('.pf-case [data-k="title"]')?.focus(); return false; }
+      await opts.save(next, original);
+      toast("Case study saved");
+    },
+    onInput: (path, ctx) => paintColours(ctx),
+    onDelete(path, ctx) {
+      // A removed column takes its mark out of every row.
       const ks = path.split("."), i = Number(ks.pop());
-      getAt(model, ks.join(".")).splice(i, 1);
-      if (ks.join(".") === "competitive.columns") model.competitive.rows.forEach((r) => r.values.splice(i - 1, 1));
-      dirty = true;
-      return draw();
-    }
-    // Add, then put the cursor in the new piece of text.
-    if (act === "para" || act === "item") { list.push(""); dirty = true; return draw(`${path}.${list.length - 1}`); }
-    if (act === "persona") { list.push({ name: "", needs: [], frustrations: [], goals: [] }); dirty = true; return draw(`${path}.${list.length - 1}.name`); }
-    if (act === "flow") { list.push({ label: "", src: "" }); dirty = true; return draw(`${path}.${list.length - 1}.label`); }
-    if (act === "section") { list.push({ title: "", text: [""] }); dirty = true; return draw(`${path}.${list.length - 1}.title`); }
-    if (act === "mark") { setAt(model, path, NEXT_MARK[markOf(getAt(model, path))]); dirty = true; draw(); return page.querySelector(`[data-path="${CSS.escape(path)}"]`)?.focus(); }
-    if (act === "row") {
-      const c = model.competitive;
-      if (!c.columns.length) c.columns = ["Feature", "This app", "Competitor"];
-      c.rows.push({ feature: "", values: c.columns.slice(1).map(() => "no") });
-      dirty = true; return draw(`competitive.rows.${c.rows.length - 1}.feature`);
-    }
-    if (act === "col") { list.push(""); model.competitive.rows.forEach((r) => r.values.push("no")); dirty = true; return draw(`${path}.${list.length - 1}`); }
-    if (act === "iasection") { list.push({ title: "", items: [] }); dirty = true; return draw(`${path}.${list.length - 1}.title`); }
-    if (act === "color") { list.push({ name: "", hex: "" }); dirty = true; return draw(`${path}.${list.length - 1}.name`); }
+      if (ks.join(".") === "competitive.columns") ctx.model.competitive.rows.forEach((r) => r.values.splice(i - 1, 1));
+    },
+    wire(ctx) {
+      ctx.page.addEventListener("change", (e) => {
+        const pick = e.target.closest("[data-color]");
+        if (!pick) return;
+        setAt(model, pick.dataset.color, pick.value);
+        const field = ctx.page.querySelector(`[data-k="${CSS.escape(pick.dataset.color)}"]`);
+        if (field) field.textContent = pick.value;
+        ctx.markDirty();
+        paintColours(ctx);
+      });
+    },
+    actions: {
+      shots(path, ctx) { ctx.pickImages(path, (src) => ({ src, alt: "" })); return false; },
+      persona(path) { const l = getAt(model, path); l.push({ name: "", needs: [], frustrations: [], goals: [] }); return `${path}.${l.length - 1}.name`; },
+      flow(path) { const l = getAt(model, path); l.push({ label: "", src: "" }); return `${path}.${l.length - 1}.label`; },
+      section(path) { const l = getAt(model, path); l.push({ title: "", text: [""] }); return `${path}.${l.length - 1}.title`; },
+      iasection(path) { const l = getAt(model, path); l.push({ title: "", items: [] }); return `${path}.${l.length - 1}.title`; },
+      color(path) { const l = getAt(model, path); l.push({ name: "", hex: "" }); return `${path}.${l.length - 1}.name`; },
+      mark(path, ctx) {
+        setAt(model, path, NEXT_MARK[markOf(getAt(model, path))]);
+        ctx.markDirty();
+        ctx.draw();
+        ctx.page.querySelector(`[data-path="${CSS.escape(path)}"]`)?.focus();
+        return false;
+      },
+      row() {
+        const c = model.competitive;
+        if (!c.columns.length) c.columns = ["Feature", "This app", "Competitor"];
+        c.rows.push({ feature: "", values: c.columns.slice(1).map(() => "no") });
+        return `competitive.rows.${c.rows.length - 1}.feature`;
+      },
+      col(path) { const l = getAt(model, path); l.push(""); model.competitive.rows.forEach((r) => r.values.push("no")); return `${path}.${l.length - 1}`; },
+    },
   });
-
-  open = { close };
-  return { close };
 }
