@@ -2232,8 +2232,12 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const photo = r(".pf-s-portrait"), row = r(".pf-s-figure .pf-socials");
       const icons = [...document.querySelectorAll(".pf-s-figure .pf-social")].map((a) => [a.getAttribute("aria-label"), !!a.querySelector("svg"), a.textContent.trim(), a.getAttribute("href")]);
       const stripBg = getComputedStyle(document.querySelector(".pf-s-stats")).backgroundColor;
+      const { countStats } = await import(new URL("app/portfolio/count.js", location.href).href);
+      countStats(root); // the count-up wraps each number in spans: they keep the number's size
+      const numSize = [...document.querySelectorAll(".pf-s-stats b")].map((b) => getComputedStyle(b.querySelector("[aria-hidden]") || b).fontSize);
+      const labelSize = getComputedStyle(document.querySelector(".pf-s-stats > div > span")).fontSize;
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
-      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-btn"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
+      return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, numSize, labelSize, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-btn"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
           const st = getComputedStyle(b);
           return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), b.classList.contains("pf-btn--outline") && st.backgroundColor === "rgba(0, 0, 0, 0)", st.borderTopLeftRadius === "999px", Math.round(b.getBoundingClientRect().height), l.left >= i.right, Math.abs(Math.round((l.top + l.height / 2) - (i.top + i.height / 2))) <= 1, Math.abs(Math.round(page.right - b.getBoundingClientRect().right)), b.getBoundingClientRect().bottom <= hero.top]; })(),
         heroButtons: document.querySelectorAll(".pf-s-actions .pf-btn").length, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
@@ -2260,6 +2264,8 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     const [white, navy] = ["rgb(255, 255, 255)", "rgb(3, 4, 94)"];
     assert.deepEqual(m.stats, [["rgba(0, 0, 0, 0)", navy, ""], [navy, white, "is-hi"], ["rgba(0, 0, 0, 0)", navy, ""]], "white boxes with navy text; the middle one navy with white text");
     assert.equal(m.stripBg, white);
+    assert.deepEqual(m.numSize, ["26px", "26px", "26px"], "the numbers are 26px (twice the label)");
+    assert.equal(m.labelSize, "13px");
     assert.equal(m.bars.length, m.sections, "a strip before every section");
     assert.ok(m.bars.every((x) => x === "true"), "the strips are decorative");
     assert.equal(m.firstBarAfterStats, "pf-bars");

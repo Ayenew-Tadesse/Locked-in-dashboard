@@ -130,14 +130,15 @@
 .pf-s-open{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;font-size:13.5px;color:var(--ink-2);}
 .pf-s-open span{display:inline-flex;align-items:center;gap:6px;}
 .pf-s-open span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good);}
-.pf-s-stats b{font-size:30px;font-weight:800;color:var(--pf-stat-ink);font-variant-numeric:tabular-nums;}
+.pf-s-stats b{font-size:26px;line-height:1.15;font-weight:800;color:var(--pf-stat-ink);font-variant-numeric:tabular-nums;}
 .pf-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
-.pf-s-stats span{font-size:13px;color:var(--pf-stat-ink);}
+/* The label only: the number's own spans (count.js) keep the number's size. */
+.pf-s-stats > div > span{font-size:13px;color:var(--pf-stat-ink);}
 /* Light pages: white boxes, navy text; dark pages keep dark boxes and light text. */
 @supports (color: light-dark(#000, #fff)){ .pf-s-stats{--pf-stat-bg:light-dark(#FFFFFF, var(--surface));--pf-stat-ink:light-dark(var(--pf-navy), var(--ink));} }
 /* The middle number is highlighted: navy with white text (as in the mockup). */
 .pf-s-stats .is-hi{background:var(--pf-navy);}
-.pf-s-stats .is-hi b, .pf-s-stats .is-hi span{color:#FFFFFF;}
+.pf-s-stats .is-hi b, .pf-s-stats .is-hi > span{color:#FFFFFF;}
 .pf-cards{display:grid;grid-template-columns:repeat(auto-fit, minmax(min(260px, 100%), 1fr));gap:16px;}
 /* Featured projects: one sliding row that snaps to a card. 3 in view on a laptop, 2 on a
    tablet (up to 700px), 1 centred (up to 520px, neighbours peeking) on a phone. Arrows and dots appear only when it overflows. */
