@@ -9,6 +9,7 @@ import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { portfolioGithub } from "../github.js";
+import { openCaseEditor, META } from "./case-editor.js";
 
 // Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
 const EDITOR_SECTIONS = ["cases", "stats", "about", "skillgroups", "highlights", "experience", "process", "logs", "activity", "milestones", "plan", "contact"];
@@ -291,9 +292,11 @@ function wireCaseCards(el, hooks) {
   const grid = el.querySelector("#li-pf-cases");
   const redraw = () => { grid.innerHTML = caseCardsHtml(currentSite().cases || []); };
   const changed = () => { redraw(); hooks.saved(); };
+  // Tapping a card opens it on the page to edit; "Edit as a form" there opens the form.
   const edit = (id) => {
-    const c = (currentSite().cases || []).find((x) => x.id === id);
-    editCase(c || null, changed, c ? () => deleteCase(id) : null);
+    const c = (currentSite().cases || []).find((x) => x.id === id) || null;
+    const onDelete = c ? () => deleteCase(id) : null;
+    openCaseEditor(c, { save: storeCase, onDelete, done: changed, openForm: (draft) => editCase(c ? { ...draft, id: c.id } : draft, changed, onDelete, c) });
   };
   async function deleteCase(id) {
     const site = currentSite();
@@ -362,7 +365,7 @@ function wireCaseCards(el, hooks) {
   function cancel(e) { if (drag && e.pointerId === drag.id) end(false); }
   grid.addEventListener("click", (e) => {
     if (suppressClick) return;
-    if (e.target.closest("#li-pf-case-add")) return editCase(null, changed, null);
+    if (e.target.closest("#li-pf-case-add")) return edit(null);
     const card = e.target.closest("[data-case-card]");
     if (card) edit(card.dataset.caseCard);
   });
@@ -380,11 +383,26 @@ function wireCaseCards(el, hooks) {
 }
 
 // ---------------------------------------------------------------------------
-// Case study editor
+// Case study editor (the form; case-editor.js edits on the page)
 // ---------------------------------------------------------------------------
-const META = ["Role", "Type", "Platform", "Tools"];
 
-function editCase(original, done, onDelete) {
+/** Save a case study: replace the one it was (by id), or add it with a fresh id. */
+export async function storeCase(next, original) {
+  next = { ...next };
+  if (!next.id) next.id = next.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "case-" + Date.now().toString(36);
+  const site = currentSite();
+  site.cases = site.cases || [];
+  const i = original ? site.cases.findIndex((x) => x.id === original.id) : -1;
+  if (i >= 0) site.cases[i] = next;
+  else {
+    if (site.cases.some((x) => x.id === next.id)) next.id += "-" + Date.now().toString(36).slice(-4);
+    site.cases.push(next);
+  }
+  await saveSite(site);
+}
+
+// draft: what the form opens with; saved: the stored case it replaces (defaults to draft).
+function editCase(original, done, onDelete, saved = original) {
   const c = clone(original || { id: "", title: "", status: "live", shots: [], meta: META.map((label) => ({ label, value: "" })) });
   let shots = (c.shots || []).map((s) => ({ ...s }));
   let flow = (c.flow?.steps || []).map((s) => ({ ...s }));
@@ -477,7 +495,7 @@ function editCase(original, done, onDelete) {
     onReady(f) {
       f.querySelector("[data-case-delete]")?.addEventListener("click", async () => {
         // The confirm replaces this dialog; if you don't delete, the editor opens again.
-        if (!(await onDelete())) editCase(original, done, onDelete);
+        if (!(await onDelete())) editCase(original, done, onDelete, saved);
       });
       const draw = () => { f.querySelector("#li-pf-shots").innerHTML = shotsHtml() + `<label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" multiple data-shots hidden></label>`; };
       readPersonas = () => { personas = [...f.querySelectorAll("[data-persona]")].map((row, i) => ({
@@ -516,7 +534,7 @@ function editCase(original, done, onDelete) {
       const [head, ...rows] = lines(v.compTable).map((l) => l.split("|").map((x) => x.trim()));
       const next = {
         ...c,
-        id: c.id || v.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "case-" + Date.now().toString(36),
+        id: c.id || "",
         title: v.title.trim(), tag: v.tag.trim(), cardDesc: v.cardDesc.trim(), status: v.status === "progress" ? "progress" : "live",
         liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
         shots, meta: [...META.map((l) => ({ label: l, value: v["meta_" + l].trim() })), ...(c.meta || []).filter((m) => !META.includes(m.label))].filter((m) => m.value),
@@ -529,15 +547,7 @@ function editCase(original, done, onDelete) {
         style: { ...(c.style || {}), intro: v.styleIntro.trim(), font: v.styleFont.trim(), button: v.styleButton.trim(), sampleHead: v.styleHead.trim(), sampleBody: v.styleBody.trim(),
           colors: lines(v.styleColors).map((l) => { const m = l.match(/^(.*?)\s*(#[0-9a-f]{3,8})$/i); return m ? { name: m[1].trim() || m[2], hex: m[2] } : null; }).filter(Boolean) },
       };
-      const site = currentSite();
-      site.cases = site.cases || [];
-      const i = site.cases.findIndex((x) => x.id === (original?.id ?? "\u0000"));
-      if (i >= 0) site.cases[i] = next;
-      else {
-        if (site.cases.some((x) => x.id === next.id)) next.id += "-" + Date.now().toString(36).slice(-4);
-        site.cases.push(next);
-      }
-      await saveSite(site);
+      await storeCase(next, saved);
       toast("Case study saved");
       done();
     },

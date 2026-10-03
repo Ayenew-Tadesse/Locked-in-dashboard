@@ -323,3 +323,45 @@ html.pf-phone-open{overflow:hidden;}
 .pf-phone__actions .pf-btn--outline{color:#fff;border-color:rgba(255,255,255,.55);}
 .pf-phone__actions .pf-btn--outline:hover{border-color:#fff;}
 @media (prefers-reduced-motion: reduce){.pf-phone-overlay{animation:none;}.pf-phone__loading span{animation-duration:2s;}}
+
+/* ---- Editing a case study on the page (dashboard only, case-editor.js) ---- */
+#li-ce{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;background:var(--bg);}
+html.li-ce-open{overflow:hidden;}
+html.li-ce-open #li-chat-fab{display:none;}
+.ce-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;padding-top:max(10px, env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--line);}
+.ce-bar__title{flex:1;min-width:0;font-weight:700;font-size:14px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ce-bar__title small{display:block;font-weight:400;font-size:12px;color:var(--ink-3);}
+.ce-body{flex:1;overflow:auto;padding:24px clamp(16px, 6vw, 80px) 120px;overscroll-behavior:contain;}
+.ce-page{max-width:980px;}
+/* Editable text: a soft outline, stronger while typing; the placeholder shows when empty. */
+.ce-t{display:inline-block;min-width:2ch;border-radius:6px;outline:1px dashed color-mix(in srgb, var(--accent) 35%, transparent);outline-offset:3px;cursor:text;white-space:pre-wrap;overflow-wrap:anywhere;}
+p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
+.ce-t:hover{outline-color:color-mix(in srgb, var(--accent) 70%, transparent);}
+.ce-t:focus{outline:2px solid var(--accent);background:color-mix(in srgb, var(--accent) 6%, transparent);}
+.ce-t:empty::before{content:attr(data-ph);color:var(--ink-3);font-weight:400;font-style:italic;pointer-events:none;}
+.ce-item{position:relative;}
+.ce-para{display:flex;align-items:flex-start;gap:6px;}
+.ce-para > .ce-t{flex:1;margin:0 0 12px;}
+.ce-add{display:inline-flex;align-items:center;gap:4px;min-height:34px;padding:6px 12px;margin:4px 6px 4px 0;border:1px dashed color-mix(in srgb, var(--accent) 55%, transparent);border-radius:999px;
+  background:transparent;color:var(--accent);font:600 13px/1.2 inherit;font-family:inherit;cursor:pointer;}
+.ce-add:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);}
+.ce-del{flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-3);font-size:12px;cursor:pointer;}
+.ce-del:hover{color:#C0392B;border-color:#C0392B;}
+.pf-persona.ce-item > .ce-del, .ce-block.ce-item > .ce-del{position:absolute;top:8px;right:8px;}
+.ce-shot > .ce-del{position:absolute;top:6px;right:6px;}
+.pf-steps li.ce-item, .pf-flow li.ce-item{padding-right:34px;}
+.pf-steps li.ce-item > .ce-del, .pf-flow li.ce-item > .ce-del{position:absolute;top:6px;right:4px;}
+.ce-img{display:block;padding:0;border:0;background:none;cursor:pointer;border-radius:12px;outline:1px dashed color-mix(in srgb, var(--accent) 35%, transparent);outline-offset:3px;}
+.ce-img:hover{outline:2px solid var(--accent);}
+.ce-img--round{border-radius:50%;}
+.ce-img img{display:block;}
+.ce-shots{align-items:center;}
+.ce-add--shot{min-height:120px;padding:0 18px;border-radius:14px;}
+.ce-noimg{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:9/16;max-height:220px;color:var(--accent);font-weight:600;font-size:13px;background:color-mix(in srgb, var(--accent) 6%, transparent);border-radius:10px;}
+.ce-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.ce-chip{display:inline-flex;align-items:center;gap:4px;font-style:normal;}
+.ce-chip .ce-del{width:22px;height:22px;font-size:10px;}
+.ce-demo .ce-t{min-width:4ch;}
+.ce-section-add{text-align:center;margin:22px 0 6px;}
+.ce-note{margin:22px 0 0;padding:12px 14px;border-radius:12px;background:var(--surface-2);color:var(--ink-2);font-size:13.5px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+@media (max-width:640px){ .ce-bar{padding:8px 10px;} .ce-bar__title small{display:none;} .ce-body{padding:16px 12px 120px;} .ce-del{width:32px;height:32px;} }
