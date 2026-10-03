@@ -435,3 +435,10 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .ce-link{font-size:12px;color:var(--ink-3);max-width:100%;overflow-wrap:anywhere;}
 .ce-site .pf-s-contact + .ce-add{margin-top:12px;}
 .ce-li > .ce-t{display:inline;}
+/* Preview in the page editor: the clean page, as hiring managers see it. */
+#li-ce.ce-preview .ce-add, #li-ce.ce-preview .ce-del, #li-ce.ce-preview .ce-toggle, #li-ce.ce-preview .ce-sec-note,
+#li-ce.ce-preview .ce-cardwrap, #li-ce.ce-preview .ce-hidden, #li-ce.ce-preview .ce-link, #li-ce.ce-preview .ce-chiptoggle:not(.on),
+#li-ce.ce-preview .ce-sechead--small, #li-ce.ce-preview .ce-noimg, #li-ce.ce-preview .ce-roles:has(.ce-t:empty){display:none !important;}
+#li-ce.ce-preview .ce-t:empty{display:none;}
+#li-ce.ce-preview .ce-t, #li-ce.ce-preview .ce-img, #li-ce.ce-preview .ce-mark, #li-ce.ce-preview .ce-chiptoggle{outline:none !important;border-color:transparent;background:none;cursor:default;}
+#li-ce.ce-preview .ce-item{padding-right:0;}

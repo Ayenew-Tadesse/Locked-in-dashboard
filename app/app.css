@@ -884,3 +884,13 @@ html.app-mode:not(.li-page) .li-view{min-height:100vh;min-height:100dvh;}
 #li-member-projects .li-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .li-view-head .li-link + .card-label{display:block;margin-top:8px;}
 .li-avatar-group{background:var(--accent-soft);color:var(--accent);font-size:13px;}
+/* ☰ menu: Case studies dropdown. */
+.li-menu-drop .li-menu-caret{margin-left:auto;font-style:normal;color:var(--ink-3);transition:transform .15s;}
+.li-menu-drop[aria-expanded="true"] .li-menu-caret{transform:rotate(180deg);}
+.li-menu-cases{border-bottom:1px solid var(--line);background:var(--surface-2);}
+.li-menu-case{display:flex;align-items:center;gap:10px;width:100%;margin:0;padding:11px 16px 11px 44px;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer;}
+.li-menu-case span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.li-menu-case:hover, .li-menu-case:focus-visible{background:var(--accent-soft);outline:none;}
+.li-menu-case__tag{flex:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:color-mix(in srgb, var(--good) 15%, transparent);color:var(--good);}
+.li-menu-case__tag.prog{background:var(--surface);color:var(--ink-3);}
+.li-menu-case--new{color:var(--accent);font-weight:600;}

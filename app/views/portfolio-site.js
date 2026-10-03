@@ -358,11 +358,8 @@ function wireCaseCards(el, hooks) {
       openForm: (draft) => editCase(c ? { ...draft, id: c.id } : draft, changed, onDelete, c) });
   };
   async function deleteCase(id) {
-    const site = currentSite();
-    const c = (site.cases || []).find((x) => x.id === id);
-    if (!c || !(await confirmDialog(`Delete the case study "${c.title}"?`))) return false;
-    site.cases = site.cases.filter((x) => x.id !== id);
-    await saveSite(site); toast("Case study deleted"); changed();
+    if (!(await removeCase(id))) return false;
+    changed();
     return true;
   }
   async function swap(a, b) {
@@ -445,6 +442,29 @@ function wireCaseCards(el, hooks) {
 // ---------------------------------------------------------------------------
 // Case study editor (the form; case-editor.js edits on the page)
 // ---------------------------------------------------------------------------
+
+/** Delete a case study (after asking). */
+async function removeCase(id) {
+  const site = currentSite();
+  const c = (site.cases || []).find((x) => x.id === id);
+  if (!c || !(await confirmDialog(`Delete the case study "${c.title}"?`))) return false;
+  site.cases = site.cases.filter((x) => x.id !== id);
+  await saveSite(site);
+  toast("Case study deleted");
+  portfolioChanged();
+  return true;
+}
+
+/** Tell whoever shows the portfolio (the Portfolio page) that it changed. */
+export const portfolioChanged = () => document.dispatchEvent(new CustomEvent("li:portfolio-changed"));
+
+/** Open a case study (or a new one, id null) in the page editor from anywhere (the ☰ menu). */
+export function openCaseStudy(id) {
+  const c = id ? (currentSite().cases || []).find((x) => x.id === id) || null : null;
+  const onDelete = c ? () => removeCase(c.id) : null;
+  openCaseEditor(c, { save: storeCase, onDelete, done: portfolioChanged,
+    openForm: (draft) => editCase(c ? { ...draft, id: c.id } : draft, portfolioChanged, onDelete, c) });
+}
 
 /** Save a case study: replace the one it was (by id), or add it with a fresh id. */
 export async function storeCase(next, original) {
