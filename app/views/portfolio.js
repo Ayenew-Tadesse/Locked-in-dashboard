@@ -90,7 +90,11 @@ function previewData() {
   });
 }
 
+let onChanged = null; // the Portfolio page redraws when a case study is saved from the ☰ menu
 export function renderPortfolioPage(el) {
+  if (onChanged) document.removeEventListener("li:portfolio-changed", onChanged);
+  onChanged = () => { if (el.isConnected && location.hash.startsWith("#/portfolio")) renderPortfolioPage(el); };
+  document.addEventListener("li:portfolio-changed", onChanged);
   if (state.isColleague) { el.innerHTML = `<p class="li-empty">The portfolio is for the team owner.</p>`; return; }
   previewChannel();
   draft = null;

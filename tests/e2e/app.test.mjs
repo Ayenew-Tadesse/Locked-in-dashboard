@@ -353,7 +353,7 @@ test("tablets and computers: the ☰ sits at the right of the tab row and opens 
   assert.equal(await page.locator("#li-nav-extra .li-nav-link").count(), 0, "no inline menu links");
   await desk.click();
   assert.equal(await desk.getAttribute("aria-expanded"), "true");
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
   const panel = await page.locator("#li-menu .li-menu").boundingBox();
   assert.ok(panel.x + panel.width >= 1279 && panel.x > 640, "slides in on the right");
   await page.click('#li-menu a[href="#/settings"]');
@@ -1949,7 +1949,7 @@ test("☰ menu: Profile, Daily report, Settings, Light / Dark mode (remembered) 
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Resume", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
   // Light background: the row switches it and then offers Dark mode.
   await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
@@ -2638,6 +2638,60 @@ test("portfolio: edit the home page on the page (intro, photo, numbers, skills, 
   await page.waitForSelector("#li-ce.ce-site");
   await ce('[data-act="cancel"]').click();
   await page.waitForSelector("#li-ce", { state: "detached" });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("menu: Case studies dropdown opens each one to view (Preview) and edit; saving updates the portfolio", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  const ce = (sel) => page.locator(`#li-ce ${sel}`);
+  const menuCases = async () => {
+    const btn = (await page.locator("#li-menu-btn").isVisible()) ? "#li-menu-btn" : (await page.locator("#li-menu-btn-desk").isVisible()) ? "#li-menu-btn-desk" : null;
+    if (btn) await page.click(btn);
+    else await page.evaluate(async () => (await import(new URL("app/ui/menu.js", location.href).href)).openMenu()); // a page without the tab row
+    await page.waitForSelector("#li-menu:not([hidden])");
+    if (await page.locator("#li-menu-cases[hidden]").count()) await page.click("#li-menu [data-cases-toggle]");
+    return page.locator("#li-menu .li-menu-case").allInnerTexts();
+  };
+  // The dropdown lists every case study (Live / In progress) and + New.
+  const items = await menuCases();
+  assert.deepEqual(items.map((t) => t.replace(/\s+/g, " ").trim()), ["Hid-Go Flight Booking App Live", "Guxo Bus Booking App Live", "Modern Hotel Booking App In progress", "+ New case study"]);
+  assert.equal(await page.getAttribute("#li-menu [data-cases-toggle]", "aria-expanded"), "true");
+
+  // Tap one: it opens on the page. Preview shows it clean (nothing editable); Edit goes back.
+  await page.click('#li-menu [data-case-open="guxo"]');
+  await page.waitForSelector("#li-ce");
+  assert.equal(await page.locator("#li-menu").isHidden(), true);
+  await ce('[data-act="preview"]').click();
+  assert.equal(await ce('.pf-case [data-k="title"]').getAttribute("contenteditable"), "false");
+  assert.equal(await ce(".ce-add").first().isVisible(), false, "no + buttons in Preview");
+  assert.equal(await ce(".ce-del").first().isVisible(), false, "no ✕ in Preview");
+  await ce('[data-act="preview"]').click();
+  assert.equal(await ce('[data-act="preview"]').innerText(), "Preview");
+  await page.fill('#li-ce .pf-case [data-k="title"]', "Guxo Bus, from the menu");
+  await ce('[data-act="save"]').click();
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  // Linked: the Portfolio page (open behind) and its hiring-manager preview show it at once.
+  await page.waitForFunction(() => [...document.querySelectorAll("#li-pf-cases [data-case-card]")].some((c) => /Guxo Bus, from the menu/.test(c.textContent)));
+  await page.locator('#li-pf-preview [data-case="guxo"]').first().click();
+  assert.equal(await page.locator("#li-pf-preview .pf-case__title").innerText(), "Guxo Bus, from the menu");
+
+  // From another page: + New case study, saved, shows in the menu and on the portfolio.
+  await page.evaluate(() => { location.hash = "#/"; });
+  await page.waitForSelector("#li-nav .li-nav-link");
+  const before = await menuCases();
+  assert.ok(before.some((t) => /Guxo Bus, from the menu/.test(t)), "the dropdown has the new title");
+  await page.click('#li-menu [data-case-open=""]');
+  await page.waitForSelector("#li-ce");
+  await page.fill('#li-ce .pf-case [data-k="title"]', "Menu-made case study");
+  await ce('[data-act="save"]').click();
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  const after = await menuCases();
+  assert.ok(after.some((t) => /Menu-made case study/.test(t)));
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForFunction(() => [...document.querySelectorAll("#li-pf-cases [data-case-card]")].some((c) => /Menu-made case study/.test(c.textContent)));
   assert.deepEqual(page.errors, []);
   await page.close();
 });

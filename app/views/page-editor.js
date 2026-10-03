@@ -51,6 +51,7 @@ export function openPageEditor(o) {
     <header class="ce-bar">
       <button type="button" class="li-btn ghost" data-act="cancel">Cancel</button>
       <span class="ce-bar__title">${esc(o.title)} <small>Tap text to change it · + to add</small></span>
+      <button type="button" class="li-btn ghost" data-act="preview" aria-pressed="false" title="See it as hiring managers do">Preview</button>
       ${o.settings ? `<button type="button" class="li-btn ghost" data-act="settings">Settings</button>` : ""}
       <button type="button" class="li-btn primary" data-act="save">Save</button>
     </header>
@@ -60,6 +61,14 @@ export function openPageEditor(o) {
   document.documentElement.classList.add("li-ce-open");
   const page = wrap.querySelector(".ce-page"), body = wrap.querySelector(".ce-body"), file = wrap.querySelector("[data-file]");
 
+  // Preview: the page without outlines, + / ✕ or hints (and nothing editable), as hiring managers see it.
+  let preview = false;
+  const applyPreview = () => {
+    wrap.classList.toggle("ce-preview", preview);
+    page.querySelectorAll("[data-k]").forEach((el) => el.setAttribute("contenteditable", preview ? "false" : "true"));
+    const b = wrap.querySelector('[data-act="preview"]');
+    if (b) { b.textContent = preview ? "Edit" : "Preview"; b.setAttribute("aria-pressed", String(preview)); }
+  };
   const ctx = {
     model, page, wrap,
     markDirty() { dirty = true; },
@@ -72,6 +81,7 @@ export function openPageEditor(o) {
         const el = page.querySelector(`[data-k="${CSS.escape(focusPath)}"]`);
         if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); }
       }
+      applyPreview();
       o.afterDraw?.(ctx);
     },
     close: (force) => close(force),
@@ -162,7 +172,9 @@ export function openPageEditor(o) {
     const { act, path } = b.dataset;
     if (act === "cancel") return cancel();
     if (act === "save") return save(b);
+    if (act === "preview") { preview = !preview; applyPreview(); body.scrollTop = 0; return; }
     if (act === "settings") return o.settings(ctx);
+    if (preview) return; // nothing changes while previewing
     if (act === "img") { pickFor = { path }; file.multiple = false; return file.click(); }
     if (act === "del") {
       const ks = path.split("."), i = Number(ks.pop());

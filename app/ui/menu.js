@@ -1,4 +1,4 @@
-// The ☰ menu (top left): Profile, Daily report, Projects (owner), Settings, Light / Dark mode, and Log out (the
+// The ☰ menu (top left): Profile, Daily report, Projects (owner), Portfolio, Case studies (a dropdown), Resume, Settings, Light / Dark mode, and Log out (the
 // front-page Log out button is hidden; the menu presses it).
 import { state } from "../state.js";
 import { esc } from "./dom.js";
@@ -54,6 +54,16 @@ export function setupMenu({ onLogout } = {}) {
     if (t) { applyTheme(t.dataset.theme); renderMenu(); }
     if (e.target.closest("[data-logout]")) onLogout?.();
     if (e.target.closest("[data-open-report]")) { closeMenu(); openDailyReport(); }
+    if (e.target.closest("[data-cases-toggle]")) {
+      try { localStorage.setItem(CASES_KEY, casesOpen() ? "0" : "1"); } catch { /* stays as it is */ }
+      renderMenu();
+      menu.querySelector("[data-cases-toggle]")?.focus();
+    }
+    const one = e.target.closest("[data-case-open]");
+    if (one) {
+      closeMenu();
+      import("../views/portfolio-site.js").then((m) => m.openCaseStudy(one.dataset.caseOpen || null));
+    }
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) closeMenu(); });
 }
@@ -74,12 +84,26 @@ function renderMenu() {
     ${state.groups?.length ? link("group", "Project groups", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.5"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M15.5 14.8c2.9-.4 5.5 1.4 5.5 4.7"/></svg>`) : ""}
     ${state.isManager && state.projects !== undefined ? link("projects", "Projects", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`) : ""}
     ${!state.isColleague ? link("portfolio", "Portfolio", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>`) : ""}
+    ${!state.isColleague ? casesMenu() : ""}
     ${!state.isColleague ? link("resume", "Resume", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>`) : ""}
     ${link("settings", "Settings", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`)}
     <button type="button" class="li-menu-link" data-theme="${theme === "dark" ? "light" : "dark"}" aria-label="Switch to ${theme === "dark" ? "light" : "dark"} background">${theme === "dark"
       ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Light mode</span>`
       : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Dark mode</span>`}</button>
     ${logoutShown() ? `<button type="button" class="li-menu-link li-menu-logout" data-logout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Log out</span></button>` : ""}`;
+}
+
+// Case studies: a dropdown of yours (as on your portfolio); tap one to view and edit it on the page.
+const CASES_KEY = "li_menu_cases";
+const casesOpen = () => { try { return localStorage.getItem(CASES_KEY) === "1"; } catch { return false; } };
+function casesMenu() {
+  const cases = state.settings?.preferences?.portfolio?.site?.cases || [];
+  const open = casesOpen();
+  return `<button type="button" class="li-menu-link li-menu-drop" data-cases-toggle aria-expanded="${open}" aria-controls="li-menu-cases"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h8M8 16h5"/></svg><span>Case studies</span><i class="li-menu-caret" aria-hidden="true">&#9662;</i></button>
+    <div class="li-menu-cases" id="li-menu-cases"${open ? "" : " hidden"}>
+      ${cases.map((c) => `<button type="button" class="li-menu-case" data-case-open="${esc(c.id)}"><span>${esc(c.title || "Untitled case study")}</span><small class="li-menu-case__tag${c.status === "progress" ? " prog" : ""}">${c.status === "progress" ? "In progress" : "Live"}</small></button>`).join("")}
+      <button type="button" class="li-menu-case li-menu-case--new" data-case-open="">+ New case study</button>
+    </div>`;
 }
 
 /**
