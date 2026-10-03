@@ -147,9 +147,65 @@ const BARS = `<div class="pf-bars" aria-hidden="true"></div>`;
 /** The sections that have content, with the strip before each one. */
 const withBars = (sections) => sections.filter(Boolean).map((x) => BARS + x).join("");
 
+/** What shows next to your introduction: "illustration" (the default), "photo" or "none". */
+export const pictureOf = (s) => (["illustration", "photo", "none"].includes(s?.picture) ? s.picture : "illustration");
+
+/**
+ * A product-designer scene (no person): a phone and a tablet showing app
+ * screens, with colour swatches, a type sample, a pen tool and a cursor.
+ * Drawn in the page's own colours, so it follows light and dark themes.
+ */
+export const ILLUSTRATION = `<svg class="pf-ill pf-s-portrait" viewBox="0 0 480 440" role="img" aria-label="Illustration: app screens on a phone and a tablet, with design tools">
+  <circle class="bg" cx="250" cy="225" r="192"/>
+  <g class="card" transform="rotate(-6 175 195)">
+    <rect class="fr" x="40" y="100" width="270" height="190" rx="18"/>
+    <rect class="sf" x="52" y="112" width="246" height="166" rx="8"/>
+    <path class="nv" d="M60 112h230a8 8 0 0 1 8 8v20H52v-20a8 8 0 0 1 8-8z"/>
+    <circle class="sf" cx="68" cy="126" r="5"/><rect class="sf o" x="80" y="123" width="56" height="6" rx="3"/>
+    <rect class="s2" x="64" y="150" width="124" height="116" rx="8"/>
+    <rect class="ln" x="74" y="160" width="60" height="6" rx="3"/>
+    ${[48, 70, 38, 86, 60, 76].map((h, i) => `<rect class="ac" x="${76 + i * 18}" y="${256 - h}" width="10" height="${h}" rx="3"/>`).join("")}
+    <rect class="s2" x="198" y="150" width="88" height="52" rx="8"/>
+    <rect class="ln" x="208" y="160" width="40" height="6" rx="3"/><rect class="tx" x="208" y="174" width="56" height="12" rx="4"/>
+    <rect class="s2" x="198" y="212" width="88" height="54" rx="8"/>
+    <circle class="gd" cx="216" cy="230" r="9"/><rect class="ln" x="232" y="226" width="44" height="6" rx="3"/><rect class="ln" x="208" y="248" width="66" height="6" rx="3"/>
+  </g>
+  <g class="card" transform="rotate(5 345 270)">
+    <rect class="fr" x="270" y="118" width="150" height="304" rx="26"/>
+    <rect class="sf" x="280" y="128" width="130" height="284" rx="18"/>
+    <rect class="fr" x="325" y="136" width="40" height="8" rx="4"/>
+    <rect class="as" x="290" y="156" width="110" height="50" rx="10"/>
+    <rect class="ac" x="300" y="168" width="54" height="7" rx="3.5"/><rect class="ln" x="300" y="184" width="80" height="6" rx="3"/>
+    <rect class="s2" x="290" y="216" width="110" height="40" rx="8"/>
+    <circle class="ac" cx="306" cy="236" r="8"/><rect class="ln" x="320" y="228" width="60" height="6" rx="3"/><rect class="ln" x="320" y="240" width="40" height="6" rx="3"/>
+    <rect class="s2" x="290" y="264" width="110" height="40" rx="8"/>
+    <circle class="nv" cx="306" cy="284" r="8"/><rect class="ln" x="320" y="276" width="56" height="6" rx="3"/><rect class="ln" x="320" y="288" width="34" height="6" rx="3"/>
+    <rect class="s2" x="290" y="312" width="110" height="34" rx="8"/>
+    <rect class="nv" x="290" y="364" width="110" height="32" rx="8"/><rect class="sf" x="322" y="377" width="46" height="6" rx="3"/>
+  </g>
+  <g class="card"><rect class="sf st" x="358" y="36" width="104" height="48" rx="12"/>
+    <circle class="ac" cx="382" cy="60" r="11"/><circle class="nv" cx="410" cy="60" r="11"/><circle class="gd" cx="438" cy="60" r="11"/></g>
+  <g class="card"><rect class="sf st" x="22" y="34" width="84" height="64" rx="12"/>
+    <text class="tx" x="64" y="78" text-anchor="middle" font-size="30" font-family="inherit">Aa</text></g>
+  <g class="card"><rect class="sf st" x="40" y="318" width="168" height="76" rx="12"/>
+    <path class="pen" d="M60 376 C 90 320, 130 392, 188 340"/>
+    <rect class="sf pt" x="55" y="371" width="10" height="10" rx="2"/><rect class="sf pt" x="183" y="335" width="10" height="10" rx="2"/>
+    <circle class="ac" cx="90" cy="338" r="4"/><circle class="ac" cx="150" cy="384" r="4"/>
+    <path class="hl" d="M90 338 L124 357 L150 384"/></g>
+  <path class="cur" d="M246 300 l0 34 l9 -9 l7 15 l7 -3 l-7 -15 l12 0 z"/>
+  <circle class="ac o" cx="448" cy="170" r="6"/><circle class="nv o" cx="30" cy="250" r="5"/><circle class="ac o" cx="232" cy="28" r="4"/>
+</svg>`;
+
+/** The picture beside your introduction: the illustration, your photo, or nothing. */
+export function heroPicture(s, name) {
+  const pick = pictureOf(s);
+  if (pick === "illustration") return ILLUSTRATION;
+  return pick === "photo" ? img(s.portrait, `Portrait of ${name}`, "pf-s-portrait") : "";
+}
+
 function home(data, live) {
   const s = data.site, h = s.hero || {}, name = h.name || data.about?.name || "";
-  const icons = socialIcons(s, data.about), portrait = img(s.portrait, `Portrait of ${name}`, "pf-s-portrait");
+  const icons = socialIcons(s, data.about), portrait = heroPicture(s, name);
   const social = icons ? `<nav class="pf-socials" aria-label="Social">${icons}</nav>` : "";
   const resumeCls = "pf-btn pf-btn--outline pf-resume-btn"; // fills like Download PDF on hover
   const resume = hasResume(s) ? `<a class="${resumeCls}" href="#page=resume" data-resume>${RESUME_ICON}<span>Resume</span></a>` : link(s.resume, `${RESUME_ICON}<span>Resume</span>`, resumeCls);

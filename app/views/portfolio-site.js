@@ -10,7 +10,7 @@ import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { portfolioGithub } from "../github.js";
 import { openCaseEditor, META, deviceField } from "./case-editor.js";
-import { deviceOf } from "../portfolio/site.js";
+import { deviceOf, pictureOf } from "../portfolio/site.js";
 import { projectOrderFromCases } from "../core/project-links.js";
 import { openSiteEditor } from "./site-editor.js";
 
@@ -66,6 +66,7 @@ export async function savePortfolioPage(m) {
     description: t(m.hero.description), open: { ...m.hero.open }, roles: t(m.hero.roles) };
   site.resume = t(m.resume);
   site.portrait = imgUrl(m.portrait);
+  site.picture = m.picture;
   site.stats = m.stats.map((x) => ({ num: t(x.num), label: t(x.label) })).filter((x) => x.num || x.label).slice(0, 4);
   site.about = m.about.map((x) => String(x).replace(/\s+/g, " ").trim()).filter(Boolean);
   site.skills = m.skills.map((g) => ({ title: t(g.title), items: g.items.map(t).filter(Boolean) })).filter((g) => g.title || g.items.length);
@@ -134,7 +135,9 @@ export function editorHtml() {
         </div></div>
         <label class="li-field">Roles I'm looking for<input name="roles" maxlength="200" value="${esc(h.roles || "")}" placeholder="e.g. Senior Product Designer, Lead UX"></label>
         <label class="li-field full">Resume link <small class="li-muted">(a URL or mailto:)</small><input name="resume" maxlength="500" value="${esc(s.resume || "")}"></label>
-        <div class="li-field full"><span>Photo</span><div class="li-pf-imgs" id="li-pf-portrait">${imgUrl(s.portrait) ? `<figure><img src="${esc(s.portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove photo">&#10005;</button></figure>` : ""}
+        <label class="li-field full">Picture beside your intro<select name="picture">
+          ${[["illustration", "Illustration"], ["photo", "My photo"], ["none", "No picture"]].map(([v, l]) => `<option value="${v}"${pictureOf(s) === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <div class="li-field full"><span>Photo <small class="li-muted">(shown when the picture is "My photo")</small></span><div class="li-pf-imgs" id="li-pf-portrait">${imgUrl(s.portrait) ? `<figure><img src="${esc(s.portrait)}" alt="Portrait"><button type="button" class="li-icon-btn" data-remove-portrait aria-label="Remove photo">&#10005;</button></figure>` : ""}
           <label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" data-portrait hidden></label></div></div>`)}
       ${section("stats", "Numbers", `<div class="li-pf-stats-edit">${stats.map((x, i) => `<div class="li-pf-stat-edit">
           <input name="stat_num_${i}" maxlength="12" value="${esc(x.num || "")}" placeholder="${["e.g. 5+", "e.g. 20+", "e.g. 10+", "e.g. 3"][i]}" aria-label="Number ${i + 1}">
@@ -279,6 +282,7 @@ export function wireEditor(el, hooks) {
       description: f.description.value.trim(), open, roles: f.roles.value.trim() };
     site.resume = f.resume.value.trim();
     site.portrait = portrait;
+    site.picture = f.picture.value;
     site.stats = [0, 1, 2, 3].map((i) => ({ num: f["stat_num_" + i].value.trim(), label: f["stat_label_" + i].value.trim() })).filter((x) => x.num || x.label);
     site.about = String(f.about.value).split(/\n\s*\n/).map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
     site.skills = rows("#li-pf-skill-groups", ["title", "items"]).map((g) => ({ title: g.title, items: lines(g.items) })).filter((g) => g.title || g.items.length);
