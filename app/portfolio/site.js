@@ -133,7 +133,7 @@ export function cardThumb(c, { tag = "div", slots = false } = {}) {
   // Without chosen screens, a project with one or two screenshots shows that many phones; otherwise three.
   const n = chosen || !shots.length ? 3 : shots.length;
   const phones = Array.from({ length: n }, (_, i) => `<span class="pf-mini-phone"${slot(i)}><span class="pf-mini-phone__screen">
-    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${shots[i] ? img(shots[i], alt(i)) : placeholderScreen(i === 0 ? "Screens coming soon" : "")}<span class="pf-mini-phone__home" aria-hidden="true"></span></span></span>`);
+    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${shots[i] ? img(shots[i], alt(i)) : placeholderScreen(i === 0 ? "Screens coming soon" : "")}</span></span>`);
   return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
 }
 

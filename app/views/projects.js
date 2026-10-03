@@ -130,7 +130,8 @@ export function openProjectForm(p = {}) {
         name: v.name.trim(), code: v.code.trim() || null, description: v.description.trim() || null, category: v.category.trim() || null, stage: v.stage.trim() || null,
         status: v.status, facts: v.facts.split("\n").map((s) => s.trim()).filter(Boolean), links, checklist,
       });
-      toast(editing ? (synced ? `Project saved · ${synced} updated` : "Project saved") : "Project added");
+      toast(editing ? (synced ? `Project saved · ${synced} updated` : "Project saved")
+        : { created: "Project added · case study created", linked: "Project added · linked to its case study" }[synced] || "Project added");
     },
   });
 }

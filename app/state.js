@@ -56,6 +56,8 @@ export const state = {
 const listeners = new Set();
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function emit() { listeners.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } }); }
+/** Redraws the open page (after a change it can't see, e.g. a new case study linked to a project). */
+export const refresh = () => emit();
 
 let toastFn = (msg) => console.log(msg);
 export function setToast(fn) { toastFn = fn; }

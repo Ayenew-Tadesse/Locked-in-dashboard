@@ -1,9 +1,9 @@
 // Saving or deleting a project, and bringing everything about it along:
 // its case studies (and so the portfolio), milestones and tasks
 // (core/project-links.js decides what changes). Used by the Projects page.
-import { state, saveProject, deleteProject, placeProject, reload, toast } from "./state.js";
-import { planProjectSync, planProjectDelete, describeSync, caseOrderFromProjects } from "./core/project-links.js";
-import { currentSite, saveSite, portfolioChanged } from "./views/portfolio-site.js";
+import { state, saveProject, deleteProject, placeProject, reload, refresh, toast } from "./state.js";
+import { planProjectSync, planProjectDelete, describeSync, caseOrderFromProjects, casesOfProject, caseFromProject } from "./core/project-links.js";
+import { currentSite, saveSite, portfolioChanged, storeCase } from "./views/portfolio-site.js";
 
 /** Applies case-study patches to the saved portfolio in one save. */
 async function patchCases(patches) {
@@ -17,11 +17,45 @@ async function patchCases(patches) {
   portfolioChanged();
 }
 
-/** Saves a project; its case studies, milestones and tasks follow. Returns what was updated ("" if nothing). */
+/**
+ * A new project gets its case study: one is created "In progress" (its card shows
+ * placeholder screens) from the project's name, category, description, link and
+ * facts, in the project's place in the order. One that already has the name is
+ * linked instead. Returns "created", "linked" or "" (when it didn't finish).
+ */
+async function caseForNewProject(p) {
+  try {
+    const site = currentSite();
+    site.cases = site.cases || [];
+    const mine = casesOfProject(site.cases, p);
+    let result = "linked";
+    if (mine.length) {
+      mine.forEach((c) => { c.project = p.name; });
+      await saveSite(site);
+    } else {
+      await storeCase({ ...caseFromProject(p), status: "progress" });
+      result = "created";
+    }
+    const after = currentSite();
+    const ids = caseOrderFromProjects(after.cases || [], state.projects);
+    if (ids) { after.cases = ids.map((id) => after.cases.find((c) => c.id === id)); await saveSite(after); }
+    portfolioChanged();
+    refresh(); // the Projects page shows the link to it
+    return result;
+  } catch (e) {
+    toast(`The project was added, but its case study wasn't created: ${e.message}`, "error");
+    return "";
+  }
+}
+
+/**
+ * Saves a project; its case studies, milestones and tasks follow. Returns what was
+ * updated ("" if nothing); for a new project, "created" or "linked" (its case study).
+ */
 export async function saveProjectLinked(p) {
   const before = p.id ? state.projects.find((x) => x.id === p.id) : null;
   const saved = await saveProject(p);
-  if (!before) return "";
+  if (!before) return caseForNewProject(saved);
   const plan = planProjectSync(before, saved, { cases: currentSite().cases || [], milestones: state.milestones, tasks: state.tasks });
   if (!plan.cases.length && !plan.milestones.length && !plan.tasks.length) return "";
   try {
