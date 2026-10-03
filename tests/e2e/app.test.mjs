@@ -2569,7 +2569,10 @@ test("portfolio: edit the home page on the page (intro, photo, numbers, skills, 
   await ce('[data-act="open"][data-path="relocation"]').click();
   assert.equal(await ce('[data-act="open"][data-path="relocation"]').getAttribute("aria-pressed"), "true");
   await page.fill('#li-ce [data-k="hero.roles"]', "Lead UX");
-  // Photo: tap to replace.
+  // The picture: the illustration by default; choose My photo, then tap to replace it.
+  assert.equal(await page.locator("#li-ce .pf-s-figure svg.pf-ill").count(), 1);
+  await ce('[data-act="picture"][data-path="photo"]').click();
+  assert.equal(await ce('[data-act="picture"][data-path="photo"]').getAttribute("aria-pressed"), "true");
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
   const chooser = page.waitForEvent("filechooser");
   await ce('[data-act="img"][data-path="portrait"]').click();
@@ -2929,6 +2932,27 @@ test("portfolio cards: phone apps show three phones, tablet apps their tablet, n
   });
   await page.waitForFunction(() => document.querySelectorAll("#li-pf-preview .pf-card .pf-tablet").length === 1);
   assert.deepEqual((await thumbs()).slice(0, 2), [{ phones: 0, tablet: 1, word: "" }, { phones: 1, tablet: 0, word: "" }]);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("portfolio: an illustration beside your intro by default; your photo or nothing when you choose", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  const preview = page.locator("#li-pf-preview");
+  await preview.locator(".pf-s-hero").waitFor();
+  assert.equal(await preview.locator(".pf-s-figure svg.pf-ill").count(), 1, "the illustration by default");
+  assert.equal(await preview.locator(".pf-s-figure img").count(), 0, "not the photo");
+  assert.match(await preview.locator(".pf-ill").getAttribute("aria-label"), /Illustration/);
+  assert.ok((await preview.locator(".pf-s-figure .pf-social").count()) > 0, "social icons stay under the picture");
+  // The form: My photo shows the photo; No picture shows none.
+  await openAllSections(page);
+  await page.selectOption("#li-pf-form [name=picture]", "photo");
+  await page.waitForFunction(() => document.querySelector("#li-pf-preview .pf-s-figure img.pf-s-portrait"));
+  await page.selectOption("#li-pf-form [name=picture]", "none");
+  await page.waitForFunction(() => !document.querySelector("#li-pf-preview .pf-s-figure"));
+  await page.selectOption("#li-pf-form [name=picture]", "illustration");
+  await page.waitForFunction(() => document.querySelector("#li-pf-preview .pf-s-figure svg.pf-ill"));
   assert.deepEqual(page.errors, []);
   await page.close();
 });

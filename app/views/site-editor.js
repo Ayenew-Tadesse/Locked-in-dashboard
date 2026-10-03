@@ -8,7 +8,7 @@
 import { state, toast } from "../state.js";
 import { esc, openModal, closeModal, confirmDialog } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, imgUrl } from "./page-editor.js";
-import { CONTACT_ICONS, contactIcon, cardThumb } from "../portfolio/site.js";
+import { CONTACT_ICONS, contactIcon, cardThumb, pictureOf, ILLUSTRATION } from "../portfolio/site.js";
 import { portfolioPrefs } from "../core/portfolio.js";
 
 const clone = (x) => JSON.parse(JSON.stringify(x ?? null));
@@ -39,9 +39,10 @@ function render(m) {
       <p class="ce-roles">Looking for: ${ed("hero.roles", h.roles, { ph: "Roles, e.g. Senior Product Designer" })}</p>
     </div>
     <div class="pf-s-figure">
-      <span class="ce-item ce-photo">${imgUrl(m.portrait)
+      <p class="ce-open ce-picture">${PICTURES.map(([k, l]) => `<button type="button" class="ce-chiptoggle${m.picture === k ? " on" : ""}" data-act="picture" data-path="${k}" aria-pressed="${m.picture === k}">${l}</button>`).join("")}</p>
+      ${m.picture === "illustration" ? ILLUSTRATION : m.picture === "photo" ? `<span class="ce-item ce-photo">${imgUrl(m.portrait)
         ? `<button type="button" class="ce-img" data-act="img" data-path="portrait" aria-label="Change photo"><img class="pf-s-portrait" src="${esc(m.portrait)}" alt=""></button>${del("photo", "Remove photo").replace('data-act="del"', 'data-act="unphoto"')}`
-        : `<button type="button" class="ce-add ce-add--photo" data-act="img" data-path="portrait">+ Photo</button>`}</span>
+        : `<button type="button" class="ce-add ce-add--photo" data-act="img" data-path="portrait">+ Photo</button>`}</span>` : ""}
       <nav class="pf-socials ce-socials" aria-label="Social links (edit them in Contact)">${webLinks.map(([c, i]) => `<button type="button" class="pf-social" data-act="gocontact" data-path="${i}" title="${esc(c.label)}: edit in Contact" aria-label="${esc(c.label)}: edit its link in Contact">${CONTACT_ICONS[contactIcon(c)]}</button>`).join("")}
         <button type="button" class="pf-social ce-social-add" data-act="contact" data-path="contact" aria-label="Add a social link" title="Add a social link">+</button></nav>
     </div>
@@ -73,13 +74,15 @@ function render(m) {
 }
 
 /** The portfolio's home as an editable model (from what's saved, as the form starts). */
+const PICTURES = [["illustration", "Illustration"], ["photo", "My photo"], ["none", "No picture"]];
+
 export function siteModel(site, prefs) {
   const p = portfolioPrefs(prefs);
   const h = site.hero || {};
   return {
     hero: { eyebrow: h.eyebrow || "", name: h.name || "", role: h.role || "", location: h.location || "", description: h.description || "",
       open: { remote: !!h.open?.remote, hybrid: !!h.open?.hybrid, relocation: !!h.open?.relocation }, roles: h.roles || "" },
-    portrait: site.portrait || "", resume: site.resume || "",
+    portrait: site.portrait || "", picture: pictureOf(site), resume: site.resume || "",
     stats: (site.stats || []).map((x) => ({ num: x.num || "", label: x.label || "" })).slice(0, MAX_STATS),
     about: [...(site.about || [])],
     skills: (site.skills || []).map((g) => ({ title: g.title || "", items: [...(g.items || [])] })),
@@ -129,6 +132,7 @@ export function openSiteEditor(opts) {
       toggle(key) { model.show[key] = model.show[key] === false; },
       open(key) { model.hero.open[key] = !model.hero.open[key]; },
       unphoto() { model.portrait = ""; },
+      picture(key) { model.picture = key; },
       stat() { model.stats.push({ num: "", label: "" }); return `stats.${model.stats.length - 1}.num`; },
       group() { model.skills.push({ title: "", items: [] }); return `skills.${model.skills.length - 1}.title`; },
       contact() { model.contact.push({ label: "", value: "", href: "" }); return `contact.${model.contact.length - 1}.label`; },
