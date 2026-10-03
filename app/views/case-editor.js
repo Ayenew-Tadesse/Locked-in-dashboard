@@ -5,10 +5,10 @@
 // top. Everything is plain text (pasting drops formatting) and the public page
 // escapes it, so nothing typed here can run as code.
 //
-// The comparison table, information architecture and style guide are still
-// edited with the form ("Edit as a form") for now.
+// The home-page card (tag, title, description) is shown at the top and
+// edited the same way. "Edit as a form" (in Settings) is still there.
 import { state, toast } from "../state.js";
-import { esc, openModal, confirmDialog } from "../ui/dom.js";
+import { esc, openModal, closeModal, confirmDialog } from "../ui/dom.js";
 
 export const META = ["Role", "Type", "Platform", "Tools"];
 const clone = (x) => JSON.parse(JSON.stringify(x ?? {}));
@@ -33,8 +33,20 @@ function toModel(c) {
     personas: { intro: c.personas?.intro || "", items: (c.personas?.items || []).map((p) => ({ ...p, needs: [...(p.needs || [])], frustrations: [...(p.frustrations || [])], goals: [...(p.goals || [])] })) },
     flow: { title: c.flow?.title || "", intro: c.flow?.intro || "", steps: (c.flow?.steps || []).map((s) => ({ label: s.label || "", src: s.src || "" })) },
     extra: (c.extra || []).map((x) => ({ title: x.title || "", text: paras(x.text) })),
+    tag: c.tag || "", cardDesc: c.cardDesc || "",
+    competitive: { intro: c.competitive?.intro || "", columns: [...(c.competitive?.columns || [])],
+      rows: (c.competitive?.rows || []).map((r) => ({ feature: r.feature || "", values: [...(r.values || [])] })) },
+    ia: { intro: c.ia?.intro || "", root: c.ia?.root || "", sections: (c.ia?.sections || []).map((x) => ({ title: x.title || "", items: [...(x.items || [])] })) },
+    style: { ...(c.style || {}), intro: c.style?.intro || "", font: c.style?.font || "", button: c.style?.button || "", sampleHead: c.style?.sampleHead || "",
+      sampleBody: c.style?.sampleBody || "", colors: (c.style?.colors || []).map((x) => ({ name: x.name || "", hex: x.hex || "" })) },
   };
 }
+
+// The comparison table's marks: tap a cell to go yes → partly → no.
+export const MARKS = { yes: "&#10003;", partial: "&#8776;", no: "&#8212;" };
+const NEXT_MARK = { yes: "partial", partial: "no", no: "yes" };
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const markOf = (v) => (MARKS[v] ? v : "no");
 
 // Back to what the portfolio stores (empty bits dropped).
 export function fromModel(m) {
@@ -52,6 +64,15 @@ export function fromModel(m) {
       .filter((p) => p.name) },
     flow: { title: clean(m.flow.title), intro: clean(m.flow.intro), steps: m.flow.steps.map((s) => ({ label: clean(s.label), src: imgUrl(s.src) })).filter((s) => s.label || s.src) },
     extra: m.extra.map((x) => ({ title: clean(x.title), text: joinParas(x.text) })).filter((x) => x.title || x.text),
+    tag: clean(m.tag), cardDesc: clean(m.cardDesc),
+    competitive: (() => {
+      const rows = m.competitive.rows.map((r) => ({ feature: clean(r.feature), values: m.competitive.columns.slice(1).map((_, i) => markOf(r.values[i])) })).filter((r) => r.feature);
+      return { intro: clean(m.competitive.intro), columns: rows.length ? m.competitive.columns.map(clean) : [], rows };
+    })(),
+    ia: { intro: clean(m.ia.intro), root: clean(m.ia.root), sections: m.ia.sections.map((x) => ({ title: clean(x.title), items: list(x.items) })).filter((x) => x.title) },
+    style: { ...m.style, intro: clean(m.style.intro), font: clean(m.style.font), sampleHead: clean(m.style.sampleHead), sampleBody: clean(m.style.sampleBody),
+      button: HEX.test(clean(m.style.button)) ? clean(m.style.button) : "",
+      colors: m.style.colors.map((x) => ({ name: clean(x.name), hex: clean(x.hex) })).filter((x) => HEX.test(x.hex)).map((x) => ({ name: x.name || x.hex, hex: x.hex })) },
   };
 }
 
@@ -99,8 +120,52 @@ function personaHtml(p, i) {
   </div>`;
 }
 
+// The comparison table: header names and features are text; each mark is a button.
+function compareHtml(c) {
+  const cols = c.columns;
+  const head = cols.length ? `<thead><tr>${cols.map((h, j) => `<th><span class="ce-cell">${ed(`competitive.columns.${j}`, h, { ph: j ? "App" : "Feature" })}${j > 1 ? del(`competitive.columns.${j}`, "Remove column") : ""}</span></th>`).join("")}</tr></thead>` : "";
+  const body = c.rows.map((r, i) => `<tr><td><span class="ce-cell">${del(`competitive.rows.${i}`, "Remove row")}${ed(`competitive.rows.${i}.feature`, r.feature, { ph: "Feature" })}</span></td>
+    ${cols.slice(1).map((_, j) => { const v = markOf(r.values[j]); return `<td class="${v}"><button type="button" class="ce-mark" data-act="mark" data-path="competitive.rows.${i}.values.${j}" aria-label="${esc(r.feature || "Feature")} in ${esc(cols[j + 1] || "this app")}: ${v}. Tap to change">${MARKS[v]}</button></td>`; }).join("")}</tr>`).join("");
+  return `<div class="pf-table-wrap"><table class="pf-compare ce-compare">${head}<tbody>${body}</tbody></table></div>
+    ${add("row", "competitive.rows", "Row")}${cols.length ? add("col", "competitive.columns", "Column") : ""}`;
+}
+
+function iaHtml(ia) {
+  return `<div class="pf-ia">${ed("ia.root", ia.root, { cls: "pf-ia__root", ph: "App name" })}
+    <div class="pf-ia__sections">${ia.sections.map((x, i) => `<div class="ce-item">${del(`ia.sections.${i}`, "Remove section")}
+        ${ed(`ia.sections.${i}.title`, x.title, { tag: "h3", ph: "Section, e.g. Search" })}
+        <ul>${x.items.map((it, j) => `<li class="ce-li">${ed(`ia.sections.${i}.items.${j}`, it, { ph: "Screen or item" })}${del(`ia.sections.${i}.items.${j}`, "Remove")}</li>`).join("")}</ul>
+        ${add("item", `ia.sections.${i}.items`, "Item")}</div>`).join("")}</div>
+    ${add("iasection", "ia.sections", "Section")}</div>`;
+}
+
+function styleHtml(st) {
+  const sw = (hex) => (HEX.test(hex) ? hex : "transparent");
+  return `<h3 class="pf-h3">Color palette</h3>
+    <div class="pf-swatches">${st.colors.map((x, i) => `<div class="ce-item ce-swatch">${del(`style.colors.${i}`, "Remove colour")}
+        <label class="ce-swatch__pick" aria-label="Pick ${esc(x.name || "the colour")}"><i style="background:${sw(x.hex)}" data-swatch="${i}"></i><input type="color" data-color="style.colors.${i}.hex" value="${HEX.test(x.hex) && x.hex.length === 7 ? esc(x.hex) : "#3366ff"}"></label>
+        ${ed(`style.colors.${i}.name`, x.name, { tag: "b", ph: "Name" })}${ed(`style.colors.${i}.hex`, x.hex, { ph: "#HEX" })}</div>`).join("")}</div>
+    ${add("color", "style.colors", "Colour")}
+    <h3 class="pf-h3">Typography</h3>
+    <div class="pf-type">${ed("style.sampleHead", st.sampleHead, { tag: "b", ph: "Sample heading" })}${ed("style.sampleBody", st.sampleBody, { tag: "p", ph: "Sample text" })}${ed("style.font", st.font, { ph: "Font, e.g. Poppins" })}</div>
+    <h3 class="pf-h3">Buttons</h3>
+    <div class="pf-s-actions ce-buttons"><span class="pf-btn pf-btn--solid" data-btn-sample style="${HEX.test(st.button) ? `background:${st.button};border-color:${st.button}` : ""}">Primary action</span><span class="pf-btn pf-btn--outline">Secondary action</span>
+      <label class="ce-swatch__pick ce-swatch__pick--small" aria-label="Pick the button colour"><i style="background:${sw(st.button)}" data-swatch="button"></i><input type="color" data-color="style.button" value="${HEX.test(st.button) && st.button.length === 7 ? esc(st.button) : "#3366ff"}"></label>
+      ${ed("style.button", st.button, { ph: "#HEX" })}</div>`;
+}
+
+// How it shows on your home page.
+function cardHtml(m) {
+  const shot = imgUrl(m.shots[0]?.src);
+  return `<section class="ce-cardwrap"><p class="ce-label">Card on your home page</p>
+    <article class="pf-card ce-card"><div class="pf-card__thumb${shot ? " has-img" : ""}">${shot ? `<img src="${esc(shot)}" alt="">` : `<span>${esc(m.title || "Title")}</span>`}</div>
+      <div class="pf-card__body">${ed("tag", m.tag, { tag: "p", cls: "pf-card__tag", ph: "Tag, e.g. Mobile App UI/UX" })}${ed("title", m.title, { tag: "h3", ph: "Case study title" })}
+        ${ed("cardDesc", m.cardDesc, { tag: "p", cls: "pf-card__desc", ph: "One or two lines for the card", multi: true })}</div></article></section>`;
+}
+
 function render(m) {
-  return `<article class="pf-case ce-case">
+  return `${cardHtml(m)}
+  <article class="pf-case ce-case">
     ${ed("pill", m.pill, { tag: "p", cls: "pf-pill", ph: "Status label, e.g. Live case study" })}
     ${ed("title", m.title, { tag: "h1", cls: "pf-case__title", ph: "Case study title" })}
     ${ed("subtitle", m.subtitle, { tag: "p", cls: "pf-s-desc", ph: "Subtitle: one or two lines about the project", multi: true })}
@@ -115,7 +180,9 @@ function render(m) {
     ${block("Problem statement", paraList("problem", m.problem, "Problem statement"))}
     ${block("Who I designed for", `${ed("personas.intro", m.personas.intro, { tag: "p", cls: "pf-intro", ph: "Intro: who you designed for", multi: true })}
       <div class="pf-personas">${m.personas.items.map(personaHtml).join("")}</div>${add("persona", "personas.items", "Persona")}`)}
+    ${block("Competitive analysis", `${ed("competitive.intro", m.competitive.intro, { tag: "p", cls: "pf-intro", ph: "Intro: who you compared against", multi: true })}${compareHtml(m.competitive)}`)}
     ${block("Key insight", `<blockquote class="pf-insight">${ed("insight", m.insight, { ph: "The key insight", multi: true })}</blockquote>`)}
+    ${block("Information architecture", `${ed("ia.intro", m.ia.intro, { tag: "p", cls: "pf-intro", ph: "Intro to the structure", multi: true })}${iaHtml(m.ia)}`)}
     <section class="pf-case-block ce-block"><h2>${ed("flow.title", m.flow.title, { ph: "User flow" })}</h2>
       ${ed("flow.intro", m.flow.intro, { tag: "p", cls: "pf-intro", ph: "Intro to the flow", multi: true })}
       <ol class="pf-flow">${m.flow.steps.map((s, i) => `<li class="ce-item">
@@ -123,12 +190,11 @@ function render(m) {
           ${ed(`flow.steps.${i}.label`, s.label, { ph: "Step name" })}${del(`flow.steps.${i}`, "Remove step")}</li>`).join("")}</ol>
       ${add("flow", "flow.steps", "Flow step")}</section>
     ${block("Solution", paraList("solution", m.solution, "Solution"))}
+    ${block("UI style guide", `${ed("style.intro", m.style.intro, { tag: "p", cls: "pf-intro", ph: "Intro to the style guide", multi: true })}${styleHtml(m.style)}`)}
     ${block("Outcome", paraList("outcome", m.outcome, "Outcome"))}
     ${m.extra.map((x, i) => `<section class="pf-case-block ce-block ce-item"><h2>${ed(`extra.${i}.title`, x.title, { ph: "Section title" })}</h2>${del(`extra.${i}`, "Remove section")}
       ${paraList(`extra.${i}.text`, x.text, "Text")}</section>`).join("")}
     <p class="ce-section-add">${add("section", "extra", "Add a section")}</p>
-    <aside class="ce-note"><span>The <b>comparison table</b>, <b>information architecture</b> and <b>UI style guide</b> are edited with the form for now.</span>
-      <button type="button" class="li-btn small" data-act="form">Edit as a form</button></aside>
   </article>`;
 }
 
@@ -174,7 +240,7 @@ export function openCaseEditor(original, opts) {
     }
   };
   draw();
-  page.querySelector('[data-k="title"]')?.focus({ preventScroll: true });
+  page.querySelector('.pf-case [data-k="title"]')?.focus({ preventScroll: true });
 
   // Typing: keep the model in step (plain text; single-line fields stay one line).
   page.addEventListener("input", (e) => {
@@ -183,8 +249,27 @@ export function openCaseEditor(original, opts) {
     let v = el.innerText.replace(/ /g, " ");
     v = el.hasAttribute("data-multi") ? v.replace(/\n+$/, "") : v.replace(/\s*\n\s*/g, " ");
     setAt(model, el.dataset.k, v);
+    page.querySelectorAll(`[data-k="${CSS.escape(el.dataset.k)}"]`).forEach((o) => { if (o !== el) o.textContent = v; });
     if (!el.textContent) el.innerHTML = ""; // so the placeholder shows again
     dirty = true;
+    paintColours();
+  });
+  // Colour swatches and the sample button follow the hex codes as you type or pick.
+  const paintColours = () => {
+    model.style.colors.forEach((x, i) => { const sw = page.querySelector(`[data-swatch="${i}"]`); if (sw) sw.style.background = HEX.test(x.hex.trim()) ? x.hex.trim() : "transparent"; });
+    const b = model.style.button.trim(), ok = HEX.test(b);
+    const sample = page.querySelector("[data-btn-sample]"), sw = page.querySelector('[data-swatch="button"]');
+    if (sample) { sample.style.background = ok ? b : ""; sample.style.borderColor = ok ? b : ""; }
+    if (sw) sw.style.background = ok ? b : "transparent";
+  };
+  page.addEventListener("change", (e) => {
+    const pick = e.target.closest("[data-color]");
+    if (!pick) return;
+    setAt(model, pick.dataset.color, pick.value);
+    const field = page.querySelector(`[data-k="${CSS.escape(pick.dataset.color)}"]`);
+    if (field) field.textContent = pick.value;
+    dirty = true;
+    paintColours();
   });
   page.addEventListener("paste", (e) => {
     const el = e.target.closest("[data-k]");
@@ -242,7 +327,7 @@ export function openCaseEditor(original, opts) {
 
   const save = async (btn) => {
     const next = fromModel(model);
-    if (!next.title) { toast("Give the case study a title first.", "error"); page.querySelector('[data-k="title"]')?.focus(); return; }
+    if (!next.title) { toast("Give the case study a title first.", "error"); page.querySelector('.pf-case [data-k="title"]')?.focus(); return; }
     btn.disabled = true;
     try {
       await opts.save(next, original);
@@ -255,21 +340,20 @@ export function openCaseEditor(original, opts) {
   // Settings: what isn't visible text on the page.
   const settings = () => openModal({
     eyebrow: "Case study", title: "Settings", submitLabel: "Done",
-    extraButtons: opts.onDelete ? `<button type="button" class="li-btn danger-ghost" data-case-delete>Delete</button>` : "",
+    extraButtons: `${opts.onDelete ? `<button type="button" class="li-btn danger-ghost" data-case-delete>Delete</button>` : ""}<button type="button" class="li-btn ghost" data-case-form>Edit as a form</button>`,
     body: `
-      <label class="li-field">Tag on the card<input name="tag" maxlength="60" value="${esc(model.tag || "")}" placeholder="Mobile App UI/UX"></label>
-      <label class="li-field full">Card description<textarea name="cardDesc" rows="2" maxlength="300">${esc(model.cardDesc || "")}</textarea></label>
       <label class="li-field">Status<select name="status"><option value="live"${model.status !== "progress" ? " selected" : ""}>Live case study</option><option value="progress"${model.status === "progress" ? " selected" : ""}>In progress (card only)</option></select></label>
       <label class="li-field">Live app link<input name="liveUrl" maxlength="300" value="${esc(model.liveUrl || "")}" placeholder="https://…"></label>
       <label class="li-check-row full"><input type="checkbox" name="phone"${model.phone !== false ? " checked" : ""}> Show "Try the app" in a phone frame on computers</label>
       <label class="li-field full">Dashboard project <small class="li-muted">(shows its live progress)</small><select name="project"><option value="">None</option>${(state.projects || []).map((p) => `<option${model.project === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>`,
     onReady(f) {
+      f.querySelector("[data-case-form]").addEventListener("click", () => { closeModal(); close(true); opts.openForm(fromModel(model)); });
       f.querySelector("[data-case-delete]")?.addEventListener("click", async () => {
         if (await opts.onDelete()) { close(true); opts.done?.(); }
       });
     },
     async onSubmit(v) {
-      Object.assign(model, { tag: v.tag.trim(), cardDesc: v.cardDesc.trim(), status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "" });
+      Object.assign(model, { status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "" });
       dirty = true;
     },
   });
@@ -287,6 +371,7 @@ export function openCaseEditor(original, opts) {
     if (act === "del") {
       const ks = path.split("."), i = Number(ks.pop());
       getAt(model, ks.join(".")).splice(i, 1);
+      if (ks.join(".") === "competitive.columns") model.competitive.rows.forEach((r) => r.values.splice(i - 1, 1));
       dirty = true;
       return draw();
     }
@@ -295,6 +380,16 @@ export function openCaseEditor(original, opts) {
     if (act === "persona") { list.push({ name: "", needs: [], frustrations: [], goals: [] }); dirty = true; return draw(`${path}.${list.length - 1}.name`); }
     if (act === "flow") { list.push({ label: "", src: "" }); dirty = true; return draw(`${path}.${list.length - 1}.label`); }
     if (act === "section") { list.push({ title: "", text: [""] }); dirty = true; return draw(`${path}.${list.length - 1}.title`); }
+    if (act === "mark") { setAt(model, path, NEXT_MARK[markOf(getAt(model, path))]); dirty = true; draw(); return page.querySelector(`[data-path="${CSS.escape(path)}"]`)?.focus(); }
+    if (act === "row") {
+      const c = model.competitive;
+      if (!c.columns.length) c.columns = ["Feature", "This app", "Competitor"];
+      c.rows.push({ feature: "", values: c.columns.slice(1).map(() => "no") });
+      dirty = true; return draw(`competitive.rows.${c.rows.length - 1}.feature`);
+    }
+    if (act === "col") { list.push(""); model.competitive.rows.forEach((r) => r.values.push("no")); dirty = true; return draw(`${path}.${list.length - 1}`); }
+    if (act === "iasection") { list.push({ title: "", items: [] }); dirty = true; return draw(`${path}.${list.length - 1}.title`); }
+    if (act === "color") { list.push({ name: "", hex: "" }); dirty = true; return draw(`${path}.${list.length - 1}.name`); }
   });
 
   open = { close };

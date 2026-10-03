@@ -2397,9 +2397,9 @@ test("case studies: edit on the page (tap text, + to add, ✕ to remove, images,
   // Tap a card: the case study opens as the page, with its text editable in place.
   await page.locator('#li-pf-cases [data-case-card="hidgo"]').click();
   await page.waitForSelector("#li-ce");
-  assert.equal(await ce('[data-k="title"]').innerText(), "Hid-Go Flight Booking App");
-  assert.equal(await ce('[data-k="title"]').getAttribute("contenteditable"), "true");
-  await page.fill('#li-ce [data-k="title"]', "Hid-Go, rebooked");
+  assert.equal(await ce('.pf-case [data-k="title"]').innerText(), "Hid-Go Flight Booking App");
+  assert.equal(await ce('.pf-case [data-k="title"]').getAttribute("contenteditable"), "true");
+  await page.fill('#li-ce .pf-case [data-k="title"]', "Hid-Go, rebooked");
   // Enter at the end of a paragraph starts the next one.
   await ce('[data-k="overview.0"]').click();
   await page.keyboard.press("Control+End");
@@ -2434,7 +2434,7 @@ test("case studies: edit on the page (tap text, + to add, ✕ to remove, images,
   assert.equal(await ce(".ce-shot").count(), shots - 1);
   // Settings: what isn't text on the page.
   await ce('[data-act="settings"]').click();
-  await page.fill("#li-modal [name=tag]", "Case study tag");
+  await page.selectOption("#li-modal [name=status]", "live");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });
   await ce('[data-act="save"]').click();
@@ -2447,7 +2447,7 @@ test("case studies: edit on the page (tap text, + to add, ✕ to remove, images,
 
   // Cancel with changes asks first; discarding keeps the saved version.
   await page.locator('#li-pf-cases [data-case-card="hidgo"]').click();
-  await page.fill('#li-ce [data-k="title"]', "Not saved");
+  await page.fill('#li-ce .pf-case [data-k="title"]', "Not saved");
   await ce('[data-act="cancel"]').click();
   await page.waitForSelector("#li-modal");
   await page.click("#li-modal button[type=submit]"); // Discard
@@ -2457,19 +2457,87 @@ test("case studies: edit on the page (tap text, + to add, ✕ to remove, images,
   // A new case study starts blank; it needs a title; "Edit as a form" keeps what you typed.
   await page.click("#li-pf-case-add");
   await page.waitForSelector("#li-ce");
-  assert.equal(await ce('[data-k="title"]').innerText(), "");
+  assert.equal(await ce('.pf-case [data-k="title"]').innerText(), "");
   await ce('[data-act="save"]').click();
   assert.equal(await page.locator("#li-ce").count(), 1, "not saved without a title");
-  await page.fill('#li-ce [data-k="title"]', "Banking App");
+  await page.fill('#li-ce .pf-case [data-k="title"]', "Banking App");
   await ce('[data-act="item"][data-path="process.steps"]').click();
   await page.keyboard.type("Interviews");
-  await ce('[data-act="form"]').click();
+  await ce('[data-act="settings"]').click();
+  await page.click("#li-modal [data-case-form]");
   await page.waitForSelector("#li-modal [name=title]");
   assert.equal(await page.inputValue("#li-modal [name=title]"), "Banking App");
   assert.equal(await page.inputValue("#li-modal [name=processSteps]"), "Interviews");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.waitForFunction(() => [...document.querySelectorAll("#li-pf-cases [data-case-card]")].some((c) => /Banking App/.test(c.textContent)));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("case studies on the page: the card, comparison table, information architecture and style guide", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  await openAllSections(page);
+  const ce = (sel) => page.locator(`#li-ce ${sel}`);
+  await page.locator('#li-pf-cases [data-case-card="hidgo"]').click();
+  await page.waitForSelector("#li-ce");
+
+  // The home-page card: tag, title (the same as the page's) and description.
+  await page.fill('#li-ce .ce-card [data-k="tag"]', "Flights · UX");
+  await page.fill('#li-ce .ce-card [data-k="title"]', "Hid-Go Flights");
+  assert.equal(await ce('.pf-case [data-k="title"]').innerText(), "Hid-Go Flights", "one title, shown in both places");
+  await page.fill('#li-ce .ce-card [data-k="cardDesc"]', "Book a domestic flight in four steps.");
+
+  // Comparison table: tap a mark to change it, add a row and a column, remove a column.
+  const mark = ce('[data-act="mark"][data-path="competitive.rows.0.values.0"]');
+  assert.match(await mark.getAttribute("aria-label"), /: yes\./);
+  await mark.click();
+  assert.match(await ce('[data-act="mark"][data-path="competitive.rows.0.values.0"]').getAttribute("aria-label"), /: partial\./, "yes → partly");
+  await ce('[data-act="row"]').click();
+  await page.keyboard.type("Works offline");
+  await ce('[data-act="col"]').click();
+  await page.keyboard.type("Bus app");
+  assert.equal(await ce(".ce-compare thead th").count(), 5);
+  await ce('[data-act="del"][data-path="competitive.columns.3"]').click(); // Generic OTA app
+  assert.equal(await ce(".ce-compare thead th").count(), 4);
+
+  // Information architecture: a section with an item; remove an item.
+  await ce('[data-act="iasection"]').click();
+  await page.keyboard.type("Help");
+  const last = (await ce(".pf-ia__sections > .ce-item").count()) - 1;
+  await ce(`[data-act="item"][data-path="ia.sections.${last}.items"]`).click();
+  await page.keyboard.type("FAQ");
+  await ce('[data-act="del"][data-path="ia.sections.0.items.0"]').click(); // Splash
+
+  // Style guide: a colour typed as hex (the swatch follows), one picked, the button colour.
+  await ce('[data-act="color"]').click();
+  await page.keyboard.type("Accent");
+  const n = (await ce(".ce-swatch").count()) - 1;
+  await page.fill(`#li-ce [data-k="style.colors.${n}.hex"]`, "#FF8800");
+  assert.equal(await ce(`[data-swatch="${n}"]`).evaluate((e) => getComputedStyle(e).backgroundColor), "rgb(255, 136, 0)");
+  await ce('[data-color="style.colors.0.hex"]').evaluate((e) => { e.value = "#112233"; e.dispatchEvent(new Event("change", { bubbles: true })); });
+  assert.equal(await ce('[data-k="style.colors.0.hex"]').innerText(), "#112233");
+  await page.fill('#li-ce [data-k="style.button"]', "#00AA55");
+  assert.equal(await ce("[data-btn-sample]").evaluate((e) => getComputedStyle(e).backgroundColor), "rgb(0, 170, 85)");
+  await ce('[data-act="save"]').click();
+  await page.waitForSelector("#li-ce", { state: "detached" });
+
+  // What a hiring manager sees.
+  const card = page.locator("#li-pf-preview .pf-card", { hasText: "Hid-Go Flights" });
+  assert.match(await card.innerText(), /Flights · UX[\s\S]*Hid-Go Flights[\s\S]*Book a domestic flight in four steps/i);
+  await page.locator('#li-pf-preview [data-case="hidgo"]').first().click();
+  await page.locator("#li-pf-preview .pf-case__title").waitFor();
+  const table = page.locator("#li-pf-preview .pf-compare");
+  assert.deepEqual(await table.locator("thead th").allInnerTexts(), ["Feature", "Hid-Go", "Typical airline app", "Bus app"]);
+  assert.equal(await table.locator("tbody tr").first().locator("td").nth(1).getAttribute("class"), "partial");
+  assert.match(await table.locator("tbody tr").last().innerText(), /Works offline/);
+  const ia = await page.locator("#li-pf-preview .pf-ia").innerText();
+  assert.match(ia, /Help[\s\S]*FAQ/);
+  assert.doesNotMatch(ia, /Splash/);
+  const swatches = await page.locator("#li-pf-preview .pf-swatches").innerText();
+  assert.match(swatches, /#112233[\s\S]*Accent[\s\S]*#FF8800/);
+  assert.match(await page.locator("#li-pf-preview .pf-s-actions .pf-btn--solid").getAttribute("style"), /#00AA55/);
   assert.deepEqual(page.errors, []);
   await page.close();
 });

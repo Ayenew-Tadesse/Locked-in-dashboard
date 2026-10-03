@@ -365,3 +365,23 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .ce-section-add{text-align:center;margin:22px 0 6px;}
 .ce-note{margin:22px 0 0;padding:12px 14px;border-radius:12px;background:var(--surface-2);color:var(--ink-2);font-size:13.5px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
 @media (max-width:640px){ .ce-bar{padding:8px 10px;} .ce-bar__title small{display:none;} .ce-body{padding:16px 12px 120px;} .ce-del{width:32px;height:32px;} }
+/* Step 2: the home-page card, comparison table, information architecture, style guide. */
+.ce-cardwrap{max-width:320px;margin:0 0 28px;}
+.ce-label{margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);}
+.ce-card .pf-card__body{gap:8px;}
+.ce-cell{display:inline-flex;align-items:center;gap:6px;}
+.ce-compare .ce-del{width:24px;height:24px;font-size:10px;}
+.ce-mark{min-width:40px;min-height:34px;padding:4px 8px;border:1px dashed color-mix(in srgb, var(--accent) 35%, transparent);border-radius:8px;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;}
+.ce-mark:hover, .ce-mark:focus-visible{border-style:solid;border-color:var(--accent);}
+.pf-ia__sections div.ce-item{position:relative;padding-right:34px;}
+.pf-ia__sections div.ce-item > .ce-del{position:absolute;top:6px;right:6px;width:24px;height:24px;font-size:10px;}
+.pf-ia__root.ce-t{display:inline-block;}
+.ce-li{display:list-item;}
+.ce-li .ce-del{width:20px;height:20px;font-size:9px;margin-left:4px;vertical-align:middle;}
+.ce-swatch{position:relative;padding-top:2px;}
+.ce-swatch > .ce-del{position:absolute;top:-6px;right:-6px;width:24px;height:24px;font-size:10px;z-index:1;}
+.ce-swatch__pick{position:relative;display:block;cursor:pointer;}
+.ce-swatch__pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+.ce-swatch__pick i{display:block;height:54px;border-radius:10px;border:1px solid var(--line);background-image:linear-gradient(45deg, var(--line) 25%, transparent 25%, transparent 75%, var(--line) 75%);background-size:12px 12px;}
+.ce-swatch__pick--small i{width:38px;height:38px;}
+.ce-buttons{align-items:center;}
