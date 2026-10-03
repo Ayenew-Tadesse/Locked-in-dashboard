@@ -6,7 +6,7 @@
 // Links opt in with data-try (see site.js); Close, Esc or the backdrop close it.
 import { esc } from "../ui/dom.js";
 
-const SIZES = { phone: { W: 390, H: 844, BEZEL: 14 }, tablet: { W: 1180, H: 820, BEZEL: 24 } };
+const SIZES = { phone: { W: 390, H: 844, BEZEL: 10 }, tablet: { W: 1180, H: 820, BEZEL: 16 } };
 const small = () => matchMedia("(max-width: 699px)").matches;
 let open = null;
 
