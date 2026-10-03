@@ -40,6 +40,37 @@ const SOCIAL_ICONS = {
   dribbble: svg('<circle cx="12" cy="12" r="9"/><path d="M19.1 6.6C15.5 9.4 9 10 3.3 9.6M8.6 3.7c3 3.6 6.2 10.6 7.2 16.5M3.4 13.9c5-1.6 11.6-1.5 17.4.5"/>'),
   website: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
 };
+// Contact cards: a filled icon (picked from the link or label), the label, the value.
+// The whole card is the link (call, email, open the profile).
+const filled = (d) => `<svg class="pf-cc__icon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
+const CONTACT_ICONS = {
+  phone: filled("M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"),
+  email: filled("M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm.8 2v.3l8.2 5.2 8.2-5.2V7l-8.2 5.1z"),
+  linkedin: filled("M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm3.3 7.2H5v8.3h2.3zM6.2 5.5a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm4.1 4.7v8.3h2.3v-4.3c0-1.2.4-2 1.5-2s1.4.9 1.4 2v4.3h2.3v-4.8c0-2.4-1.3-3.6-3.1-3.6-1.4 0-2 .7-2.3 1.2v-1.1z"),
+  github: filled("M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7 3.6 3.6 0 0 1 .1-2.7s.8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.8V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z"),
+  behance: filled("M3 6h5.3c2 0 3.3 1 3.3 2.7 0 1.1-.6 1.9-1.6 2.2 1.3.3 2.1 1.3 2.1 2.6 0 2-1.6 3.5-4 3.5H3zm2.4 2v2.5h2.6c.9 0 1.4-.5 1.4-1.3S8.9 8 8 8zm0 4.4v2.6h2.9c1 0 1.6-.5 1.6-1.3s-.6-1.3-1.6-1.3zM15 7h5v1.3h-5zm2.6 2.3c2.3 0 3.6 1.6 3.4 4.2h-5.3c.1 1.2.8 1.9 1.9 1.9.8 0 1.4-.4 1.6-1h1.7c-.4 1.6-1.7 2.5-3.4 2.5-2.3 0-3.8-1.5-3.8-3.8s1.6-3.8 3.9-3.8zm-1.9 3h3.5c0-1-.7-1.6-1.7-1.6s-1.6.6-1.8 1.6z"),
+  instagram: filled("M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm5.3-3.3a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"),
+  location: filled("M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zm0 4.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"),
+  web: filled("M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-1.7 2.2A8 8 0 0 0 4.1 11h3.4a15 15 0 0 1 2.8-6.8zm3.4 0A15 15 0 0 1 16.5 11h3.4a8 8 0 0 0-6.2-6.8zM12 4.6A13 13 0 0 0 9.5 11h5A13 13 0 0 0 12 4.6zM4.1 13a8 8 0 0 0 6.2 6.8A15 15 0 0 1 7.5 13zm5.4 0a13 13 0 0 0 2.5 6.4 13 13 0 0 0 2.5-6.4zm7 0a15 15 0 0 1-2.8 6.8 8 8 0 0 0 6.2-6.8z"),
+  link: filled("M10.6 13.4a1 1 0 0 1 0-1.4l3-3a1 1 0 1 1 1.4 1.4l-3 3a1 1 0 0 1-1.4 0zM8.5 19a4.5 4.5 0 0 1-3.2-7.7l2.1-2.1a1 1 0 1 1 1.4 1.4l-2.1 2.1a2.5 2.5 0 0 0 3.5 3.5l2.1-2.1a1 1 0 1 1 1.4 1.4l-2.1 2.1A4.5 4.5 0 0 1 8.5 19zm7.4-4.8a1 1 0 0 1-.7-1.7l2.1-2.1a2.5 2.5 0 0 0-3.5-3.5l-2.1 2.1a1 1 0 1 1-1.4-1.4l2.1-2.1a4.5 4.5 0 0 1 6.4 6.4l-2.1 2.1a1 1 0 0 1-.8.2z"),
+};
+/** Which icon a contact row gets, from its link, then its label. */
+export function contactIcon(c) {
+  const href = String(c.href || "").toLowerCase(), label = String(c.label || "").toLowerCase();
+  if (href.startsWith("tel:") || /phone|mobile|call/.test(label)) return "phone";
+  if (href.startsWith("mailto:") || /e-?mail/.test(label)) return "email";
+  for (const k of ["linkedin", "github", "behance", "instagram"]) if (href.includes(k) || label.includes(k)) return k;
+  if (/address|location|based|city/.test(label)) return "location";
+  if (/^https?:/.test(href) || /website|portfolio|site/.test(label)) return "web";
+  return "link";
+}
+function contactCard(c) {
+  const href = /^(mailto:|tel:)/i.test(c.href || "") ? c.href : safeUrl(c.href);
+  const inner = `${CONTACT_ICONS[contactIcon(c)]}<b class="pf-cc__label">${esc(c.label)}</b><span class="pf-cc__value">${esc(c.value)}</span>`;
+  return href ? `<a class="pf-cc" data-icon="${contactIcon(c)}" href="${esc(href)}"${/^https?:/i.test(href) ? ' target="_blank" rel="noopener"' : ""}>${inner}</a>`
+    : `<div class="pf-cc" data-icon="${contactIcon(c)}">${inner}</div>`;
+}
+
 // The featured projects row's arrows (see rail.js).
 const chevron = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const CHEVRON_LEFT = chevron("M15 5l-7 7 7 7"), CHEVRON_RIGHT = chevron("M9 5l7 7-7 7");
@@ -132,10 +163,7 @@ function home(data, live) {
     live.activity || "",
     live.milestones || "",
     live.plan || "",
-    s.contact?.length ? `<section class="pf-section" id="pf-contact"><h2>Contact me</h2><div class="pf-s-contact">${s.contact.map((c) => {
-      const href = /^(mailto:|tel:)/i.test(c.href || "") ? c.href : safeUrl(c.href);
-      return `<div><span>${esc(c.label)}</span>${href ? `<a href="${esc(href)}"${/^https?:/i.test(href) ? ' target="_blank" rel="noopener"' : ""}>${esc(c.value)}</a>` : `<b>${esc(c.value)}</b>`}</div>`;
-    }).join("")}</div></section>` : "",
+    s.contact?.length ? `<section class="pf-section" id="pf-contact"><h2>Contact me</h2><div class="pf-s-contact">${s.contact.map(contactCard).join("")}</div></section>` : "",
   ])}`;
 }
 
@@ -201,6 +229,6 @@ function casePage(data, c) {
 export function renderSite(data, live, view) {
   const c = view && (data.site.cases || []).find((x) => x.id === view && x.status !== "progress");
   return `<div class="pf pf--site">${c ? casePage(data, c) : home(data, live)}
-    <footer class="pf-foot">Live from my work dashboard · updated ${esc(new Date(data.generated_at || Date.now()).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}</footer>
+    <footer class="pf-foot pf-foot--band">&copy; ${new Date().getFullYear()} ${esc(data.site.hero?.name || data.about?.name || "")}. All rights reserved.</footer>
   </div>`;
 }
