@@ -1,8 +1,8 @@
 // Saving or deleting a project, and bringing everything about it along:
 // its case studies (and so the portfolio), milestones and tasks
 // (core/project-links.js decides what changes). Used by the Projects page.
-import { state, saveProject, deleteProject, reload, toast } from "./state.js";
-import { planProjectSync, planProjectDelete, describeSync } from "./core/project-links.js";
+import { state, saveProject, deleteProject, placeProject, reload, toast } from "./state.js";
+import { planProjectSync, planProjectDelete, describeSync, caseOrderFromProjects } from "./core/project-links.js";
 import { currentSite, saveSite, portfolioChanged } from "./views/portfolio-site.js";
 
 /** Applies case-study patches to the saved portfolio in one save. */
@@ -49,4 +49,21 @@ export async function deleteProjectLinked(id) {
   await deleteProject(id);
   await patchCases(patches);
   return patches.length;
+}
+
+/** Moves a project to a place (0 = first); its case studies (and so the portfolio) follow. */
+export async function placeProjectLinked(id, to) {
+  await placeProject(id, to);
+  const site = currentSite();
+  const ids = caseOrderFromProjects(site.cases || [], state.projects);
+  if (!ids) return false;
+  site.cases = ids.map((cid) => site.cases.find((c) => c.id === cid));
+  try {
+    await saveSite(site);
+    portfolioChanged();
+  } catch (e) {
+    toast(`The projects were reordered, but the case studies didn't follow: ${e.message}`, "error");
+    return false;
+  }
+  return true;
 }
