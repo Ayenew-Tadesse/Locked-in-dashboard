@@ -1,0 +1,218 @@
+{
+ "kind": "locked-in.project-pack",
+ "version": 1,
+ "caseStudy": {
+  "id": "guxo-flights",
+  "project": "Guxo Flights",
+  "title": "Guxo Flights",
+  "status": "live",
+  "pill": "Live case study",
+  "device": "phone",
+  "liveUrl": "https://ayenew-tadesse.github.io/Guxo-Flights/",
+  "tag": "Mobile App UI/UX · Flight booking",
+  "cardDesc": "Booking an Ethiopian domestic flight on a phone, from search to boarding pass, with local payment options.",
+  "subtitle": "A phone-first prototype for booking domestic flights across Ethiopia: search, compare fares, pick a seat, pay by phone and board.",
+  "shots": [
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/home.jpg",
+    "alt": "Search screen: From, To, date and passengers"
+   },
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/results.jpg",
+    "alt": "Results with fare comparison and the date strip"
+   },
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/confirm.jpg",
+    "alt": "Booking confirmed with confirmation code"
+   }
+  ],
+  "meta": [
+   {
+    "label": "Role",
+    "value": "UI/UX designer & front-end developer (solo)"
+   },
+   {
+    "label": "Type",
+    "value": "Self-directed product prototype"
+   },
+   {
+    "label": "Platform",
+    "value": "Mobile web app (phone-first, responsive)"
+   },
+   {
+    "label": "Tools",
+    "value": "HTML, CSS, vanilla JavaScript"
+   }
+  ],
+  "overview": "Guxo Flights is a working prototype of a domestic flight booking app for Ethiopia, built as a single self-contained web page with no frameworks.\n\nIt covers the whole trip: sign up, search between 10 domestic airports, compare fares, choose a fare and a seat, pay with local options, and manage trips through check-in and the boarding pass.",
+  "process": {
+   "intro": "Designed and built as one continuous prototype, so every screen could be tried on a real phone rather than only viewed.",
+   "steps": [
+    "Mapped the booking journey end to end: search, results, fare and seat, payment, confirmation, trips and boarding.",
+    "Designed the search and results first, the screens travellers spend the most time comparing on.",
+    "Added the choices that matter locally: phone-wallet and bank-counter payment alongside cards, and prices in birr.",
+    "Built trip management after booking: My Trips, check-in, the boarding pass, notifications and a points programme.",
+    "Tuned it for phones first, with light and dark themes and layouts that also work on larger screens."
+   ]
+  },
+  "problem": "Booking a domestic flight on a phone often means dense results, unclear fare differences and checkout forms that ask for everything at once.\n\nMany travellers also want to pay with a phone wallet or at a bank counter rather than only by card.",
+  "personas": {
+   "intro": "Proto-personas used to shape the flow (illustrative, not real people).",
+   "items": [
+    {
+     "name": "The business traveller",
+     "occupation": "Flies between regional offices",
+     "summary": "Books at short notice and wants the fastest option without reading every row.",
+     "needs": [
+      "Clear fastest and cheapest labels",
+      "A quick re-book"
+     ],
+     "frustrations": [
+      "Hidden fees at checkout"
+     ],
+     "goals": [
+      "Book in a couple of minutes"
+     ]
+    },
+    {
+     "name": "The family visitor",
+     "occupation": "Visits relatives for holidays",
+     "summary": "Compares prices across dates and pays from a phone wallet.",
+     "needs": [
+      "Prices across nearby dates",
+      "Phone payment"
+     ],
+     "frustrations": [
+      "Card-only checkouts"
+     ],
+     "goals": [
+      "Find an affordable day to fly"
+     ]
+    },
+    {
+     "name": "The first-time flyer",
+     "occupation": "Student travelling home",
+     "summary": "Is unsure what each fare includes and what happens at the airport.",
+     "needs": [
+      "Plain fare differences",
+      "A boarding pass on the phone"
+     ],
+     "frustrations": [
+      "Jargon and unclear baggage rules"
+     ],
+     "goals": [
+      "Arrive at the gate with confidence"
+     ]
+    }
+   ]
+  },
+  "insight": "Travellers decide on the results and fare screens; if the differences there are plain (fastest, cheapest, what each fare includes), the rest of checkout can stay short.",
+  "ia": {
+   "intro": "Four tabs at the bottom; booking runs as one path from search to confirmation.",
+   "root": "Guxo Flights",
+   "sections": [
+    {
+     "title": "Home",
+     "items": [
+      "Search (one way / round trip)",
+      "Notifications",
+      "Profile & points"
+     ]
+    },
+    {
+     "title": "Book",
+     "items": [
+      "Results",
+      "Fare & seats",
+      "Payment",
+      "Confirmation"
+     ]
+    },
+    {
+     "title": "My Trips",
+     "items": [
+      "Upcoming trips",
+      "Trip detail",
+      "Re-book / cancel"
+     ]
+    },
+    {
+     "title": "Check-in",
+     "items": [
+      "Check-in",
+      "Boarding pass"
+     ]
+    }
+   ]
+  },
+  "flow": {
+   "title": "User flow: from search to boarding pass",
+   "intro": "Captured from the working app after every change, so it always matches the current version.",
+   "steps": [
+    {
+     "label": "Search",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/home.jpg"
+    },
+    {
+     "label": "Choose a flight",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/results.jpg"
+    },
+    {
+     "label": "Choose a fare",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/fare.jpg"
+    },
+    {
+     "label": "Pick a seat",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/seat.jpg"
+    },
+    {
+     "label": "Pay by phone",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/payment.jpg"
+    },
+    {
+     "label": "Booked",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/confirm.jpg"
+    },
+    {
+     "label": "Boarding pass",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo-Flights/screenshots/phone/boarding.jpg"
+    }
+   ]
+  },
+  "solution": "A results list that labels the fastest and cheapest flights, shows fares across nearby dates, and lets travellers filter by stops and time.\n\nThree clear fares (Basic, Standard, Flex) with what each includes, then a seat map, on one screen.\n\nCheckout with phone, bank-counter and card payment, a single final price, and points earned shown up front.\n\nAfter booking: My Trips, check-in and a boarding pass with a QR code, all on the phone.",
+  "style": {
+   "intro": "The app's real design tokens.",
+   "font": "Poppins",
+   "sampleHead": "Search flights",
+   "sampleBody": "Addis Ababa (ADD) → Mekelle (MQX) · 1 passenger",
+   "button": "#1B2CC1",
+   "colors": [
+    {
+     "name": "Primary",
+     "hex": "#1B2CC1"
+    },
+    {
+     "name": "Primary light",
+     "hex": "#7692FF"
+    },
+    {
+     "name": "Ink",
+     "hex": "#091540"
+    },
+    {
+     "name": "Background",
+     "hex": "#EAF2FE"
+    },
+    {
+     "name": "Success",
+     "hex": "#2E8B57"
+    },
+    {
+     "name": "Error",
+     "hex": "#C24545"
+    }
+   ]
+  },
+  "outcome": "A complete, clickable booking prototype that can be tried on any phone, from sign-up to the boarding pass.\n\nCovers 10 Ethiopian domestic airports, one-way and round trips, three fare types, a seat map, three payment methods, trip management and a points programme, with light and dark themes.\n\nIts screenshots are taken automatically from the live app after every change, so this case study always shows the current design."
+ }
+}
