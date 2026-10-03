@@ -16,7 +16,8 @@ export function demoSeed(today = todayKey()) {
     { id: "m1", goal_id: "g1", title: "Launch personal portfolio", category: "Portfolio", priority: "high", progress_mode: "tasks",
       start_date: addDays(today, -30), deadline: addDays(today, 20), status: "in_progress", description: "Case studies + contact page." },
     { id: "m2", goal_id: "g1", title: "Booking flow end-to-end", category: "Guxo Flights", priority: "urgent", progress_mode: "tasks",
-      start_date: addDays(today, -21), deadline: addDays(today, 6), status: "in_progress" },
+      start_date: addDays(today, -24), deadline: addDays(today, 3), status: "in_progress" },
+    // ^ Behind on every day: its tasks are at most ~73% done against 89% of the time gone.
     { id: "m3", title: "Read 6 design books", category: "Learning", priority: "low", progress_mode: "manual",
       target: 6, current_progress: 2, start_date: addDays(today, -60), deadline: addDays(today, 60), status: "in_progress" },
   ];
