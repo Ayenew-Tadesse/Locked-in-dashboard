@@ -8,6 +8,7 @@ import { renderPortfolio } from "../portfolio/render.js";
 import { editorHtml, wireEditor } from "./portfolio-site.js";
 import { printResume } from "../portfolio/resume.js";
 import { tryInPhone } from "../portfolio/phone.js";
+import "../portfolio/slider.js"; // screenshot sliders on case studies
 import { countStats } from "../portfolio/count.js";
 import { setupRails } from "../portfolio/rail.js";
 

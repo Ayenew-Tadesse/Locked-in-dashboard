@@ -5,6 +5,7 @@ import { renderPortfolio } from "./portfolio/render.js";
 import { buildPortfolioData } from "./core/portfolio.js";
 import { printResume } from "./portfolio/resume.js";
 import { tryInPhone } from "./portfolio/phone.js";
+import "./portfolio/slider.js"; // screenshot sliders on case studies
 import { countStats } from "./portfolio/count.js";
 import { setupRails } from "./portfolio/rail.js";
 import { mergeCommits } from "./core/portfolio.js";

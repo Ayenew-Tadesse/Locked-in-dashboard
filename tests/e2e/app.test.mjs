@@ -2757,7 +2757,7 @@ test("import a project file: project, milestones, tasks and case study, never tw
     const { openPhone, closePhone } = await import(new URL("app/portfolio/phone.js", location.href).href);
     openPhone("about:blank", "Ethio School Platform", null, "tablet");
     const scr = document.querySelector(".pf-phone--tablet .pf-phone__screen");
-    const out = { tablet: !!scr, size: scr && `${scr.style.width} × ${scr.style.height}`, island: !!document.querySelector(".pf-phone__island") };
+    const out = { tablet: !!scr, size: scr && `${scr.style.width} × ${scr.style.height}`, island: getComputedStyle(document.querySelector(".pf-phone__island")).display !== "none" };
     closePhone();
     return out;
   });
@@ -2773,5 +2773,42 @@ test("import: a file that isn't a project file is refused before anything is sav
   await page.locator("[data-pack-preview]").getByText("This file isn't a Locked-in project file.").waitFor();
   await page.click('#li-modal button[type="submit"]');
   await page.locator("#li-modal .li-form-error").getByText("Choose a project file first.").waitFor();
+  await page.close();
+});
+
+test("tablet case study: screenshots in a line with a slider; Try the app switches between tablet and phone", async () => {
+  const page = await open("projects", { width: 1280, height: 800 });
+  await page.route("https://ethio-school-platform.vercel.app/**", (r) => r.fulfill({ contentType: "text/html", body: "<!doctype html><title>School</title><h1>School app</h1><input id='x'>" }));
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/ethio-school-platform.json", import.meta.url).pathname);
+  await page.locator("[data-pack-preview]").getByText("This will add:").waitFor();
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.goto(page.url().replace(/#.*$/, "#/portfolio"));
+  await page.locator('#li-pf-preview [data-case="ethio-school-platform"]').first().click();
+  const slider = page.locator("#li-pf-preview [data-slider]");
+  await slider.waitFor();
+  assert.equal(await slider.locator(".pf-slider__item .pf-tablet").count(), 3, "three tablets in a line");
+  assert.equal(await slider.locator(".pf-slider__btn--prev").isDisabled(), true, "at the start: no back arrow");
+  await slider.locator(".pf-slider__btn--next").click();
+  await page.waitForFunction(() => document.querySelector("#li-pf-preview [data-slide-to='1']").hasAttribute("aria-current"));
+  await slider.locator("[data-slide-to='2']").click();
+  await page.waitForFunction(() => document.querySelector("#li-pf-preview .pf-slider__btn--next").disabled);
+
+  // Try the app: opens on a tablet; switching to the phone keeps the app (no reload).
+  await page.locator("#li-pf-preview .pf-case a[data-try]").click();
+  await page.waitForSelector(".pf-phone--tablet");
+  const app = page.frameLocator(".pf-phone-overlay iframe");
+  await app.locator("#x").fill("kept");
+  await page.click(".pf-device-switch [data-device=phone]");
+  await page.waitForFunction(() => !document.querySelector(".pf-phone--tablet"));
+  const screen = await page.locator(".pf-phone__screen").evaluate((el) => `${el.style.width} × ${el.style.height}`);
+  assert.equal(screen, "390px × 844px");
+  assert.equal(await app.locator("#x").inputValue(), "kept", "the app wasn't reloaded");
+  assert.equal(await page.locator(".pf-device-switch [data-device=phone]").getAttribute("aria-pressed"), "true");
+  await page.click(".pf-device-switch [data-device=tablet]");
+  await page.waitForSelector(".pf-phone--tablet");
+  await page.keyboard.press("Escape");
+  assert.deepEqual(page.errors, []);
   await page.close();
 });

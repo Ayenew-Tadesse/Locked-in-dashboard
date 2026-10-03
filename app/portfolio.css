@@ -487,3 +487,34 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .pf-tablet__screen img, .pf-shots--wide .pf-tablet__screen img, .pf-flow--wide .pf-tablet__screen img{display:block;width:100%;height:auto;border:0;border-radius:0;}
 .pf-flow--wide .pf-tablet{margin-bottom:4px;}
 .pf-shots--wide > .pf-tablet:first-child, .pf-shots--wide > .ce-shot:first-child .pf-tablet{width:88%;margin:0 auto;}
+/* The frame draws both devices' details; each shows on its own device only. */
+.pf-phone:not(.pf-phone--tablet) .pf-only-tablet, .pf-phone--tablet .pf-only-phone{display:none;}
+.pf-phone, .pf-phone__screen{transition:width .25s ease, height .25s ease, border-radius .25s ease, padding .25s ease;}
+@media (prefers-reduced-motion: reduce){ .pf-phone, .pf-phone__screen{transition:none;} }
+/* Phone | Tablet switch under the frame. */
+.pf-phone__actions{flex-wrap:wrap;justify-content:center;}
+.pf-device-switch{display:inline-flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);}
+.pf-device-switch button{min-height:36px;padding:0 16px;border:0;border-radius:999px;background:none;color:#e7ecf5;font:600 14px/1 inherit;cursor:pointer;}
+.pf-device-switch button[aria-pressed="true"]{background:#fff;color:#0b1220;}
+.pf-device-switch button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+/* Screenshot slider (tablets and computers): in a line, snapping to each; the next one peeks in. */
+.pf-slider{position:relative;margin:22px 0 6px;}
+.pf-slider__track{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;padding:6px 2px 14px;outline:none;}
+.pf-slider__track::-webkit-scrollbar{display:none;}
+.pf-slider__track:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:12px;}
+.pf-slider__item{flex:0 0 58%;min-width:0;scroll-snap-align:start;}
+.pf-slider__item:last-child{scroll-snap-align:end;}
+.pf-slider__item img{display:block;width:100%;height:auto;}
+@container pf (max-width:620px){ .pf-slider__item{flex-basis:86%;} .pf-slider__track{gap:12px;} }
+.pf-slider__btn{position:absolute;top:calc(50% - 22px);transform:translateY(-50%);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);font:400 28px/1 inherit;cursor:pointer;box-shadow:0 6px 18px rgb(0 0 0 / .18);z-index:2;transition:opacity .2s;}
+.pf-slider__btn--prev{left:-10px;}
+.pf-slider__btn--next{right:-10px;}
+.pf-slider__btn:disabled{opacity:0;pointer-events:none;}
+.pf-slider__btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.pf-slider__dots{display:flex;justify-content:center;gap:8px;margin-top:4px;}
+.pf-slider__dots button{width:9px;height:9px;padding:0;border:0;border-radius:999px;background:var(--line);cursor:pointer;transition:width .2s, background .2s;}
+.pf-slider__dots button[aria-current]{width:26px;background:var(--accent);}
+.pf-slider__dots button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+@media (prefers-reduced-motion: reduce){ .pf-slider__track{scroll-behavior:auto;} }
+@media print{ .pf-slider__track{flex-wrap:wrap;overflow:visible;} .pf-slider__btn, .pf-slider__dots{display:none;} }
