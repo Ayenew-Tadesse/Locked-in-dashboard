@@ -2741,15 +2741,27 @@ test("import a project file: project, milestones, tasks and case study, never tw
     const cases = state.settings.preferences.portfolio.site.cases;
     const c = cases.find((x) => x.id === "ethio-school-platform");
     return { n: cases.filter((x) => x.title === "Ethio School Platform").length, older: c.subtitle === "an older version",
-      ms: state.milestones.filter((m) => m.title.startsWith("ESP ")).length, wide: c.phone === false, live: c.liveUrl };
+      ms: state.milestones.filter((m) => m.title.startsWith("ESP ")).length, device: c.device, live: c.liveUrl };
   });
-  assert.deepEqual(after, { n: 1, older: false, ms: 7, wide: true, live: "https://ethio-school-platform.vercel.app/login" });
+  assert.deepEqual(after, { n: 1, older: false, ms: 7, device: "tablet", live: "https://ethio-school-platform.vercel.app/login" });
 
-  // A website's case study shows computer-size screenshots and a "Try" link that opens the site.
+  // A tablet app's case study shows its screenshots in tablets, wide.
   await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("ethio-school-platform"));
   await page.waitForSelector("#li-ce .pf-shots--wide");
   assert.equal(await page.locator("#li-ce .pf-flow--wide li").count(), 4);
-  assert.equal(await page.locator("#li-ce .pf-laptop").count(), 7, "every screenshot in a laptop frame");
+  assert.equal(await page.locator("#li-ce .pf-tablet").count(), 7, "every screenshot in a tablet frame");
+
+  // "Try the app" opens the live app in a landscape tablet (1180 × 820 screen).
+  await page.keyboard.press("Escape");
+  const tab = await page.evaluate(async () => {
+    const { openPhone, closePhone } = await import(new URL("app/portfolio/phone.js", location.href).href);
+    openPhone("about:blank", "Ethio School Platform", null, "tablet");
+    const scr = document.querySelector(".pf-phone--tablet .pf-phone__screen");
+    const out = { tablet: !!scr, size: scr && `${scr.style.width} × ${scr.style.height}`, island: !!document.querySelector(".pf-phone__island") };
+    closePhone();
+    return out;
+  });
+  assert.deepEqual(tab, { tablet: true, size: "1180px × 820px", island: false });
   assert.deepEqual(page.errors, []);
   await page.close();
 });

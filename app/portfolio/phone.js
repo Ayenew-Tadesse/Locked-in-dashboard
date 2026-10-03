@@ -1,11 +1,12 @@
-// "Try the app" in a phone: on a computer the live app opens inside a
-// realistic phone (390 × 844, like an iPhone), scaled to fit the window, so a
-// hiring manager can tap through it without leaving the portfolio. On a phone
-// the link just opens the app full screen (it's already on a real phone).
+// "Try the app" in a phone or a tablet: on a computer the live app opens
+// inside a realistic phone (390 × 844, like an iPhone) or a landscape tablet
+// (1180 × 820, like an iPad), scaled to fit the window, so a hiring manager
+// can tap through it without leaving the portfolio. On a phone the link just
+// opens the app full screen (it's already on a real phone).
 // Links opt in with data-try (see site.js); Close, Esc or the backdrop close it.
 import { esc } from "../ui/dom.js";
 
-const W = 390, H = 844, BEZEL = 14;
+const SIZES = { phone: { W: 390, H: 844, BEZEL: 14 }, tablet: { W: 1180, H: 820, BEZEL: 24 } };
 const small = () => matchMedia("(max-width: 699px)").matches;
 let open = null;
 
@@ -21,12 +22,13 @@ export function tryInPhone(e) {
   const a = e.target.closest?.("a[data-try]");
   if (!a || small() || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return false;
   e.preventDefault();
-  openPhone(a.href, a.dataset.try || "", a);
+  openPhone(a.href, a.dataset.try || "", a, a.dataset.device === "tablet" ? "tablet" : "phone");
   return true;
 }
 
-export function openPhone(url, title, from = document.activeElement) {
+export function openPhone(url, title, from = document.activeElement, device = "phone") {
   closePhone();
+  const { W, H, BEZEL } = SIZES[device] || SIZES.phone, tab = device === "tablet";
   const box = document.createElement("div");
   box.className = "pf-phone-overlay";
   box.setAttribute("role", "dialog");
@@ -35,12 +37,13 @@ export function openPhone(url, title, from = document.activeElement) {
   box.innerHTML = `
     <div class="pf-phone-stage">
       <div class="pf-phone-fit">
-        <div class="pf-phone" style="width:${W + BEZEL * 2}px;height:${H + BEZEL * 2}px">
-          <span class="pf-phone__btn pf-phone__btn--power" aria-hidden="true"></span>
+        <div class="pf-phone${tab ? " pf-phone--tablet" : ""}" style="width:${W + BEZEL * 2}px;height:${H + BEZEL * 2}px">
+          ${tab ? `<span class="pf-phone__btn pf-phone__btn--top" aria-hidden="true"></span><i class="pf-phone__cam" aria-hidden="true"></i>`
+            : `<span class="pf-phone__btn pf-phone__btn--power" aria-hidden="true"></span>
           <span class="pf-phone__btn pf-phone__btn--vol1" aria-hidden="true"></span>
-          <span class="pf-phone__btn pf-phone__btn--vol2" aria-hidden="true"></span>
+          <span class="pf-phone__btn pf-phone__btn--vol2" aria-hidden="true"></span>`}
           <div class="pf-phone__screen" style="width:${W}px;height:${H}px">
-            <div class="pf-phone__status" aria-hidden="true"><b class="pf-phone__time">${clock()}</b><i class="pf-phone__island"></i><span class="pf-phone__icons">${ICONS}</span></div>
+            <div class="pf-phone__status" aria-hidden="true"><b class="pf-phone__time">${clock()}</b>${tab ? "" : `<i class="pf-phone__island"></i>`}<span class="pf-phone__icons">${ICONS}</span></div>
             <iframe class="pf-phone__app" src="${esc(url)}" title="${esc(title || "App")} (interactive demo)" allow="clipboard-write; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             <div class="pf-phone__loading" aria-hidden="true"><span></span></div>
             <div class="pf-phone__home" aria-hidden="true"><i></i></div>

@@ -10,9 +10,12 @@
 import { state, toast } from "../state.js";
 import { esc, openModal, closeModal } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, getAt, setAt, imgUrl } from "./page-editor.js";
-import { laptop } from "../portfolio/site.js";
+import { deviceOf, screenFrame } from "../portfolio/site.js";
 
 export const META = ["Role", "Type", "Platform", "Tools"];
+/** The "Device" choice: what "Try the app" opens in and how screenshots are framed. */
+export const deviceField = (d) => `<label class="li-field">Device <small class="li-muted">("Try the app" and screenshots)</small><select name="device">
+  ${[["phone", "Phone"], ["tablet", "Tablet (landscape)"], ["computer", "Computer (website)"]].map(([k, l]) => `<option value="${k}"${d === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
 const clone = (x) => JSON.parse(JSON.stringify(x ?? {}));
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 const joinParas = (list) => (list || []).map((p) => String(p).trim()).filter(Boolean).join("\n\n");
@@ -145,13 +148,13 @@ function cardHtml(m) {
 }
 
 function render(m) {
-  const frame = m.phone === false ? laptop : String; // websites: screenshots in a laptop
+  const frame = screenFrame(m), wide = deviceOf(m) !== "phone"; // tablets and computers: screenshots in their device
   return `${cardHtml(m)}
   <article class="pf-case ce-case">
     ${ed("pill", m.pill, { tag: "p", cls: "pf-pill", ph: "Status label, e.g. Live case study" })}
     ${ed("title", m.title, { tag: "h1", cls: "pf-case__title", ph: "Case study title" })}
     ${ed("subtitle", m.subtitle, { tag: "p", cls: "pf-s-desc", ph: "Subtitle: one or two lines about the project", multi: true })}
-    <div class="pf-shots ce-shots${m.phone === false ? " pf-shots--wide" : ""}">${m.shots.map((s, i) => `<span class="ce-item ce-shot">
+    <div class="pf-shots ce-shots${wide ? " pf-shots--wide" : ""}">${m.shots.map((s, i) => `<span class="ce-item ce-shot">
         <button type="button" class="ce-img" data-act="img" data-path="shots.${i}.src" aria-label="Replace screenshot ${i + 1}">${frame(`<img src="${esc(imgUrl(s.src))}" alt="">`)}</button>${del(`shots.${i}`, "Remove screenshot")}</span>`).join("")}
       <button type="button" class="ce-add ce-add--shot" data-act="shots" data-path="shots">+ Screenshot</button></div>
     <dl class="pf-meta">${m.meta.map((x, i) => `<div><dt>${esc(x.label)}</dt><dd>${ed(`meta.${i}.value`, x.value, { ph: x.label })}</dd></div>`).join("")}</dl>
@@ -167,7 +170,7 @@ function render(m) {
     ${block("Information architecture", `${ed("ia.intro", m.ia.intro, { tag: "p", cls: "pf-intro", ph: "Intro to the structure", multi: true })}${iaHtml(m.ia)}`)}
     <section class="pf-case-block ce-block"><h2>${ed("flow.title", m.flow.title, { ph: "User flow" })}</h2>
       ${ed("flow.intro", m.flow.intro, { tag: "p", cls: "pf-intro", ph: "Intro to the flow", multi: true })}
-      <ol class="pf-flow${m.phone === false ? " pf-flow--wide" : ""}">${m.flow.steps.map((s, i) => `<li class="ce-item">
+      <ol class="pf-flow${wide ? " pf-flow--wide" : ""}">${m.flow.steps.map((s, i) => `<li class="ce-item">
           <button type="button" class="ce-img" data-act="img" data-path="flow.steps.${i}.src" aria-label="${imgUrl(s.src) ? "Replace" : "Add"} the image for step ${i + 1}">${imgUrl(s.src) ? frame(`<img src="${esc(s.src)}" alt="">`) : `<span class="ce-noimg">+ Image</span>`}</button>
           ${ed(`flow.steps.${i}.label`, s.label, { ph: "Step name" })}${del(`flow.steps.${i}`, "Remove step")}</li>`).join("")}</ol>
       ${add("flow", "flow.steps", "Flow step")}</section>
@@ -206,7 +209,7 @@ export function openCaseEditor(original, opts) {
     body: `
       <label class="li-field">Status<select name="status"><option value="live"${model.status !== "progress" ? " selected" : ""}>Live case study</option><option value="progress"${model.status === "progress" ? " selected" : ""}>In progress (card only)</option></select></label>
       <label class="li-field">Live app link<input name="liveUrl" maxlength="300" value="${esc(model.liveUrl || "")}" placeholder="https://…"></label>
-      <label class="li-check-row full"><input type="checkbox" name="phone"${model.phone !== false ? " checked" : ""}> Phone app: "Try the app" in a phone frame, screenshots phone-size <small class="li-muted">(turn off for websites: computer-size screenshots)</small></label>
+      ${deviceField(deviceOf(model))}
       <label class="li-field full">Dashboard project <small class="li-muted">(shows its live progress)</small><select name="project"><option value="">None</option>${(state.projects || []).map((p) => `<option${model.project === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>`,
     onReady(f) {
       f.querySelector("[data-case-form]").addEventListener("click", () => { closeModal(); ctx.close(true); opts.openForm(fromModel(model)); });
@@ -215,7 +218,7 @@ export function openCaseEditor(original, opts) {
       });
     },
     async onSubmit(v) {
-      Object.assign(model, { status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "" });
+      Object.assign(model, { status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), device: v.device, phone: v.device === "phone", project: v.project || "" });
       ctx.markDirty();
     },
   });

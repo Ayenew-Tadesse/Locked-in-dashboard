@@ -18,8 +18,14 @@ const img = (src, alt, cls = "") => {
   const url = typeof src === "string" && (/^https?:\/\//i.test(src) || /^data:image\//i.test(src) || /^blob:/i.test(src)) ? src : null;
   return url ? `<img class="${cls}" src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy">` : "";
 };
+/** What a case study's app runs on: "phone" (the default), "tablet" or "computer" (older ones: phone: false). */
+export const deviceOf = (c) => (["phone", "tablet", "computer"].includes(c?.device) ? c.device : c?.phone === false ? "computer" : "phone");
 /** A website's screenshot in a laptop frame (screen with bezel and camera, on a base). */
 export const laptop = (html) => (html ? `<span class="pf-laptop"><span class="pf-laptop__screen">${html}</span></span>` : "");
+/** A screenshot in a landscape tablet (even bezel, front camera). */
+export const tablet = (html) => (html ? `<span class="pf-tablet"><span class="pf-tablet__screen">${html}</span></span>` : "");
+/** How a case study's screenshots are framed: phones as they are; tablets and computers wide, in their device. */
+export const screenFrame = (c) => ({ phone: String, tablet, computer: laptop })[deviceOf(c)];
 const link = (href, label, cls = "pf-btn pf-btn--outline") => {
   const url = safeUrl(href) || (/^mailto:|^tel:/i.test(href || "") ? href : null);
   return url ? `<a class="${cls}" href="${esc(url)}"${/^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : ""}>${label}</a>` : "";
@@ -28,7 +34,8 @@ const link = (href, label, cls = "pf-btn pf-btn--outline") => {
 // case study turns that off.
 const tryLink = (c, label, cls) => {
   const a = link(c.liveUrl, label, cls);
-  return a && c.phone !== false ? a.replace("<a ", `<a data-try="${esc(c.title || "")}" `) : a;
+  const device = deviceOf(c);
+  return a && device !== "computer" ? a.replace("<a ", `<a data-try="${esc(c.title || "")}" data-device="${device}" `) : a;
 };
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
 const SOCIAL = { linkedin: "LinkedIn", behance: "Behance", dribbble: "Dribbble", instagram: "Instagram", github: "GitHub", website: "Website" };
@@ -196,7 +203,7 @@ function casePage(data, c) {
     ${c.pill ? `<p class="pf-pill">${esc(c.pill)}</p>` : ""}
     <h1 class="pf-case__title">${esc(c.title)}</h1>
     ${c.subtitle ? `<p class="pf-s-desc">${esc(c.subtitle)}</p>` : ""}
-    ${c.shots?.length ? `<div class="pf-shots${c.phone === false ? " pf-shots--wide" : ""}">${c.shots.map((s) => (c.phone === false ? laptop : String)(img(s.src, s.alt || c.title))).join("")}</div>` : ""}
+    ${c.shots?.length ? `<div class="pf-shots${deviceOf(c) !== "phone" ? " pf-shots--wide" : ""}">${c.shots.map((s) => screenFrame(c)(img(s.src, s.alt || c.title))).join("")}</div>` : ""}
     ${c.liveUrl ? `<p class="pf-center">${tryLink(c, "Try the live prototype &#8599;")}</p>` : ""}
     ${c.meta?.length ? `<dl class="pf-meta">${c.meta.map((m) => `<div><dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd></div>`).join("")}</dl>` : ""}
     ${prog && prog.total ? `<p class="pf-live-prog"><b>Live from my dashboard:</b> ${prog.pct}% done · ${prog.done} of ${prog.total} steps${p.stage ? ` · ${esc(p.stage)}` : ""}</p>` : ""}
@@ -212,7 +219,7 @@ function casePage(data, c) {
       <tbody>${c.competitive.rows.map((r) => `<tr><td>${esc(r.feature)}</td>${(r.values || []).map((v) => `<td class="${esc(v)}" aria-label="${esc(v)}">${MARK[v] || esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : "")}
     ${block("Key insight", c.insight ? `<blockquote class="pf-insight">${esc(c.insight)}</blockquote>` : "")}
     ${block("Information architecture", c.ia?.sections?.length ? `${intro(c.ia.intro)}<div class="pf-ia">${c.ia.root ? `<div class="pf-ia__root">${esc(c.ia.root)}</div>` : ""}<div class="pf-ia__sections">${c.ia.sections.map((s) => `<div><h3>${esc(s.title)}</h3><ul>${(s.items || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : "")}
-    ${block(c.flow?.title || "User flow", c.flow?.steps?.length ? `${intro(c.flow.intro)}<ol class="pf-flow${c.phone === false ? " pf-flow--wide" : ""}">${c.flow.steps.map((s) => `<li>${(c.phone === false ? laptop : String)(img(s.src, s.label))}<span>${esc(s.label)}</span></li>`).join("")}</ol>` : "")}
+    ${block(c.flow?.title || "User flow", c.flow?.steps?.length ? `${intro(c.flow.intro)}<ol class="pf-flow${deviceOf(c) !== "phone" ? " pf-flow--wide" : ""}">${c.flow.steps.map((s) => `<li>${screenFrame(c)(img(s.src, s.label))}<span>${esc(s.label)}</span></li>`).join("")}</ol>` : "")}
     ${block("Solution", paras(c.solution))}
     ${block("UI style guide", c.style && (c.style.colors?.length || c.style.font) ? `${intro(c.style.intro)}
       ${c.style.colors?.length ? `<h3 class="pf-h3">Color palette</h3><div class="pf-swatches">${c.style.colors.map((x) => `<div><i style="background:${/^#[0-9a-f]{3,8}$/i.test(x.hex) ? x.hex : "transparent"}"></i><b>${esc(x.name)}</b><span>${esc(x.hex)}</span></div>`).join("")}</div>` : ""}
