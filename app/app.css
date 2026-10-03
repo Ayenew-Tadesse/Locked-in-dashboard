@@ -894,3 +894,6 @@ html.app-mode:not(.li-page) .li-view{min-height:100vh;min-height:100dvh;}
 .li-menu-case__tag{flex:none;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:color-mix(in srgb, var(--good) 15%, transparent);color:var(--good);}
 .li-menu-case__tag.prog{background:var(--surface);color:var(--ink-3);}
 .li-menu-case--new{color:var(--accent);font-weight:600;}
+
+/* Import a project file: what it will add. */
+.li-import-list { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; gap: .4rem; }

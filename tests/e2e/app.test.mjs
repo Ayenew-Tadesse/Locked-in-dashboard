@@ -2695,3 +2695,47 @@ test("menu: Case studies dropdown opens each one to view (Preview) and edit; sav
   assert.deepEqual(page.errors, []);
   await page.close();
 });
+
+test("import a project file: project, milestones, tasks and case study, never twice", async () => {
+  const page = await open("projects");
+  const file = new URL("../../docs/project-files/ethio-school-platform.json", import.meta.url).pathname;
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", file);
+  const preview = page.locator("[data-pack-preview]");
+  await preview.getByText("This will add:").waitFor();
+  const text = await preview.innerText();
+  assert.match(text, /Project Ethio School Platform with 7 checklist items/);
+  assert.match(text, /7 milestones with 32 tasks/);
+  assert.match(text, /Case study Ethio School Platform with 7 pictures, on your portfolio/);
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.locator('[data-project] .li-project-row-name', { hasText: "Ethio School Platform" }).waitFor();
+
+  // Milestones and their tasks are in; the finished ones count as done.
+  const counts = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const ms = state.milestones.filter((m) => m.title.startsWith("ESP "));
+    const c = (state.settings.preferences?.portfolio?.site?.cases || []).find((x) => x.id === "ethio-school-platform");
+    return { ms: ms.length, done: ms.filter((m) => m.status === "completed").length,
+      tasks: state.tasks.filter((t) => ms.some((m) => m.id === t.milestone_id)).length,
+      caseTitle: c?.title, flow: c?.flow?.steps?.length, dataLeft: JSON.stringify(c || {}).includes("data:image") };
+  });
+  assert.deepEqual(counts, { ms: 7, done: 4, tasks: 32, caseTitle: "Ethio School Platform", flow: 4, dataLeft: false });
+
+  // A second import adds nothing.
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", file);
+  await preview.getByText("Everything in this file is already in your dashboard.").waitFor();
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("import: a file that isn't a project file is refused before anything is saved", async () => {
+  const page = await open("settings");
+  await page.click("#li-import-pack");
+  await page.setInputFiles("[data-pack-file]", { name: "notes.json", mimeType: "application/json", buffer: Buffer.from('{"hello":1}') });
+  await page.locator("[data-pack-preview]").getByText("This file isn't a Locked-in project file.").waitFor();
+  await page.click('#li-modal button[type="submit"]');
+  await page.locator("#li-modal .li-form-error").getByText("Choose a project file first.").waitFor();
+  await page.close();
+});
