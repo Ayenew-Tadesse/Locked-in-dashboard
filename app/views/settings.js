@@ -9,6 +9,7 @@ import { PLAN_STATS } from "../plan/year-plan.js";
 import { githubUsername, refreshGithub, syncPortfolioGithub } from "../github.js";
 import { githubUser } from "../core/github.js";
 import { quarterBy, yearConfig } from "../core/quarters.js";
+import { openImportDialog } from "../project-import.js";
 
 // "Set up my year" has been done: afterwards only missing history is offered.
 const setUp = () => !!(state.settings.plan_loaded_at || state.settings.legacy_imported_at);
@@ -88,6 +89,7 @@ export function renderSettings(el) {
       <p class="li-sub">Everything is stored in your database${state.store.mode === "demo" ? " (demo mode: in memory only, nothing is saved)" : ""}. Download a full copy at any time.</p>
       <div class="li-btn-row">
         <button type="button" class="li-btn" id="li-export">Download backup (JSON)</button>
+        <button type="button" class="li-btn" id="li-import-pack">Import project file</button>
         ${!state.team || state.isOwner ? (setUp()
           ? `<button type="button" class="li-btn" id="li-import-missing">Add missing history</button>`
           : `<button type="button" class="li-btn" id="li-import-legacy">Set up my year</button>`) : ""}
@@ -212,6 +214,7 @@ export function renderSettings(el) {
   }));
 
   // Data
+  el.querySelector("#li-import-pack").addEventListener("click", openImportDialog);
   el.querySelector("#li-export").addEventListener("click", () => {
     const data = { exported_at: new Date().toISOString(), profile: state.profile, settings: state.settings, tasks: state.tasks,
       milestones: state.milestones, quarterly_goals: state.goals, daily_scores: Object.values(state.daily), weekly_scores: Object.values(state.weekly) };

@@ -4,24 +4,31 @@ import { state, saveProject, deleteProject, moveProject, toast, can } from "../s
 import { esc, openModal, confirmDialog, progressBar } from "../ui/dom.js";
 import { PROJECT_STATUSES, LINK_LABELS, projectProgress } from "../core/projects.js";
 import { projectCard } from "./project-cards.js";
+import { openImportDialog } from "../project-import.js";
 
 export function renderProjects(el) {
   if (state.projects === null) {
     el.innerHTML = `<header class="li-view-head"><div><span class="card-label">Projects</span><h2 class="li-h2">Projects</h2></div></header>
-      <p class="li-empty">Projects need one more database update: run <code>supabase/migrations/20260929000000_projects.sql</code> in Supabase's SQL Editor, then refresh.</p>`;
+      <p class="li-empty">Projects need one more database update: run <code>supabase/migrations/20260929000000_projects.sql</code> in Supabase's SQL Editor, then refresh.</p>
+      <p class="li-sub">You can still import a project file: its milestones, tasks and case study come in now.</p>
+      <button type="button" class="li-btn" id="li-project-import">Import project file</button>`;
+    el.querySelector("#li-project-import").addEventListener("click", openImportDialog);
     return;
   }
   const list = state.projects;
   if (!state.isManager || (!can("edit_projects") && !can("delete_projects"))) {
-    el.innerHTML = `<header class="li-view-head"><div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2></div></header>
+    el.innerHTML = `<header class="li-view-head"><div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2></div>
+        <button type="button" class="li-btn" id="li-project-import">Import project file</button></header>
       ${list.length ? list.map((p) => projectCard(p)).join("") : `<p class="li-empty">No projects yet.</p>`}`;
+    el.querySelector("#li-project-import").addEventListener("click", openImportDialog);
     return;
   }
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2>
         <span class="li-sub">Shown as cards on the Overview, in this order. Your team sees them.</span></div>
-      ${can("edit_projects") ? `<button type="button" class="li-btn primary" id="li-project-add">+ New project</button>` : ""}
+      <div class="li-btn-row"><button type="button" class="li-btn" id="li-project-import">Import project file</button>
+      ${can("edit_projects") ? `<button type="button" class="li-btn primary" id="li-project-add">+ New project</button>` : ""}</div>
     </header>
     ${list.length ? `<ul class="li-project-list">${list.map((p, i) => {
       const prog = projectProgress(p);
@@ -41,6 +48,7 @@ export function renderProjects(el) {
     }).join("")}</ul>` : `<p class="li-empty">No projects yet. Add your first one.</p>`}`;
 
   el.querySelector("#li-project-add")?.addEventListener("click", () => openProjectForm());
+  el.querySelector("#li-project-import").addEventListener("click", openImportDialog);
   el.querySelectorAll("[data-project]").forEach((row) => {
     const p = list.find((x) => x.id === row.dataset.project);
     row.querySelector("[data-edit]")?.addEventListener("click", () => openProjectForm(p));
