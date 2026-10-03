@@ -110,7 +110,6 @@
 .pf-resume-btn svg{width:16px;height:16px;flex:none;}
 .pf-resume-btn{transition:background-color .15s, color .15s;}
 .pf-resume-btn:hover, .pf-resume-btn:focus-visible, .pf-resume-btn:active{background:var(--accent);color:var(--surface);}
-.pf-btn--disabled{border-color:var(--line);color:var(--ink-3);cursor:default;}
 .pf-s-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center;padding:12px 0 28px;}
 .pf-s-eyebrow{margin:0 0 6px;font-size:16px;color:var(--ink-2);}
 .pf-s-hero h1{margin:0;font-family:'Big Shoulders Display', 'IBM Plex Sans', sans-serif;font-weight:800;font-size:clamp(38px, 7vw, 64px);line-height:1.02;}
@@ -224,7 +223,6 @@
 .pf-card__tag{margin:0;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
 .pf-card h3{margin:0;font-size:17px;}
 .pf-card__desc{margin:0;font-size:13.5px;color:var(--ink-2);}
-.pf-card__prog{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-3);}
 .pf-card__cta{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:8px;}
 .pf-card__cta .pf-btn{padding:8px 14px;font-size:13px;}
 .pf-s-about{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px 8px;}
@@ -265,7 +263,6 @@ a.pf-cc:hover, a.pf-cc:focus-visible{border-color:var(--pf-cc-icon);box-shadow:0
 .pf-meta div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
 .pf-meta dt{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;}
 .pf-meta dd{margin:2px 0 0;font-weight:600;font-size:14px;}
-.pf-live-prog{margin:14px 0 0;padding:10px 14px;border-radius:10px;background:var(--accent-soft);font-size:13.5px;}
 .pf-case-block{padding:26px 0 2px;border-bottom:1px solid var(--line);}
 .pf-case-block h2{margin:0 0 10px;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:0;text-transform:none;font-family:inherit;}
 .pf-case-block p{margin:0 0 12px;color:var(--ink-2);}

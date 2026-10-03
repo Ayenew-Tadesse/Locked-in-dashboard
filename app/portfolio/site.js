@@ -6,7 +6,7 @@
 // how I work) sit between them. Links use data-case / data-home so the page
 // that shows it decides how to switch views.
 import { esc } from "../ui/dom.js";
-import { safeUrl, projectProgress } from "../core/projects.js";
+import { safeUrl } from "../core/projects.js";
 import { hasResume } from "./resume.js";
 
 /** Is there a site to lay out? */
@@ -96,12 +96,6 @@ function socialIcons(s, about) {
   }).filter(Boolean).join("");
 }
 
-// The dashboard project a case study belongs to (by name), for live progress.
-function projectFor(c, projects) {
-  const want = (c.project || c.title || "").toLowerCase();
-  return (projects || []).find((p) => p.name && (want === p.name.toLowerCase() || (c.project && c.project === p.name)))
-    || (projects || []).find((p) => p.name && want.startsWith(p.name.toLowerCase() + " "));
-}
 
 /** The card's chosen screens ([front, left, right]; a tablet or computer uses the first), or null when none are chosen. */
 export function cardScreens(c) {
@@ -137,20 +131,18 @@ export function cardThumb(c, { tag = "div", slots = false } = {}) {
   return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
 }
 
-function caseCard(c, projects) {
-  const p = projectFor(c, projects);
-  const prog = p ? projectProgress(p) : null;
+// No project status reaches the public page (progress, "In progress"): a case study
+// that isn't live yet simply has no "View case study" button.
+function caseCard(c) {
+  const cta = c.status === "progress" ? tryLink(c, "Try the app &#8599;")
+    : `<a class="pf-btn pf-btn--solid" href="#case=${esc(c.id)}" data-case="${esc(c.id)}">View case study</a>${tryLink(c, "Try the app &#8599;")}`;
   return `<article class="pf-card">
     ${cardThumb(c)}
     <div class="pf-card__body">
       ${c.tag ? `<p class="pf-card__tag">${esc(c.tag)}</p>` : ""}
       <h3>${esc(c.title)}</h3>
       ${c.cardDesc ? `<p class="pf-card__desc">${esc(c.cardDesc)}</p>` : ""}
-      ${prog && prog.total ? `<div class="pf-card__prog"><div class="pf-bar"><i style="width:${prog.pct}%"></i></div><span>${prog.pct}% · live from my dashboard</span></div>` : ""}
-      <div class="pf-card__cta">
-        ${c.status === "progress" ? `<span class="pf-btn pf-btn--disabled">In progress</span>` : `<a class="pf-btn pf-btn--solid" href="#case=${esc(c.id)}" data-case="${esc(c.id)}">View case study</a>`}
-        ${c.status !== "progress" ? tryLink(c, "Try the app &#8599;") : ""}
-      </div>
+      ${cta ? `<div class="pf-card__cta">${cta}</div>` : ""}
     </div>
   </article>`;
 }
@@ -251,7 +243,7 @@ function home(data, live) {
           <button type="button" class="pf-rail-btn" data-rail="prev" aria-label="Previous project">${CHEVRON_LEFT}</button>
           <button type="button" class="pf-rail-btn" data-rail="next" aria-label="Next project">${CHEVRON_RIGHT}</button>
         </div></div>
-      <div class="pf-rail" role="list" aria-label="Featured projects">${s.cases.map((c) => `<div class="pf-rail__item" role="listitem">${caseCard(c, data.projects)}</div>`).join("")}</div>
+      <div class="pf-rail" role="list" aria-label="Featured projects">${s.cases.map((c) => `<div class="pf-rail__item" role="listitem">${caseCard(c)}</div>`).join("")}</div>
       <div class="pf-rail-dots" hidden></div>
     </section>` : "",
     live.experience || "",
@@ -303,7 +295,6 @@ function shotsHtml(c) {
 function casePage(data, c) {
   const all = data.site.cases || [];
   const i = all.indexOf(c), next = all.slice(i + 1).concat(all.slice(0, i)).find((x) => x.status !== "progress" && x !== c);
-  const p = projectFor(c, data.projects), prog = p ? projectProgress(p) : null;
   const block = (title, body, id = "") => body ? `<section class="pf-case-block"${id ? ` id="${id}"` : ""}><h2>${esc(title)}</h2>${body}</section>` : "";
   const intro = (t) => (t ? `<p class="pf-intro">${esc(t)}</p>` : "");
   return `
@@ -315,7 +306,6 @@ function casePage(data, c) {
     ${shotsHtml(c)}
     ${c.liveUrl ? `<p class="pf-center">${tryLink(c, "Try the live prototype &#8599;")}</p>` : ""}
     ${c.meta?.length ? `<dl class="pf-meta">${c.meta.map((m) => `<div><dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd></div>`).join("")}</dl>` : ""}
-    ${prog && prog.total ? `<p class="pf-live-prog"><b>Live from my dashboard:</b> ${prog.pct}% done · ${prog.done} of ${prog.total} steps${p.stage ? ` · ${esc(p.stage)}` : ""}</p>` : ""}
     ${block("Overview", paras(c.overview))}
     ${block("Design process", c.process && (c.process.intro || c.process.steps?.length) ? `${paras(c.process.intro)}<ol class="pf-steps">${(c.process.steps || []).map((s, n) => `<li><span>${String(n + 1).padStart(2, "0")}</span>${esc(s)}</li>`).join("")}</ol>` : "")}
     ${block("Problem statement", paras(c.problem))}
