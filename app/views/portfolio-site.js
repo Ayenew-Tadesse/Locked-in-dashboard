@@ -73,6 +73,12 @@ export async function savePortfolioPage(m) {
   site.contact = cleanContacts(m.contact);
   site.social = Object.fromEntries(site.contact.filter((c) => /^https?:\/\//i.test(c.href)).map((c) => [socialKey(c.label, c.href), c.href]));
   site.cases = site.cases || [];
+  // The order you set on the page (case studies themselves are saved by their own editor).
+  const order = (m.cases || []).map((c) => c.id);
+  const rank = (c) => { const i = order.indexOf(c.id); return i < 0 ? order.length : i; };
+  const reordered = site.cases.map((c, i) => [c, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([c]) => c);
+  const moved = reordered.some((c, i) => c !== site.cases[i]);
+  site.cases = reordered;
   if (state.year) site.year = state.year; else delete site.year;
   Object.assign(site, portfolioGithub());
   if (!site.github) delete site.github;
@@ -83,6 +89,14 @@ export async function savePortfolioPage(m) {
     show: { ...(old.show || {}), ...m.show } };
   const s = await state.store.savePreferences({ ...prefs, portfolio });
   state.settings = { ...state.settings, ...s };
+  if (moved) await projectsFollow(site.cases);
+}
+
+/** The Projects page (and the Overview cards) follow the case studies' order. Returns whether they moved. */
+async function projectsFollow(cases) {
+  const ids = Array.isArray(state.projects) && state.isManager && can("edit_projects") ? projectOrderFromCases(state.projects, cases) : null;
+  if (!ids) return false;
+  try { await setProjectOrder(ids); return true; } catch { return false; /* the store already said why */ }
 }
 
 /** What the editor starts from: your site, with anything only the older fields had filled in. */
@@ -171,14 +185,21 @@ export function editorHtml() {
     </section>`;
 }
 
+const MOVES = [["top", "&#10514;", "Move to the top"], ["up", "&#8593;", "Move up"], ["down", "&#8595;", "Move down"], ["bottom", "&#10515;", "Move to the bottom"]];
+/** Top / up / down / bottom buttons for item i of n (edges disabled). attrs(where): the button's data attributes. */
+export const moveButtons = (i, n, attrs, cls = "li-icon-btn") => MOVES.map(([k, icon, label]) =>
+  `<button type="button" class="${cls}" ${attrs(k)} aria-label="${label}" title="${label}"${(k === "top" || k === "up") && i === 0 || (k === "down" || k === "bottom") && i === n - 1 ? " disabled" : ""}>${icon}</button>`).join("");
+
 function caseCardsHtml(cases) {
-  return cases.map((c) => {
+  return cases.map((c, i) => {
     const shot = imgUrl(c.shots?.[0]?.src);
     return `<div class="li-pf-case-card" data-case-card="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.title || "Untitled")}: edit, or drag to swap places">
+      <span class="li-pf-place" title="Place ${i + 1} of ${cases.length}">${i + 1}</span>
       <div class="li-pf-case-thumb">${shot ? `<img src="${esc(shot)}" alt="" draggable="false">` : `<span>${esc(c.thumbWord || (c.title || "?").split(" ")[0])}</span>`}</div>
       <b>${esc(c.title || "Untitled")}</b>
       <small class="li-muted">${c.status === "progress" ? "In progress" : "Live"}</small>
       <span class="li-pf-grip" data-grip aria-hidden="true" title="Drag to swap">&#10303;</span>
+      <span class="li-pf-moves">${moveButtons(i, cases.length, (k) => `data-case-move="${k}"`)}</span>
     </div>`;
   }).join("") + `<button type="button" class="li-pf-case-card li-pf-case-new" id="li-pf-case-add">+ Add a case study</button>`;
 }
@@ -373,11 +394,21 @@ function wireCaseCards(el, hooks) {
     const i = cases.findIndex((x) => x.id === a), j = cases.findIndex((x) => x.id === b);
     if (i < 0 || j < 0 || i === j) return;
     [cases[i], cases[j]] = [cases[j], cases[i]];
+    return commitOrder(site);
+  }
+  // To the top, up, down or to the bottom.
+  async function moveCase(id, where) {
+    const site = currentSite(), cases = site.cases || [];
+    const i = cases.findIndex((x) => x.id === id);
+    const to = { top: 0, up: i - 1, down: i + 1, bottom: cases.length - 1 }[where];
+    if (i < 0 || to < 0 || to >= cases.length || to === i) return;
+    cases.splice(to, 0, ...cases.splice(i, 1));
+    await commitOrder(site);
+    grid.querySelector(`[data-case-card="${CSS.escape(id)}"] [data-case-move="${where}"]:not(:disabled), [data-case-card="${CSS.escape(id)}"]`)?.focus();
+  }
+  async function commitOrder(site) {
     try { await saveSite(site); changed(); } catch (err) { toast("Couldn't save: " + err.message, "error"); redraw(); return; }
-    // The Projects page (and the Overview cards) follow the new order.
-    const ids = Array.isArray(state.projects) && state.isManager && can("edit_projects") ? projectOrderFromCases(state.projects, site.cases) : null;
-    if (!ids) return toast("Order saved");
-    try { await setProjectOrder(ids); toast("Order saved · projects reordered to match"); } catch { /* the store already said why */ }
+    toast((await projectsFollow(site.cases)) ? "Order saved · projects reordered to match" : "Order saved");
   }
 
   let drag = null, suppressClick = false;
@@ -420,7 +451,7 @@ function wireCaseCards(el, hooks) {
   }
   grid.addEventListener("pointerdown", (e) => {
     const card = e.target.closest("[data-case-card]");
-    if (!card || e.button > 0) return;
+    if (!card || e.button > 0 || e.target.closest("[data-case-move]")) return;
     const touch = e.pointerType !== "mouse";
     drag = { id: e.pointerId, card, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, touch, grip: !!e.target.closest("[data-grip]"), active: false, over: null };
     document.addEventListener("pointermove", move, { passive: false });
@@ -432,13 +463,15 @@ function wireCaseCards(el, hooks) {
   grid.addEventListener("click", (e) => {
     if (suppressClick) return;
     if (e.target.closest("#li-pf-case-add")) return edit(null);
+    const mv = e.target.closest("[data-case-move]");
+    if (mv) return moveCase(mv.closest("[data-case-card]").dataset.caseCard, mv.dataset.caseMove);
     const card = e.target.closest("[data-case-card]");
     if (card) edit(card.dataset.caseCard);
   });
   // Keyboard: Enter opens; Ctrl/⌘ + arrow keys swap with the neighbour.
   grid.addEventListener("keydown", (e) => {
     const card = e.target.closest("[data-case-card]");
-    if (!card) return;
+    if (!card || e.target.closest("[data-case-move]")) return;
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); edit(card.dataset.caseCard); return; }
     const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
     if (!step || !(e.ctrlKey || e.metaKey)) return;
