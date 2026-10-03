@@ -2915,9 +2915,13 @@ test("portfolio cards: phone apps show three phones, tablet apps their tablet, n
   const preview = page.locator("#li-pf-preview");
   await preview.locator(".pf-card").first().waitFor();
   const thumbs = () => preview.locator(".pf-card__thumb").evaluateAll((els) => els.map((t) => ({
-    phones: t.querySelectorAll(".pf-mini-phone img").length, tablet: t.querySelectorAll(".pf-tablet img").length, word: t.querySelector(":scope > span")?.textContent || "",
+    phones: t.querySelectorAll(".pf-mini-phone img").length, tablet: t.querySelectorAll(".pf-tablet img").length, word: t.classList.contains("has-img") ? "" : t.textContent.trim(),
   })));
   assert.deepEqual(await thumbs(), [{ phones: 3, tablet: 0, word: "" }, { phones: 3, tablet: 0, word: "" }, { phones: 0, tablet: 0, word: "Hotel Booking" }]);
+  // Each phone has a status bar above the screenshot and a home bar below it, so nothing covers the app.
+  const first = preview.locator(".pf-card").first().locator(".pf-mini-phone").first();
+  const [bar, shot, home] = await Promise.all([".pf-mini-phone__status", "img", ".pf-mini-phone__home"].map((q) => first.locator(q).boundingBox()));
+  assert.ok(bar.y + bar.height <= shot.y + 0.5 && shot.y + shot.height <= home.y + 0.5, "status bar, screenshot, home bar, top to bottom");
   // The first screenshot sits in front, in the middle.
   const mid = await preview.locator(".pf-card").first().locator(".pf-mini-phone").evaluateAll((els) => els.map((e) => ({ order: getComputedStyle(e).order, z: getComputedStyle(e).zIndex })));
   assert.deepEqual(mid[0], { order: "2", z: "2" });
