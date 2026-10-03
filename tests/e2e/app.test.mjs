@@ -3075,3 +3075,77 @@ test("projects: a new project gets its case study, in progress, in the project's
   assert.deepEqual(page.errors, []);
   await page.close();
 });
+
+test("portfolio: once, every project without a case study gets one (in order, no duplicates, deleted ones stay deleted)", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  const run = () => page.evaluate(async () => {
+    const { fillMissingCases } = await import(new URL("app/project-sync.js", location.href).href);
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const made = await fillMissingCases();
+    return { made, cases: state.settings.preferences.portfolio.site.cases.map((c) => `${c.id}:${c.status || "live"}:${c.project || ""}`) };
+  });
+  const first = await run();
+  assert.equal(first.made, 2);
+  assert.deepEqual(first.cases, ["hidgo:live:", "guxo-flights:progress:Guxo Flights", "hotel:progress:", "guxo:live:Guxo", "gexi:progress:Gexi"]);
+  await page.getByText("2 case studies created for your projects").waitFor();
+  assert.equal((await run()).made, 0, "only once");
+  // Delete one: it doesn't come back.
+  await page.evaluate(async () => {
+    const { saveSite, currentSite } = await import(new URL("app/views/portfolio-site.js", location.href).href);
+    const site = currentSite();
+    site.cases = site.cases.filter((c) => c.id !== "gexi");
+    await saveSite(site);
+  });
+  const again = await run();
+  assert.equal(again.made, 0);
+  assert.ok(!again.cases.some((c) => c.startsWith("gexi:")));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("portfolio: reorder case studies with top / up / down / bottom, on the page and in the form; projects follow", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  const saved = () => page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return { cases: state.settings.preferences.portfolio.site.cases.map((c) => c.id).join(), projects: state.projects.map((p) => p.name).join() };
+  });
+  assert.equal((await saved()).cases, "hidgo,guxo,hotel");
+  // On the page: moves show at once; Cancel keeps the saved order; Save keeps the new one.
+  await page.click("#li-pf-onpage");
+  const ce = (sel) => page.locator(`#li-ce ${sel}`);
+  await ce(".ce-casewrap").first().waitFor();
+  const onPage = () => ce(".ce-casecard__title").allInnerTexts();
+  assert.deepEqual(await ce(".ce-place").allInnerTexts(), ["1", "2", "3"]);
+  assert.equal(await ce('[data-act="casemove"][data-path="hidgo|up"]').isDisabled(), true);
+  await ce('[data-act="casemove"][data-path="hotel|top"]').click();
+  assert.deepEqual(await onPage(), ["Modern Hotel Booking App", "Hid-Go Flight Booking App", "Guxo Bus Booking App"]);
+  await ce('[data-act="cancel"]').click();
+  await page.click("#li-modal button[type=submit]"); // discard
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  assert.equal((await saved()).cases, "hidgo,guxo,hotel");
+  await page.click("#li-pf-onpage");
+  await ce('[data-act="casemove"][data-path="guxo|top"]').click();
+  await ce('[data-act="casemove"][data-path="hidgo|bottom"]').click();
+  assert.deepEqual(await onPage(), ["Guxo Bus Booking App", "Modern Hotel Booking App", "Hid-Go Flight Booking App"]);
+  await ce('[data-act="save"]').click();
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  const s1 = await saved();
+  assert.equal(s1.cases, "guxo,hotel,hidgo");
+  assert.equal(s1.projects, "Guxo Flights,Guxo,Gexi", "Guxo is the only project with a case study, so nothing else moves");
+  assert.deepEqual((await page.locator("#li-pf-preview .pf-card h3").allInnerTexts()), ["Guxo Bus Booking App", "Modern Hotel Booking App", "Hid-Go Flight Booking App"]);
+  // In the form: the same buttons save straight away.
+  await openAllSections(page);
+  const form = (id, k) => page.locator(`#li-pf-cases [data-case-card="${id}"] [data-case-move="${k}"]`);
+  await form("hidgo", "up").click();
+  await page.getByText("Order saved").first().waitFor();
+  await page.waitForFunction(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return state.settings.preferences.portfolio.site.cases.map((c) => c.id).join() === "guxo,hidgo,hotel";
+  });
+  assert.deepEqual(await page.locator("#li-pf-cases .li-pf-place").allInnerTexts(), ["1", "2", "3"]);
+  assert.equal(await form("guxo", "top").isDisabled(), true);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});

@@ -3,6 +3,7 @@
 // ?demo=history for the original dashboard's tracking history); otherwise
 // the original dashboard runs exactly as before.
 import { state, subscribe, loadAll, setToast, updateTask, saveTask, saveProfile, seedProjects, toast, refreshAccessRequests, can } from "./state.js";
+import { fillMissingCases } from "./project-sync.js";
 import { createSupabaseStore, createMemoryStore } from "./store.js";
 import { demoSeed, emptySeed } from "./demo.js";
 import { buildYearSetup } from "./plan/setup.js";
@@ -466,6 +467,8 @@ async function start(store) {
   }
   // First time with the projects table: copy the original dashboard's apps in.
   await seedProjects(window.LockedInLegacy?.data());
+  // Once: every project gets a case study on your portfolio (new ones get theirs when added).
+  await fillMissingCases();
   started = true;
   window.LockedInHooks = legacyHooks;
   setupMenu({ onLogout: () => document.getElementById("logout-btn").click() });

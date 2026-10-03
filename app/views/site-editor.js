@@ -9,6 +9,7 @@ import { state, toast } from "../state.js";
 import { esc, openModal, closeModal, confirmDialog } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, imgUrl } from "./page-editor.js";
 import { CONTACT_ICONS, contactIcon, cardThumb, pictureOf, ILLUSTRATION } from "../portfolio/site.js";
+import { moveButtons } from "./portfolio-site.js";
 import { portfolioPrefs } from "../core/portfolio.js";
 
 const clone = (x) => JSON.parse(JSON.stringify(x ?? null));
@@ -50,9 +51,10 @@ function render(m) {
   <div class="ce-sec ce-stats${m.show.stats === false ? " ce-hidden" : ""}"><div class="ce-sechead ce-sechead--small"><span>Numbers</span>${toggle(m, "stats", "Numbers")}</div>
     <div class="pf-s-stats">${m.stats.map((x, i) => `<div class="ce-item${i === Math.floor((m.stats.length - 1) / 2) ? " is-hi" : ""}">${del(`stats.${i}`, "Remove number")}<b>${ed(`stats.${i}.num`, x.num, { ph: "3+" })}</b><span>${ed(`stats.${i}.label`, x.label, { ph: "Label" })}</span></div>`).join("")}</div>
     ${m.stats.length < MAX_STATS ? add("stat", "stats", "Number") : ""}</div>
-  ${section(m, "cases", "Featured projects", `<div class="ce-cases">${m.cases.map((c) => `<button type="button" class="pf-card ce-casecard" data-act="case" data-path="${esc(c.id)}">
+  ${section(m, "cases", "Featured projects", `<div class="ce-cases">${m.cases.map((c, i) => `<div class="ce-casewrap"><span class="ce-place" title="Place ${i + 1} of ${m.cases.length}">${i + 1}</span><button type="button" class="pf-card ce-casecard" data-act="case" data-path="${esc(c.id)}">
       ${cardThumb(c, { tag: "span", word: c.title })}
-      <span class="pf-card__body">${c.tag ? `<span class="pf-card__tag">${esc(c.tag)}</span>` : ""}<b class="ce-casecard__title">${esc(c.title)}</b><span class="ce-casecard__edit">Edit on the page &rarr;</span></span></button>`).join("")}
+      <span class="pf-card__body">${c.tag ? `<span class="pf-card__tag">${esc(c.tag)}</span>` : ""}<b class="ce-casecard__title">${esc(c.title)}</b><span class="ce-casecard__edit">Edit on the page &rarr;</span></span></button>
+      <span class="ce-casemoves">${moveButtons(i, m.cases.length, (k) => `data-act="casemove" data-path="${esc(c.id)}|${k}"`, "ce-movebtn")}</span></div>`).join("")}
       <button type="button" class="ce-add ce-add--case" data-act="case" data-path="">+ Add a case study</button></div>`, "pf-cases")}
   ${section(m, "about", "About me", `<div class="pf-s-about">${paraList("about", m.about, "About me")}</div>`)}
   ${section(m, "skillgroups", "Key skills", `<div class="pf-s-skills">${m.skills.map((g, i) => `<div class="pf-s-skill ce-item">${del(`skills.${i}`, "Remove group")}
@@ -132,6 +134,12 @@ export function openSiteEditor(opts) {
       toggle(key) { model.show[key] = model.show[key] === false; },
       open(key) { model.hero.open[key] = !model.hero.open[key]; },
       unphoto() { model.portrait = ""; },
+      casemove(path) {
+        const [id, where] = path.split("|"), l = model.cases, i = l.findIndex((c) => c.id === id);
+        const to = { top: 0, up: i - 1, down: i + 1, bottom: l.length - 1 }[where];
+        if (i < 0 || to < 0 || to >= l.length || to === i) return false;
+        l.splice(to, 0, ...l.splice(i, 1));
+      },
       picture(key) { model.picture = key; },
       stat() { model.stats.push({ num: "", label: "" }); return `stats.${model.stats.length - 1}.num`; },
       group() { model.skills.push({ title: "", items: [] }); return `skills.${model.skills.length - 1}.title`; },

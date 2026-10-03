@@ -579,3 +579,12 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .ce-pick__shot{padding:0;border:2px solid var(--line);border-radius:10px;background:var(--surface-2);overflow:hidden;cursor:pointer;width:76px;height:150px;}
 .ce-pick__shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;}
 .ce-pick__shot.on, .ce-pick__shot:hover, .ce-pick__shot:focus-visible{border-color:var(--accent);}
+/* Portfolio page editor: each featured project's place and top / up / down / bottom buttons. */
+.ce-casewrap{position:relative;display:flex;flex-direction:column;}
+.ce-casewrap > .ce-casecard{flex:1;}
+.ce-place{position:absolute;top:8px;left:8px;z-index:2;min-width:24px;height:24px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:var(--surface);color:var(--ink-2);font-size:12px;box-shadow:0 1px 3px rgb(15 26 45 / .15);}
+.ce-casemoves{display:flex;gap:6px;justify-content:center;margin-top:8px;}
+.ce-movebtn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink-2);font:inherit;font-size:15px;cursor:pointer;}
+.ce-movebtn:hover:not(:disabled), .ce-movebtn:focus-visible{border-color:var(--accent);color:var(--accent);}
+.ce-movebtn:disabled{opacity:.35;cursor:default;}
+#li-ce.ce-preview .ce-casemoves, #li-ce.ce-preview .ce-place{display:none;}
