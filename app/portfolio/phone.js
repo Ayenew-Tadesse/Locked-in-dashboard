@@ -28,22 +28,23 @@ export function tryInPhone(e) {
 
 export function openPhone(url, title, from = document.activeElement, device = "phone") {
   closePhone();
-  const { W, H, BEZEL } = SIZES[device] || SIZES.phone, tab = device === "tablet";
+  let size = SIZES[device] || SIZES.phone;
   const box = document.createElement("div");
   box.className = "pf-phone-overlay";
   box.setAttribute("role", "dialog");
   box.setAttribute("aria-modal", "true");
   box.setAttribute("aria-label", `${title || "App"}, interactive demo`);
+  // Both devices' details are drawn; the frame's class shows the ones that belong to it.
   box.innerHTML = `
     <div class="pf-phone-stage">
       <div class="pf-phone-fit">
-        <div class="pf-phone${tab ? " pf-phone--tablet" : ""}" style="width:${W + BEZEL * 2}px;height:${H + BEZEL * 2}px">
-          ${tab ? `<span class="pf-phone__btn pf-phone__btn--top" aria-hidden="true"></span><i class="pf-phone__cam" aria-hidden="true"></i>`
-            : `<span class="pf-phone__btn pf-phone__btn--power" aria-hidden="true"></span>
-          <span class="pf-phone__btn pf-phone__btn--vol1" aria-hidden="true"></span>
-          <span class="pf-phone__btn pf-phone__btn--vol2" aria-hidden="true"></span>`}
-          <div class="pf-phone__screen" style="width:${W}px;height:${H}px">
-            <div class="pf-phone__status" aria-hidden="true"><b class="pf-phone__time">${clock()}</b>${tab ? "" : `<i class="pf-phone__island"></i>`}<span class="pf-phone__icons">${ICONS}</span></div>
+        <div class="pf-phone">
+          <span class="pf-phone__btn pf-phone__btn--power pf-only-phone" aria-hidden="true"></span>
+          <span class="pf-phone__btn pf-phone__btn--vol1 pf-only-phone" aria-hidden="true"></span>
+          <span class="pf-phone__btn pf-phone__btn--vol2 pf-only-phone" aria-hidden="true"></span>
+          <span class="pf-phone__btn pf-phone__btn--top pf-only-tablet" aria-hidden="true"></span><i class="pf-phone__cam pf-only-tablet" aria-hidden="true"></i>
+          <div class="pf-phone__screen">
+            <div class="pf-phone__status" aria-hidden="true"><b class="pf-phone__time">${clock()}</b><i class="pf-phone__island pf-only-phone"></i><span class="pf-phone__icons">${ICONS}</span></div>
             <iframe class="pf-phone__app" src="${esc(url)}" title="${esc(title || "App")} (interactive demo)" allow="clipboard-write; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             <div class="pf-phone__loading" aria-hidden="true"><span></span></div>
             <div class="pf-phone__home" aria-hidden="true"><i></i></div>
@@ -53,6 +54,9 @@ export function openPhone(url, title, from = document.activeElement, device = "p
       <div class="pf-phone__bar">
         <p class="pf-phone__cap"><b>${esc(title || "Live app")}</b> · interactive demo. Click to tap, scroll to swipe.</p>
         <div class="pf-phone__actions">
+          <div class="pf-device-switch" role="group" aria-label="Show the app on">
+            <button type="button" data-device="phone" aria-pressed="false">Phone</button><button type="button" data-device="tablet" aria-pressed="false">Tablet</button>
+          </div>
           <a class="pf-btn pf-btn--outline" href="${esc(url)}" target="_blank" rel="noopener">Open full screen &#8599;</a>
           <button type="button" class="pf-btn pf-btn--solid" data-phone-close>Close</button>
         </div>
@@ -62,13 +66,30 @@ export function openPhone(url, title, from = document.activeElement, device = "p
   document.documentElement.classList.add("pf-phone-open");
 
   const fit = () => {
+    const { W, H, BEZEL } = size;
     const bar = box.querySelector(".pf-phone__bar").offsetHeight + 40;
-    const s = Math.min(1, (innerHeight - bar - 32) / (H + BEZEL * 2), (innerWidth - 32) / (W + BEZEL * 2));
+    const s = Math.max(0.3, Math.min(1, (innerHeight - bar - 32) / (H + BEZEL * 2), (innerWidth - 32) / (W + BEZEL * 2)));
     const f = box.querySelector(".pf-phone-fit");
-    f.style.setProperty("--s", String(Math.max(0.4, s)));
-    f.style.width = (W + BEZEL * 2) * Math.max(0.4, s) + "px";
-    f.style.height = (H + BEZEL * 2) * Math.max(0.4, s) + "px";
+    f.style.setProperty("--s", String(s));
+    f.style.width = (W + BEZEL * 2) * s + "px";
+    f.style.height = (H + BEZEL * 2) * s + "px";
   };
+  // Reshape the frame around the running app (the app isn't reloaded, so it keeps its place).
+  const setDevice = (d) => {
+    size = SIZES[d] || SIZES.phone;
+    const { W, H, BEZEL } = size, frame = box.querySelector(".pf-phone");
+    frame.classList.toggle("pf-phone--tablet", d === "tablet");
+    Object.assign(frame.style, { width: W + BEZEL * 2 + "px", height: H + BEZEL * 2 + "px" });
+    Object.assign(box.querySelector(".pf-phone__screen").style, { width: W + "px", height: H + "px" });
+    box.querySelectorAll("[data-device]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.device === d)));
+    box.dataset.device = d;
+    fit();
+  };
+  box.querySelector(".pf-device-switch").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-device]");
+    if (b) setDevice(b.dataset.device);
+  });
+  setDevice(device === "tablet" ? "tablet" : "phone");
   const key = (e) => { if (e.key === "Escape") closePhone(); };
   const tick = setInterval(() => { const t = box.querySelector(".pf-phone__time"); if (t) t.textContent = clock(); }, 30000);
   box.querySelector(".pf-phone__app").addEventListener("load", () => box.classList.add("is-loaded"), { once: true });
@@ -77,7 +98,6 @@ export function openPhone(url, title, from = document.activeElement, device = "p
   });
   addEventListener("resize", fit);
   addEventListener("keydown", key);
-  fit();
   box.querySelector("[data-phone-close]").focus({ preventScroll: true });
   open = () => {
     clearInterval(tick);

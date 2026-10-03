@@ -191,6 +191,26 @@ function demography(p) {
 
 const MARK = { yes: "&#10003;", partial: "&#8776;", no: "&#8212;" };
 
+/**
+ * The screenshots at the top of a case study. Phone apps: a row of phones.
+ * Tablets and computers: a slider (in a line, arrows, dots, swipe; slider.js)
+ * when there are two or more, else the one screenshot large.
+ */
+function shotsHtml(c) {
+  const list = (c.shots || []).map((s) => screenFrame(c)(img(s.src, s.alt || c.title))).filter(Boolean);
+  if (!list.length) return "";
+  if (deviceOf(c) === "phone") return `<div class="pf-shots">${list.join("")}</div>`;
+  if (list.length < 2) return `<div class="pf-shots pf-shots--wide">${list[0]}</div>`;
+  return `<div class="pf-slider" data-slider>
+      <div class="pf-slider__track" tabindex="0" role="region" aria-label="Screenshots of ${esc(c.title || "the app")} (${list.length})">
+        ${list.map((h, i) => `<div class="pf-slider__item" aria-label="${i + 1} of ${list.length}">${h}</div>`).join("")}
+      </div>
+      <button type="button" class="pf-slider__btn pf-slider__btn--prev" data-slide="-1" aria-label="Previous screenshot" disabled>&#8249;</button>
+      <button type="button" class="pf-slider__btn pf-slider__btn--next" data-slide="1" aria-label="Next screenshot">&#8250;</button>
+      <div class="pf-slider__dots">${list.map((_, i) => `<button type="button" data-slide-to="${i}" aria-label="Screenshot ${i + 1}"${i ? "" : ' aria-current="true"'}></button>`).join("")}</div>
+    </div>`;
+}
+
 function casePage(data, c) {
   const all = data.site.cases || [];
   const i = all.indexOf(c), next = all.slice(i + 1).concat(all.slice(0, i)).find((x) => x.status !== "progress" && x !== c);
@@ -203,7 +223,7 @@ function casePage(data, c) {
     ${c.pill ? `<p class="pf-pill">${esc(c.pill)}</p>` : ""}
     <h1 class="pf-case__title">${esc(c.title)}</h1>
     ${c.subtitle ? `<p class="pf-s-desc">${esc(c.subtitle)}</p>` : ""}
-    ${c.shots?.length ? `<div class="pf-shots${deviceOf(c) !== "phone" ? " pf-shots--wide" : ""}">${c.shots.map((s) => screenFrame(c)(img(s.src, s.alt || c.title))).join("")}</div>` : ""}
+    ${shotsHtml(c)}
     ${c.liveUrl ? `<p class="pf-center">${tryLink(c, "Try the live prototype &#8599;")}</p>` : ""}
     ${c.meta?.length ? `<dl class="pf-meta">${c.meta.map((m) => `<div><dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd></div>`).join("")}</dl>` : ""}
     ${prog && prog.total ? `<p class="pf-live-prog"><b>Live from my dashboard:</b> ${prog.pct}% done · ${prog.done} of ${prog.total} steps${p.stage ? ` · ${esc(p.stage)}` : ""}</p>` : ""}
