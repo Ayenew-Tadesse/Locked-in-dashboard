@@ -2921,10 +2921,11 @@ test("portfolio cards: phone apps show three phones, tablet apps their tablet, n
   // A project without pictures yet still gets its phones, with placeholder screens.
   assert.equal(await preview.locator(".pf-card").nth(2).locator(".pf-mini-phone .pf-screen-ph").count(), 3);
   assert.match(await preview.locator(".pf-card").nth(2).locator(".pf-card__thumb").innerText(), /Screens coming soon/);
-  // Each phone has a status bar above the screenshot and a home bar below it, so nothing covers the app.
+  // Each phone has a status bar above the screenshot (nothing under the island), and no bar below it.
   const first = preview.locator(".pf-card").first().locator(".pf-mini-phone").first();
-  const [bar, shot, home] = await Promise.all([".pf-mini-phone__status", "img", ".pf-mini-phone__home"].map((q) => first.locator(q).boundingBox()));
-  assert.ok(bar.y + bar.height <= shot.y + 0.5 && shot.y + shot.height <= home.y + 0.5, "status bar, screenshot, home bar, top to bottom");
+  const [bar, shot] = await Promise.all([".pf-mini-phone__status", "img"].map((q) => first.locator(q).boundingBox()));
+  assert.ok(bar.y + bar.height <= shot.y + 0.5, "the screenshot starts below the status bar");
+  assert.equal(await first.locator(".pf-mini-phone__home").count(), 0);
   // The first screenshot sits in front, in the middle.
   const mid = await preview.locator(".pf-card").first().locator(".pf-mini-phone").evaluateAll((els) => els.map((e) => ({ order: getComputedStyle(e).order, z: getComputedStyle(e).zIndex })));
   assert.deepEqual(mid[0], { order: "2", z: "2" });
@@ -3029,6 +3030,48 @@ test("case study editor: choose each card screen (a screenshot, an address, an u
     portfolioChanged();
   });
   await page.waitForFunction(() => document.querySelectorAll("#li-pf-preview .pf-card")[2]?.querySelector(".pf-tablet .pf-screen-ph"));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("projects: a new project gets its case study, in progress, in the project's place", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  await page.click("#li-project-add");
+  await page.fill("#li-modal [name=name]", "Gexi Wallet");
+  await page.fill("#li-modal [name=category]", "Mobile app · payments");
+  await page.fill("#li-modal [name=description]", "Pay and get paid inside Gexi.");
+  await page.fill("#li-modal [name=link_web]", "https://gexi.example/wallet");
+  await page.fill("#li-modal [name=facts]", "Telebirr first\nWorks offline");
+  await page.click("#li-modal button[type=submit]");
+  await page.getByText("Project added · case study created").waitFor();
+  const c = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const cases = state.settings.preferences.portfolio.site.cases;
+    const x = cases.find((y) => y.project === "Gexi Wallet");
+    return x && { title: x.title, status: x.status, tag: x.tag, cardDesc: x.cardDesc, liveUrl: x.liveUrl, overview: x.overview, last: cases.at(-1).id === x.id };
+  });
+  assert.deepEqual(c, { title: "Gexi Wallet", status: "progress", tag: "Mobile app · payments", cardDesc: "Pay and get paid inside Gexi.",
+    liveUrl: "https://gexi.example/wallet", overview: "Key facts:\n\nTelebirr first\n\nWorks offline", last: true });
+  // On the Projects page it's linked; on the portfolio its card has placeholder phones.
+  await page.locator("[data-project]", { hasText: "Gexi Wallet" }).locator("[data-open-case]").waitFor();
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  const card = page.locator("#li-pf-preview .pf-card", { hasText: "Gexi Wallet" });
+  await card.waitFor();
+  assert.equal(await card.locator(".pf-mini-phone .pf-screen-ph").count(), 3);
+  assert.match(await card.innerText(), /In progress/);
+  // Adding a project whose case study already exists links it instead of making a second one.
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  await page.click("#li-project-add");
+  await page.fill("#li-modal [name=name]", "Modern Hotel Booking App");
+  await page.click("#li-modal button[type=submit]");
+  await page.getByText("Project added · linked to its case study").waitFor();
+  const hotels = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return state.settings.preferences.portfolio.site.cases.filter((y) => /hotel/i.test(y.title)).map((y) => [y.id, y.project]);
+  });
+  assert.deepEqual(hotels, [["hotel", "Modern Hotel Booking App"]]);
   assert.deepEqual(page.errors, []);
   await page.close();
 });
