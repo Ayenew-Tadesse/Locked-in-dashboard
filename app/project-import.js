@@ -35,6 +35,12 @@ function previewHtml(pack, plan) {
   </ul>`;
 }
 
+/** The case study you already have that the file's one matches (same id or title). */
+function existingCase(c) {
+  const lower = (x) => String(x || "").trim().toLowerCase();
+  return (currentSite().cases || []).find((x) => x.id === c.id || lower(x.title) === lower(c.title)) || null;
+}
+
 /** Copies the case study, uploading any pictures carried in the file into your portfolio storage. */
 async function uploadImages(c, onStep) {
   const copy = JSON.parse(JSON.stringify(c));
@@ -50,7 +56,7 @@ async function uploadImages(c, onStep) {
 }
 
 /** Adds what's new from the file. Returns a short summary of what was added. */
-export async function importPack(pack, onStep = () => {}) {
+export async function importPack(pack, onStep = () => {}, { replaceCase = false } = {}) {
   const plan = planFor(pack);
   const added = [];
   let projectId = null;
@@ -73,12 +79,15 @@ export async function importPack(pack, onStep = () => {}) {
     }
     added.push(plural(plan.milestones.add, "milestone"), plural(plan.tasks, "task"));
   }
-  if (plan.case === "add") {
-    const c = await uploadImages(pack.caseStudy, (n) => onStep(`Uploading picture ${n} of ${plan.images}…`));
-    onStep("Adding the case study…");
-    await storeCase(c, null);
+  const existing = plan.case === "exists" && replaceCase ? existingCase(pack.caseStudy) : null;
+  if (plan.case === "add" || existing) {
+    const total = caseImages(pack.caseStudy).filter(([o, k]) => /^data:image\//i.test(o[k])).length;
+    const c = await uploadImages(pack.caseStudy, (n) => onStep(`Uploading picture ${n} of ${total}…`));
+    onStep(existing ? "Replacing the case study…" : "Adding the case study…");
+    // Replacing keeps its place on your portfolio (and its id, so links to it still work).
+    await storeCase(existing ? { ...c, id: existing.id } : c, existing);
     portfolioChanged();
-    added.push("case study");
+    added.push(existing ? "case study (replaced)" : "case study");
   }
   await reload();
   return added;
@@ -105,7 +114,8 @@ export function openImportDialog() {
           pack = parsePack(await file.text());
           const plan = planFor(pack);
           const nothing = plan.project !== "add" && !plan.milestones.add && plan.case !== "add";
-          preview.innerHTML = `<p><b>${nothing ? "Everything in this file is already in your dashboard." : "This will add:"}</b></p>${previewHtml(pack, plan)}`;
+          preview.innerHTML = `<p><b>${nothing ? "Everything in this file is already in your dashboard." : "This will add:"}</b></p>${previewHtml(pack, plan)}
+            ${plan.case === "exists" ? `<label class="li-check-row"><input type="checkbox" data-replace-case> Replace my "${esc(existingCase(pack.caseStudy)?.title || pack.caseStudy.title)}" case study with the one in this file</label>` : ""}`;
         } catch (err) {
           preview.innerHTML = `<p class="li-form-error">${esc(err.message)}</p>`;
         }
@@ -114,7 +124,8 @@ export function openImportDialog() {
     async onSubmit(_v, form) {
       if (!pack) throw new Error("Choose a project file first.");
       const preview = form.querySelector("[data-pack-preview]");
-      const added = await importPack(pack, (msg) => { preview.innerHTML = `<p>${esc(msg)}</p>`; });
+      const replaceCase = !!form.querySelector("[data-replace-case]")?.checked;
+      const added = await importPack(pack, (msg) => { preview.innerHTML = `<p>${esc(msg)}</p>`; }, { replaceCase });
       toast(added.length ? `Imported: ${added.join(", ")}` : "Nothing new to import");
     },
   });

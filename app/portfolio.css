@@ -201,6 +201,11 @@ a.pf-cc:hover, a.pf-cc:focus-visible{border-color:var(--pf-cc-icon);box-shadow:0
 .pf-shots{display:flex;justify-content:center;gap:14px;margin:22px 0 6px;overflow-x:auto;padding-bottom:4px;}
 .pf-shots img{height:360px;width:auto;max-width:none;border-radius:22px;border:1px solid var(--line);background:var(--surface-2);}
 @container pf (max-width:620px){ .pf-shots{justify-content:flex-start;} .pf-shots img{height:300px;} }
+/* Computer screenshots (a website, not a phone app): the first one large, then two per row. */
+.pf-shots--wide{display:grid;grid-template-columns:1fr 1fr;gap:14px;overflow:visible;}
+.pf-shots--wide > :first-child{grid-column:1/-1;}
+.pf-shots--wide img{width:100%;height:auto;border-radius:14px;}
+@container pf (max-width:620px){ .pf-shots--wide{grid-template-columns:1fr;} .pf-shots--wide img{height:auto;} }
 .pf-center{text-align:center;margin:14px 0 0;}
 .pf-meta{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;margin:24px 0 0;}
 .pf-meta div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
@@ -242,6 +247,10 @@ a.pf-cc:hover, a.pf-cc:focus-visible{border-color:var(--pf-cc-icon);box-shadow:0
 .pf-flow{list-style:none;margin:6px 0 12px;padding:0 0 4px;display:flex;gap:14px;overflow-x:auto;}
 .pf-flow li{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;}
 .pf-flow img{height:300px;width:auto;border-radius:18px;border:1px solid var(--line);}
+.pf-flow--wide{display:grid;grid-template-columns:1fr 1fr;gap:18px 14px;overflow:visible;}
+.pf-flow--wide li{flex:initial;min-width:0;}
+.pf-flow--wide img{width:100%;height:auto;border-radius:12px;}
+@container pf (max-width:620px){ .pf-flow--wide{grid-template-columns:1fr;} }
 .pf-swatches{display:grid;grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));gap:10px;margin-bottom:10px;}
 .pf-swatches div{display:flex;flex-direction:column;gap:2px;font-size:12.5px;}
 .pf-swatches i{height:54px;border-radius:10px;border:1px solid var(--line);}
@@ -442,3 +451,7 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 #li-ce.ce-preview .ce-t:empty{display:none;}
 #li-ce.ce-preview .ce-t, #li-ce.ce-preview .ce-img, #li-ce.ce-preview .ce-mark, #li-ce.ce-preview .ce-chiptoggle{outline:none !important;border-color:transparent;background:none;cursor:default;}
 #li-ce.ce-preview .ce-item{padding-right:0;}
+/* Editing computer screenshots on the page: each picture fills its cell. */
+.pf-shots--wide .ce-shot{display:block;position:relative;}
+.pf-shots--wide .ce-img, .pf-flow--wide .ce-img{width:100%;}
+@media print{ .pf-shots--wide img, .pf-flow--wide img{height:auto;} }
