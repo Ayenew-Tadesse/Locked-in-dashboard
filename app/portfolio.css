@@ -132,7 +132,7 @@
 .pf-s-open{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;font-size:13.5px;color:var(--ink-2);}
 .pf-s-open span{display:inline-flex;align-items:center;gap:6px;}
 .pf-s-open span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good);}
-.pf-s-stats b{font-size:26px;line-height:1.15;font-weight:800;color:var(--pf-stat-ink);font-variant-numeric:tabular-nums;}
+.pf-s-stats b{font-size:26px;line-height:1.15;font-weight:400;color:var(--pf-stat-ink);font-variant-numeric:tabular-nums;}
 .pf-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
 /* The label only: the number's own spans (count.js) keep the number's size. */
 .pf-s-stats > div > span{font-size:13px;color:var(--pf-stat-ink);}
