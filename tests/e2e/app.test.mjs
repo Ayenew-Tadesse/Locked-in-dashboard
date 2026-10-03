@@ -945,8 +945,10 @@ test("portfolio site: the editor, preview and share page follow your portfolio's
   // The preview: introduction, stats, projects, about, key skills, contact.
   const preview = page.locator("#li-pf-preview");
   const home = await preview.innerText();
-  assert.match(home, /Hello there, I am[\s\S]*Ayenew Shiferaw[\s\S]*Product Designer, based in USA[\s\S]*3\+\s*Years of Experience[\s\S]*Featured projects[\s\S]*Hid-Go Flight Booking App[\s\S]*In progress[\s\S]*About me[\s\S]*architecture[\s\S]*Key skills[\s\S]*Figma \(auto-layout[\s\S]*Contact me[\s\S]*shiferawayenew0@gmail\.com/i);
+  assert.match(home, /Hello there, I am[\s\S]*Ayenew Shiferaw[\s\S]*Product Designer, based in USA[\s\S]*3\+\s*Years of Experience[\s\S]*Featured projects[\s\S]*Hid-Go Flight Booking App[\s\S]*Modern Hotel Booking App[\s\S]*About me[\s\S]*architecture[\s\S]*Key skills[\s\S]*Figma \(auto-layout[\s\S]*Contact me[\s\S]*shiferawayenew0@gmail\.com/i);
   assert.equal(await preview.locator(".pf-s-portrait").count(), 1, "the portrait came across");
+  assert.doesNotMatch(await preview.locator("#pf-cases").innerText(), /In progress|live from my dashboard|\d+%/i, "no project status on the cards");
+  assert.equal(await preview.locator(".pf-card__prog, .pf-live-prog, .pf-btn--disabled").count(), 0);
   // Open a case study, then go back.
   await preview.locator('[data-case="hidgo"]').first().click();
   await preview.locator(".pf-case__title").waitFor();
@@ -3060,7 +3062,10 @@ test("projects: a new project gets its case study, in progress, in the project's
   const card = page.locator("#li-pf-preview .pf-card", { hasText: "Gexi Wallet" });
   await card.waitFor();
   assert.equal(await card.locator(".pf-mini-phone .pf-screen-ph").count(), 3);
-  assert.match(await card.innerText(), /In progress/);
+  // Hiring managers don't see its status: no "In progress", no percentage; no case study button until it's live.
+  assert.doesNotMatch(await card.innerText(), /In progress|%|live from my dashboard/i);
+  assert.equal(await card.locator("[data-case]").count(), 0);
+  assert.match(await card.innerText(), /Try the app/);
   // Adding a project whose case study already exists links it instead of making a second one.
   await page.evaluate(() => { location.hash = "#/projects"; });
   await page.click("#li-project-add");
