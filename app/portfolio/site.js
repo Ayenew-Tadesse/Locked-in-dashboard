@@ -113,7 +113,10 @@ export function cardThumb(c, { tag = "div", word } = {}) {
   if (!shots.length) return `<${tag} class="pf-card__thumb"><span>${esc(word ?? (c.thumbWord || c.title || ""))}</span></${tag}>`;
   const alt = (i) => (i ? "" : `${c.title || "App"} screen`);
   if (deviceOf(c) !== "phone") return `<${tag} class="pf-card__thumb has-img has-frame">${screenFrame(c)(img(shots[0], alt(0)))}</${tag}>`;
-  const phones = shots.slice(0, 3).map((src, i) => `<span class="pf-mini-phone"><span class="pf-mini-phone__screen">${img(src, alt(i))}</span></span>`);
+  // A status bar (time, camera island, battery) above the screenshot and a home bar below it,
+  // as on a real phone, so the island and the rounded corners never cover the app.
+  const phones = shots.slice(0, 3).map((src, i) => `<span class="pf-mini-phone"><span class="pf-mini-phone__screen">
+    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${img(src, alt(i))}<span class="pf-mini-phone__home" aria-hidden="true"></span></span></span>`);
   return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${phones.length}">${phones.join("")}</${tag}>`;
 }
 
