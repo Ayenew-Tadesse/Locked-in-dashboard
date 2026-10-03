@@ -455,3 +455,15 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .pf-shots--wide .ce-shot{display:block;position:relative;}
 .pf-shots--wide .ce-img, .pf-flow--wide .ce-img{width:100%;}
 @media print{ .pf-shots--wide img, .pf-flow--wide img{height:auto;} }
+/* A website's screenshots in a laptop: a dark screen (bezel and camera) on a silver base.
+   All sizes are percentages of the laptop's width, so it looks the same at any size. */
+.pf-laptop{display:block;position:relative;width:100%;padding-bottom:3.4%;}
+.pf-laptop__screen{display:block;position:relative;width:86%;margin:0 auto;padding:2.1% 2.1% 2.6%;background:#16181d;
+  border-radius:clamp(8px,1.6%,16px) clamp(8px,1.6%,16px) 0 0;box-shadow:inset 0 0 0 1px #2c3038, 0 10px 24px rgb(0 0 0 / .18);}
+.pf-laptop__screen::before{content:"";position:absolute;top:.75%;left:50%;width:.55%;aspect-ratio:1;min-width:3px;border-radius:50%;background:#3a3f49;transform:translate(-50%,50%);}
+.pf-laptop__screen img, .pf-shots--wide .pf-laptop__screen img, .pf-flow--wide .pf-laptop__screen img{display:block;width:100%;height:auto;border:0;border-radius:2px;background:#fff;}
+.pf-laptop::after{content:"";position:absolute;left:0;right:0;bottom:0;height:0;padding-bottom:3.4%;
+  background:linear-gradient(180deg,#e4e6ea 0%,#c4c8cf 55%,#9fa4ad 100%);border-radius:2px 2px 40% 40% / 2px 2px 100% 100%;box-shadow:0 6px 14px rgb(0 0 0 / .18);}
+.pf-laptop__screen::after{content:"";position:absolute;left:50%;bottom:-3.9%;width:16%;height:1.4%;min-height:3px;transform:translateX(-50%);
+  background:#a7abb3;border-radius:0 0 8px 8px;z-index:1;}
+.pf-flow--wide .pf-laptop{margin-bottom:4px;}

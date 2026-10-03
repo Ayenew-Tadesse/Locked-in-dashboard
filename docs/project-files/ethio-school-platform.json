@@ -16,7 +16,7 @@
    "Demo school: Addis Future Academy (fictional data)"
   ],
   "links": {
-   "web": "https://ethio-school-platform-ayenew-tadesse.vercel.app",
+   "web": "https://ethio-school-platform.vercel.app",
    "repo": "https://github.com/Ayenew-Tadesse/ethio-school-platform"
   },
   "checklist": [
@@ -323,7 +323,7 @@
   "title": "Ethio School Platform",
   "status": "live",
   "pill": "Live case study",
-  "liveUrl": "https://ethio-school-platform-ayenew-tadesse.vercel.app/login",
+  "liveUrl": "https://ethio-school-platform.vercel.app/login",
   "phone": false,
   "tag": "Web App · Product design & build",
   "cardDesc": "One platform for a whole school: attendance, homework, grades and parent communication, designed phone-first for Ethiopian schools.",

@@ -2743,12 +2743,13 @@ test("import a project file: project, milestones, tasks and case study, never tw
     return { n: cases.filter((x) => x.title === "Ethio School Platform").length, older: c.subtitle === "an older version",
       ms: state.milestones.filter((m) => m.title.startsWith("ESP ")).length, wide: c.phone === false, live: c.liveUrl };
   });
-  assert.deepEqual(after, { n: 1, older: false, ms: 7, wide: true, live: "https://ethio-school-platform-ayenew-tadesse.vercel.app/login" });
+  assert.deepEqual(after, { n: 1, older: false, ms: 7, wide: true, live: "https://ethio-school-platform.vercel.app/login" });
 
   // A website's case study shows computer-size screenshots and a "Try" link that opens the site.
   await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("ethio-school-platform"));
   await page.waitForSelector("#li-ce .pf-shots--wide");
   assert.equal(await page.locator("#li-ce .pf-flow--wide li").count(), 4);
+  assert.equal(await page.locator("#li-ce .pf-laptop").count(), 7, "every screenshot in a laptop frame");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
