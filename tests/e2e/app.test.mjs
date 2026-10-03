@@ -2726,6 +2726,29 @@ test("import a project file: project, milestones, tasks and case study, never tw
   await page.click("#li-project-import");
   await page.setInputFiles("[data-pack-file]", file);
   await preview.getByText("Everything in this file is already in your dashboard.").waitFor();
+
+  // …unless you choose to replace the case study: it keeps its place, nothing else is added.
+  await preview.getByLabel('Replace my "Ethio School Platform" case study with the one in this file').check();
+  await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const prefs = state.settings.preferences;
+    prefs.portfolio.site.cases.find((x) => x.id === "ethio-school-platform").subtitle = "an older version";
+  });
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const after = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const cases = state.settings.preferences.portfolio.site.cases;
+    const c = cases.find((x) => x.id === "ethio-school-platform");
+    return { n: cases.filter((x) => x.title === "Ethio School Platform").length, older: c.subtitle === "an older version",
+      ms: state.milestones.filter((m) => m.title.startsWith("ESP ")).length, wide: c.phone === false, live: c.liveUrl };
+  });
+  assert.deepEqual(after, { n: 1, older: false, ms: 7, wide: true, live: "https://ethio-school-platform-ayenew-tadesse.vercel.app/login" });
+
+  // A website's case study shows computer-size screenshots and a "Try" link that opens the site.
+  await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("ethio-school-platform"));
+  await page.waitForSelector("#li-ce .pf-shots--wide");
+  assert.equal(await page.locator("#li-ce .pf-flow--wide li").count(), 4);
   assert.deepEqual(page.errors, []);
   await page.close();
 });

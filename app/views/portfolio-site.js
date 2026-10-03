@@ -528,7 +528,7 @@ function editCase(original, done, onDelete, saved = original) {
         <label class="li-field full">Card description<textarea name="cardDesc" rows="2" maxlength="300">${esc(c.cardDesc || "")}</textarea></label>
         <label class="li-field">Status<select name="status"><option value="live"${c.status !== "progress" ? " selected" : ""}>Live case study</option><option value="progress"${c.status === "progress" ? " selected" : ""}>In progress (card only)</option></select></label>
         <label class="li-field">Live app link<input name="liveUrl" maxlength="300" value="${esc(c.liveUrl || "")}" placeholder="https://…"></label>
-        <label class="li-check-row full"><input type="checkbox" name="phone"${c.phone !== false ? " checked" : ""}> Show "Try the app" in a phone frame on computers <small class="li-muted">(turn off for desktop websites)</small></label>
+        <label class="li-check-row full"><input type="checkbox" name="phone"${c.phone !== false ? " checked" : ""}> Phone app: "Try the app" in a phone frame, screenshots phone-size <small class="li-muted">(turn off for websites: computer-size screenshots)</small></label>
         <label class="li-field full">Dashboard project <small class="li-muted">(shows its live progress)</small><select name="project"><option value="">None</option>${(state.projects || []).map((p) => `<option${c.project === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
       </fieldset>
       <fieldset class="full li-pf-group"><legend>Top of the case study</legend>

@@ -194,7 +194,7 @@ function casePage(data, c) {
     ${c.pill ? `<p class="pf-pill">${esc(c.pill)}</p>` : ""}
     <h1 class="pf-case__title">${esc(c.title)}</h1>
     ${c.subtitle ? `<p class="pf-s-desc">${esc(c.subtitle)}</p>` : ""}
-    ${c.shots?.length ? `<div class="pf-shots">${c.shots.map((s) => img(s.src, s.alt || c.title)).join("")}</div>` : ""}
+    ${c.shots?.length ? `<div class="pf-shots${c.phone === false ? " pf-shots--wide" : ""}">${c.shots.map((s) => img(s.src, s.alt || c.title)).join("")}</div>` : ""}
     ${c.liveUrl ? `<p class="pf-center">${tryLink(c, "Try the live prototype &#8599;")}</p>` : ""}
     ${c.meta?.length ? `<dl class="pf-meta">${c.meta.map((m) => `<div><dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd></div>`).join("")}</dl>` : ""}
     ${prog && prog.total ? `<p class="pf-live-prog"><b>Live from my dashboard:</b> ${prog.pct}% done · ${prog.done} of ${prog.total} steps${p.stage ? ` · ${esc(p.stage)}` : ""}</p>` : ""}
@@ -210,7 +210,7 @@ function casePage(data, c) {
       <tbody>${c.competitive.rows.map((r) => `<tr><td>${esc(r.feature)}</td>${(r.values || []).map((v) => `<td class="${esc(v)}" aria-label="${esc(v)}">${MARK[v] || esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : "")}
     ${block("Key insight", c.insight ? `<blockquote class="pf-insight">${esc(c.insight)}</blockquote>` : "")}
     ${block("Information architecture", c.ia?.sections?.length ? `${intro(c.ia.intro)}<div class="pf-ia">${c.ia.root ? `<div class="pf-ia__root">${esc(c.ia.root)}</div>` : ""}<div class="pf-ia__sections">${c.ia.sections.map((s) => `<div><h3>${esc(s.title)}</h3><ul>${(s.items || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : "")}
-    ${block(c.flow?.title || "User flow", c.flow?.steps?.length ? `${intro(c.flow.intro)}<ol class="pf-flow">${c.flow.steps.map((s) => `<li>${img(s.src, s.label)}<span>${esc(s.label)}</span></li>`).join("")}</ol>` : "")}
+    ${block(c.flow?.title || "User flow", c.flow?.steps?.length ? `${intro(c.flow.intro)}<ol class="pf-flow${c.phone === false ? " pf-flow--wide" : ""}">${c.flow.steps.map((s) => `<li>${img(s.src, s.label)}<span>${esc(s.label)}</span></li>`).join("")}</ol>` : "")}
     ${block("Solution", paras(c.solution))}
     ${block("UI style guide", c.style && (c.style.colors?.length || c.style.font) ? `${intro(c.style.intro)}
       ${c.style.colors?.length ? `<h3 class="pf-h3">Color palette</h3><div class="pf-swatches">${c.style.colors.map((x) => `<div><i style="background:${/^#[0-9a-f]{3,8}$/i.test(x.hex) ? x.hex : "transparent"}"></i><b>${esc(x.name)}</b><span>${esc(x.hex)}</span></div>`).join("")}</div>` : ""}
