@@ -8,7 +8,7 @@
 import { state, toast } from "../state.js";
 import { esc, openModal, closeModal, confirmDialog } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, imgUrl } from "./page-editor.js";
-import { CONTACT_ICONS, contactIcon } from "../portfolio/site.js";
+import { CONTACT_ICONS, contactIcon, cardThumb } from "../portfolio/site.js";
 import { portfolioPrefs } from "../core/portfolio.js";
 
 const clone = (x) => JSON.parse(JSON.stringify(x ?? null));
@@ -50,7 +50,7 @@ function render(m) {
     <div class="pf-s-stats">${m.stats.map((x, i) => `<div class="ce-item${i === Math.floor((m.stats.length - 1) / 2) ? " is-hi" : ""}">${del(`stats.${i}`, "Remove number")}<b>${ed(`stats.${i}.num`, x.num, { ph: "3+" })}</b><span>${ed(`stats.${i}.label`, x.label, { ph: "Label" })}</span></div>`).join("")}</div>
     ${m.stats.length < MAX_STATS ? add("stat", "stats", "Number") : ""}</div>
   ${section(m, "cases", "Featured projects", `<div class="ce-cases">${m.cases.map((c) => `<button type="button" class="pf-card ce-casecard" data-act="case" data-path="${esc(c.id)}">
-      <span class="pf-card__thumb${imgUrl(c.shots?.[0]?.src) ? " has-img" : ""}">${imgUrl(c.shots?.[0]?.src) ? `<img src="${esc(c.shots[0].src)}" alt="">` : `<span>${esc(c.title)}</span>`}</span>
+      ${cardThumb(c, { tag: "span", word: c.title })}
       <span class="pf-card__body">${c.tag ? `<span class="pf-card__tag">${esc(c.tag)}</span>` : ""}<b class="ce-casecard__title">${esc(c.title)}</b><span class="ce-casecard__edit">Edit on the page &rarr;</span></span></button>`).join("")}
       <button type="button" class="ce-add ce-add--case" data-act="case" data-path="">+ Add a case study</button></div>`, "pf-cases")}
   ${section(m, "about", "About me", `<div class="pf-s-about">${paraList("about", m.about, "About me")}</div>`)}
