@@ -9,7 +9,8 @@ import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { portfolioGithub } from "../github.js";
-import { openCaseEditor, META } from "./case-editor.js";
+import { openCaseEditor, META, deviceField } from "./case-editor.js";
+import { deviceOf } from "../portfolio/site.js";
 import { openSiteEditor } from "./site-editor.js";
 
 // Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
@@ -528,7 +529,7 @@ function editCase(original, done, onDelete, saved = original) {
         <label class="li-field full">Card description<textarea name="cardDesc" rows="2" maxlength="300">${esc(c.cardDesc || "")}</textarea></label>
         <label class="li-field">Status<select name="status"><option value="live"${c.status !== "progress" ? " selected" : ""}>Live case study</option><option value="progress"${c.status === "progress" ? " selected" : ""}>In progress (card only)</option></select></label>
         <label class="li-field">Live app link<input name="liveUrl" maxlength="300" value="${esc(c.liveUrl || "")}" placeholder="https://…"></label>
-        <label class="li-check-row full"><input type="checkbox" name="phone"${c.phone !== false ? " checked" : ""}> Phone app: "Try the app" in a phone frame, screenshots phone-size <small class="li-muted">(turn off for websites: computer-size screenshots)</small></label>
+        ${deviceField(deviceOf(c))}
         <label class="li-field full">Dashboard project <small class="li-muted">(shows its live progress)</small><select name="project"><option value="">None</option>${(state.projects || []).map((p) => `<option${c.project === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
       </fieldset>
       <fieldset class="full li-pf-group"><legend>Top of the case study</legend>
@@ -616,7 +617,7 @@ function editCase(original, done, onDelete, saved = original) {
         ...c,
         id: c.id || "",
         title: v.title.trim(), tag: v.tag.trim(), cardDesc: v.cardDesc.trim(), status: v.status === "progress" ? "progress" : "live",
-        liveUrl: v.liveUrl.trim(), phone: !!v.phone, project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
+        liveUrl: v.liveUrl.trim(), device: v.device, phone: v.device === "phone", project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
         shots, meta: [...META.map((l) => ({ label: l, value: v["meta_" + l].trim() })), ...(c.meta || []).filter((m) => !META.includes(m.label))].filter((m) => m.value),
         overview: v.overview.trim(), problem: v.problem.trim(), insight: v.insight.trim(), solution: v.solution.trim(), outcome: v.outcome.trim(),
         process: { intro: v.processIntro.trim(), steps: lines(v.processSteps) },
