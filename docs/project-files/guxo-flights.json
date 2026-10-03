@@ -1,6 +1,59 @@
 {
  "kind": "locked-in.project-pack",
  "version": 1,
+ "project": {
+  "name": "Guxo Flights",
+  "code": "FLT",
+  "category": "Travel · flight booking",
+  "stage": "Prototype live",
+  "status": "good",
+  "description": "Booking an Ethiopian domestic flight on a phone, from search to boarding pass.",
+  "facts": [
+   "Single-page web app: HTML, CSS and JavaScript, no frameworks",
+   "10 Ethiopian domestic airports, one-way and round trips",
+   "Three fares (Basic, Standard, Flex) and a seat map",
+   "Payment by phone, bank counter or card",
+   "Screenshots updated automatically after every change"
+  ],
+  "links": {
+   "web": "https://ayenew-tadesse.github.io/Guxo-Flights/",
+   "repo": "https://github.com/Ayenew-Tadesse/Guxo-Flights"
+  },
+  "checklist": [
+   {
+    "text": "Search and results (fare comparison, date strip, filters)",
+    "done": true
+   },
+   {
+    "text": "Fare choice and seat map",
+    "done": true
+   },
+   {
+    "text": "Payment: phone, bank counter, card",
+    "done": true
+   },
+   {
+    "text": "My Trips, check-in and boarding pass",
+    "done": true
+   },
+   {
+    "text": "Light and dark themes",
+    "done": true
+   },
+   {
+    "text": "Case study",
+    "done": true
+   },
+   {
+    "text": "Test the booking flow with 5 travellers",
+    "done": false
+   },
+   {
+    "text": "Publish a round-trip booking demo",
+    "done": false
+   }
+  ]
+ },
  "caseStudy": {
   "id": "guxo-flights",
   "project": "Guxo Flights",
