@@ -4,13 +4,14 @@
 // Save. Your portfolio site (preferences.portfolio.site) is the source; every
 // save also keeps the older profile fields in step so everything that reads
 // them still works. Case studies save on their own (drag to swap, tap to edit).
-import { state, toast } from "../state.js";
+import { state, toast, can, setProjectOrder } from "../state.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { categoriesOf } from "../core/tasks.js";
 import { PORTFOLIO_SECTIONS, portfolioPrefs } from "../core/portfolio.js";
 import { portfolioGithub } from "../github.js";
 import { openCaseEditor, META, deviceField } from "./case-editor.js";
 import { deviceOf } from "../portfolio/site.js";
+import { projectOrderFromCases } from "../core/project-links.js";
 import { openSiteEditor } from "./site-editor.js";
 
 // Switches for the sections your portfolio has (projects and "skills & tools" live in other sections now).
@@ -368,7 +369,11 @@ function wireCaseCards(el, hooks) {
     const i = cases.findIndex((x) => x.id === a), j = cases.findIndex((x) => x.id === b);
     if (i < 0 || j < 0 || i === j) return;
     [cases[i], cases[j]] = [cases[j], cases[i]];
-    try { await saveSite(site); changed(); toast("Order saved"); } catch (err) { toast("Couldn't save: " + err.message, "error"); redraw(); }
+    try { await saveSite(site); changed(); } catch (err) { toast("Couldn't save: " + err.message, "error"); redraw(); return; }
+    // The Projects page (and the Overview cards) follow the new order.
+    const ids = Array.isArray(state.projects) && state.isManager && can("edit_projects") ? projectOrderFromCases(state.projects, site.cases) : null;
+    if (!ids) return toast("Order saved");
+    try { await setProjectOrder(ids); toast("Order saved · projects reordered to match"); } catch { /* the store already said why */ }
   }
 
   let drag = null, suppressClick = false;

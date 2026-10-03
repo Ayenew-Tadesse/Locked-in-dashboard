@@ -1,11 +1,11 @@
 // Projects page (☰ menu). The team owner adds, edits, reorders and deletes
 // the team's projects; everyone else sees them read-only.
-import { state, moveProject, toast, can } from "../state.js";
+import { state, toast, can } from "../state.js";
 import { esc, openModal, confirmDialog, progressBar } from "../ui/dom.js";
 import { PROJECT_STATUSES, LINK_LABELS, projectProgress } from "../core/projects.js";
 import { projectCard } from "./project-cards.js";
 import { openImportDialog } from "../project-import.js";
-import { saveProjectLinked, deleteProjectLinked } from "../project-sync.js";
+import { saveProjectLinked, deleteProjectLinked, placeProjectLinked } from "../project-sync.js";
 import { casesOfProject, milestonesOfProject, tasksOfProject, caseFromProject } from "../core/project-links.js";
 import { currentSite, openCaseStudy, openCaseDraft } from "./portfolio-site.js";
 
@@ -39,7 +39,7 @@ export function renderProjects(el) {
   el.innerHTML = `
     <header class="li-view-head">
       <div><span class="card-label">Projects</span><h2 class="li-h2">${list.length} project${list.length === 1 ? "" : "s"}</h2>
-        <span class="li-sub">Shown as cards on the Overview, in this order. Your team sees them.</span></div>
+        <span class="li-sub">This order is used everywhere: the Overview cards, your case studies and your portfolio's Featured projects. Your team sees them.</span></div>
       <div class="li-btn-row"><button type="button" class="li-btn" id="li-project-import">Import project file</button>
       ${can("edit_projects") ? `<button type="button" class="li-btn primary" id="li-project-add">+ New project</button>` : ""}</div>
     </header>
@@ -47,14 +47,16 @@ export function renderProjects(el) {
       const prog = projectProgress(p);
       return `<li data-project="${esc(p.id)}">
         <div class="li-project-row-main">
-          <b class="li-project-row-name">${esc(p.name)}</b>${p.code ? ` <small class="li-muted">${esc(p.code)}</small>` : ""}
+          <span class="li-project-place" title="Place ${i + 1} of ${list.length}">${i + 1}</span><b class="li-project-row-name">${esc(p.name)}</b>${p.code ? ` <small class="li-muted">${esc(p.code)}</small>` : ""}
           <span class="li-pill pj-${esc(p.status)}">${esc(PROJECT_STATUSES[p.status] || "")}</span>
           <div class="li-progress-line">${progressBar(prog.pct, "Checklist")}<span>${prog.total ? `${prog.done}/${prog.total}` : "No checklist"}</span></div>
           ${linkedLine(p)}
         </div>
         <div class="li-btn-row">
-          ${can("edit_projects") ? `<button type="button" class="li-btn small" data-move="-1" aria-label="Move ${esc(p.name)} up"${i === 0 ? " disabled" : ""}>↑</button>
-          <button type="button" class="li-btn small" data-move="1" aria-label="Move ${esc(p.name)} down"${i === list.length - 1 ? " disabled" : ""}>↓</button>
+          ${can("edit_projects") ? `<button type="button" class="li-btn small" data-place="0" aria-label="Move ${esc(p.name)} to the top" title="Move to the top"${i === 0 ? " disabled" : ""}>⤒</button>
+          <button type="button" class="li-btn small" data-place="${i - 1}" aria-label="Move ${esc(p.name)} up" title="Move up"${i === 0 ? " disabled" : ""}>↑</button>
+          <button type="button" class="li-btn small" data-place="${i + 1}" aria-label="Move ${esc(p.name)} down" title="Move down"${i === list.length - 1 ? " disabled" : ""}>↓</button>
+          <button type="button" class="li-btn small" data-place="${list.length - 1}" aria-label="Move ${esc(p.name)} to the bottom" title="Move to the bottom"${i === list.length - 1 ? " disabled" : ""}>⤓</button>
           <button type="button" class="li-btn small" data-edit>Edit</button>` : ""}
           ${can("delete_projects") ? `<button type="button" class="li-btn small danger-ghost" data-delete>Delete</button>` : ""}
         </div>
@@ -66,7 +68,8 @@ export function renderProjects(el) {
   el.querySelectorAll("[data-project]").forEach((row) => {
     const p = list.find((x) => x.id === row.dataset.project);
     row.querySelector("[data-edit]")?.addEventListener("click", () => openProjectForm(p));
-    row.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => moveProject(p.id, Number(b.dataset.move)).catch(() => {})));
+    row.querySelectorAll("[data-place]").forEach((b) => b.addEventListener("click", () => placeProjectLinked(p.id, Number(b.dataset.place))
+      .then((moved) => { if (moved) toast("Order saved · case studies follow"); }, () => {})));
     row.querySelector("[data-open-case]")?.addEventListener("click", (e) => openCaseStudy(e.currentTarget.dataset.openCase));
     row.querySelector("[data-new-case]")?.addEventListener("click", () => openCaseDraft(caseFromProject(p)));
     row.querySelector("[data-delete]")?.addEventListener("click", async () => {

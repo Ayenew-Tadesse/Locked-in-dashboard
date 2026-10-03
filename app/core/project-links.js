@@ -54,6 +54,47 @@ export function planProjectSync(before, after, { cases = [], milestones = [], ta
   return out;
 }
 
+// One order for everything: the Projects page, the case studies and the
+// portfolio's "Featured projects" follow the same order. Both functions
+// keep things that aren't linked where they are and only re-fill the places
+// the linked ones occupy, so nothing unrelated moves.
+
+/** The project a case study is about, from a list (null if none). */
+function projectOfCase(c, projects) {
+  return (projects || []).find((p) => casesOfProject([c], p).length) || null;
+}
+
+/** The case studies in the projects' order (by id; null when it's already so). */
+export function caseOrderFromProjects(cases, projects) {
+  const rank = new Map((projects || []).map((p, i) => [p.id, i]));
+  const linked = [], slots = [];
+  (cases || []).forEach((c, i) => {
+    const p = projectOfCase(c, projects);
+    if (p) { linked.push({ c, r: rank.get(p.id), i }); slots.push(i); }
+  });
+  const sorted = [...linked].sort((a, b) => a.r - b.r || a.i - b.i);
+  if (sorted.every((x, k) => x === linked[k])) return null;
+  const out = [...cases];
+  slots.forEach((slot, k) => { out[slot] = sorted[k].c; });
+  return out.map((c) => c.id);
+}
+
+/** The projects in the case studies' order (ids; null when it's already so). */
+export function projectOrderFromCases(projects, cases) {
+  const first = new Map();
+  (cases || []).forEach((c, i) => {
+    const p = projectOfCase(c, projects);
+    if (p && !first.has(p.id)) first.set(p.id, i);
+  });
+  const list = projects || [];
+  const slots = list.map((p, i) => (first.has(p.id) ? i : -1)).filter((i) => i >= 0);
+  const sorted = slots.map((i) => list[i]).sort((a, b) => first.get(a.id) - first.get(b.id));
+  if (sorted.every((p, k) => p === list[slots[k]])) return null;
+  const out = [...list];
+  slots.forEach((slot, k) => { out[slot] = sorted[k]; });
+  return out.map((p) => p.id);
+}
+
 /** When a project is deleted, its case studies stay on the portfolio but no longer point at it. */
 export function planProjectDelete(project, { cases = [] } = {}) {
   return casesOfProject(cases, project).map((c) => ({ id: c.id, patch: { project: "" } }));

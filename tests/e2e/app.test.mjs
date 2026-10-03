@@ -2081,7 +2081,7 @@ test("projects: small cards (3 a row) under Activity; details on tap; the owner 
   const names = () => page.locator(".li-project-list .li-project-row-name").allInnerTexts();
   assert.deepEqual(await names(), ["Guxo Flights", "Guxo", "Gexi", "Gexi Pay"]);
   // Move it up, edit it, then delete Guxo.
-  await page.locator(".li-project-list > li", { hasText: "Gexi Pay" }).locator('[data-move="-1"]').click();
+  await page.locator(".li-project-list > li", { hasText: "Gexi Pay" }).locator('[title="Move up"]').click();
   await page.waitForFunction(() => [...document.querySelectorAll(".li-project-list .li-project-row-name")].map((b) => b.textContent).join() === "Guxo Flights,Guxo,Gexi Pay,Gexi");
   await page.locator(".li-project-list > li", { hasText: "Gexi Pay" }).locator("[data-edit]").click();
   await page.fill("#li-modal [name=stage]", "Designing");
@@ -2850,6 +2850,57 @@ test("projects: case study, milestones and tasks follow the project (rename, lin
     return { kept: !!c, project: c?.project };
   });
   assert.deepEqual(left, { kept: true, project: "" });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("projects: one order for the Projects page, case studies and portfolio (both ways)", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await seedPortfolio(page); // leaves you on the Portfolio page
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/ethio-school-platform.json", import.meta.url).pathname);
+  await page.locator("[data-pack-preview]").getByText("This will add:").waitFor();
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const orders = () => page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return { projects: state.projects.map((p) => p.name).join(), cases: state.settings.preferences.portfolio.site.cases.map((c) => c.id).join() };
+  });
+  const names = () => page.locator(".li-project-list .li-project-row-name").allInnerTexts();
+  assert.deepEqual(await names(), ["Guxo Flights", "Guxo", "Gexi", "Ethio School Platform"]);
+  assert.deepEqual(await page.locator(".li-project-list .li-project-place").allInnerTexts(), ["1", "2", "3", "4"]);
+  const esp = () => page.locator("[data-project]", { hasText: "Ethio School Platform" });
+
+  // To the top: its case study moves ahead of Guxo's; the unlinked ones stay where they are.
+  await esp().locator('[title="Move to the top"]').click();
+  await page.getByText("Order saved · case studies follow").waitFor();
+  assert.deepEqual(await orders(), { projects: "Ethio School Platform,Guxo Flights,Guxo,Gexi", cases: "hidgo,ethio-school-platform,hotel,guxo" });
+  assert.equal(await esp().locator('[title="Move to the top"]').isDisabled(), true);
+  // To the bottom: it goes back behind Guxo's.
+  await esp().locator('[title="Move to the bottom"]').click();
+  await page.waitForFunction(() => document.querySelector(".li-project-list > li:last-child .li-project-row-name")?.textContent === "Ethio School Platform");
+  await page.waitForFunction(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return state.settings.preferences.portfolio.site.cases.map((c) => c.id).join() === "hidgo,guxo,hotel,ethio-school-platform";
+  });
+
+  // The other way: drag its case study to the front on the Portfolio page; the projects follow.
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
+  await openAllSections(page);
+  await page.locator("#li-pf-cases").scrollIntoViewIfNeeded();
+  const from = await page.locator('#li-pf-cases [data-case-card="ethio-school-platform"]').boundingBox();
+  const to = await page.locator('#li-pf-cases [data-case-card="hidgo"]').boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2, { steps: 3 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await page.getByText("Order saved · projects reordered to match").waitFor();
+  assert.deepEqual(await orders(), { projects: "Guxo Flights,Ethio School Platform,Gexi,Guxo", cases: "ethio-school-platform,guxo,hotel,hidgo" });
+  // The portfolio's Featured projects show the same order.
+  assert.deepEqual((await page.locator("#li-pf-preview .pf-card h3").allInnerTexts()).slice(0, 2), ["Ethio School Platform", "Guxo Bus Booking App"]);
   assert.deepEqual(page.errors, []);
   await page.close();
 });

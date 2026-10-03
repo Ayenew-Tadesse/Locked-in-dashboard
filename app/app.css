@@ -907,3 +907,4 @@ button.li-link{background:none;border:0;padding:0;cursor:pointer;font:inherit;fo
 .li-pf-urladd input{flex:1;min-width:0;}
 .li-pf-imgs figure{min-width:72px;min-height:88px;background:var(--surface-2);border-radius:8px;}
 .li-pf-imgs img{min-width:72px;max-width:160px;object-fit:cover;}
+.li-project-place{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;margin-right:8px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);font-size:.75rem;font-variant-numeric:tabular-nums;vertical-align:1px;}

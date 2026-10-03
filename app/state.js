@@ -480,17 +480,23 @@ export async function deleteProject(id) {
   await loadGroups(); // its groups and access go with it
   emit();
 }
-/** Moves a project one place up (-1) or down (+1). */
-export async function moveProject(id, dir) {
+/** Saves the projects in this order (ids); only the ones whose place changed are written. */
+export async function setProjectOrder(ids) {
   const list = [...state.projects].sort(byPosition);
-  const i = list.findIndex((x) => x.id === id), j = i + dir;
-  if (i < 0 || j < 0 || j >= list.length) return;
-  [list[i], list[j]] = [list[j], list[i]];
-  const changed = list.map((x, k) => ({ ...x, position: k })).filter((x, k) => x.position !== state.projects.find((y) => y.id === x.id)?.position || k === i || k === j);
+  const ordered = [...ids.map((id) => list.find((x) => x.id === id)).filter(Boolean), ...list.filter((x) => !ids.includes(x.id))];
+  const changed = ordered.map((x, k) => ({ ...x, position: k })).filter((x) => x.position !== list.find((y) => y.id === x.id)?.position);
+  if (!changed.length) return;
   const saved = await guard(() => Promise.all(changed.map((x) => state.store.saveProject(state.team.id, { id: x.id, position: x.position }))), "Couldn't reorder");
   const map = new Map(saved.map((x) => [x.id, x]));
-  state.projects = list.map((x, k) => map.get(x.id) || { ...x, position: k }).sort(byPosition);
+  state.projects = ordered.map((x, k) => map.get(x.id) || { ...x, position: k }).sort(byPosition);
   emit();
+}
+/** Moves a project to a place in the list (0 = first; past the end = last). */
+export async function placeProject(id, to) {
+  const ids = [...state.projects].sort(byPosition).map((x) => x.id).filter((x) => x !== id);
+  if (ids.length === state.projects.length) return;
+  ids.splice(Math.max(0, Math.min(to, ids.length)), 0, id);
+  return setProjectOrder(ids);
 }
 /** Ticks or unticks one checklist item. */
 export async function toggleProjectItem(projectId, itemId) {

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { casesOfProject, milestonesOfProject, tasksOfProject, planProjectSync, planProjectDelete, describeSync, caseFromProject } from "../../app/core/project-links.js";
+import { casesOfProject, milestonesOfProject, tasksOfProject, planProjectSync, planProjectDelete, describeSync, caseFromProject, caseOrderFromProjects, projectOrderFromCases } from "../../app/core/project-links.js";
 
 const before = { id: "p1", name: "Ethio School Platform", description: "One platform for the school.", links: { web: "https://ethio-school-platform.vercel.app" } };
 const cases = [
@@ -66,4 +66,21 @@ test("a case study started from a project", () => {
   assert.equal(c.liveUrl, "https://gexi.example");
   assert.equal(c.cardDesc, "Shop locally.");
   assert.equal(c.id, "");
+});
+
+test("one order: case studies follow the projects, unlinked ones stay put", () => {
+  const projects = [{ id: "a", name: "Alpha" }, { id: "b", name: "Beta" }, { id: "c", name: "Gamma" }];
+  const cs = [{ id: "free1", title: "Free" }, { id: "beta", title: "Beta app", project: "Beta" }, { id: "free2", title: "Other" }, { id: "alpha", title: "Alpha" }];
+  assert.deepEqual(caseOrderFromProjects(cs, projects), ["free1", "alpha", "free2", "beta"]);
+  assert.equal(caseOrderFromProjects([cs[0], cs[3], cs[2], cs[1]], projects), null, "already in order");
+  assert.equal(caseOrderFromProjects([], projects), null);
+});
+
+test("one order: projects follow the case studies, projects without one stay put", () => {
+  const projects = [{ id: "a", name: "Alpha" }, { id: "b", name: "Beta" }, { id: "c", name: "Gamma" }, { id: "d", name: "Delta" }];
+  const cs = [{ id: "d1", title: "Delta" }, { id: "free", title: "Free" }, { id: "a1", title: "Alpha" }, { id: "a2", title: "Alpha again", project: "Alpha" }];
+  // Alpha and Delta swap their places; Beta and Gamma don't move.
+  assert.deepEqual(projectOrderFromCases(projects, cs), ["d", "b", "c", "a"]);
+  assert.equal(projectOrderFromCases(projects, [cs[2], cs[0]]), null, "already in order");
+  assert.equal(projectOrderFromCases(projects, [{ id: "x", title: "Nothing" }]), null);
 });
