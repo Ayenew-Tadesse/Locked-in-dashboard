@@ -2917,7 +2917,10 @@ test("portfolio cards: phone apps show three phones, tablet apps their tablet, n
   const thumbs = () => preview.locator(".pf-card__thumb").evaluateAll((els) => els.map((t) => ({
     phones: t.querySelectorAll(".pf-mini-phone img").length, tablet: t.querySelectorAll(".pf-tablet img").length, word: t.classList.contains("has-img") ? "" : t.textContent.trim(),
   })));
-  assert.deepEqual(await thumbs(), [{ phones: 3, tablet: 0, word: "" }, { phones: 3, tablet: 0, word: "" }, { phones: 0, tablet: 0, word: "Hotel Booking" }]);
+  assert.deepEqual(await thumbs(), [{ phones: 3, tablet: 0, word: "" }, { phones: 3, tablet: 0, word: "" }, { phones: 0, tablet: 0, word: "" }]);
+  // A project without pictures yet still gets its phones, with placeholder screens.
+  assert.equal(await preview.locator(".pf-card").nth(2).locator(".pf-mini-phone .pf-screen-ph").count(), 3);
+  assert.match(await preview.locator(".pf-card").nth(2).locator(".pf-card__thumb").innerText(), /Screens coming soon/);
   // Each phone has a status bar above the screenshot and a home bar below it, so nothing covers the app.
   const first = preview.locator(".pf-card").first().locator(".pf-mini-phone").first();
   const [bar, shot, home] = await Promise.all([".pf-mini-phone__status", "img", ".pf-mini-phone__home"].map((q) => first.locator(q).boundingBox()));
@@ -2957,6 +2960,75 @@ test("portfolio: an illustration beside your intro by default; your photo or not
   await page.waitForFunction(() => !document.querySelector("#li-pf-preview .pf-s-figure"));
   await page.selectOption("#li-pf-form [name=picture]", "illustration");
   await page.waitForFunction(() => document.querySelector("#li-pf-preview .pf-s-figure svg.pf-ill"));
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("case study editor: choose each card screen (a screenshot, an address, an upload) or leave it a placeholder", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("hotel"));
+  const card = page.locator("#li-ce .ce-card");
+  await card.waitFor();
+  assert.equal(await card.locator(".pf-screen-ph").count(), 3, "placeholders until you choose");
+  // The front screen: the page editor has no screenshots for this one, so paste an address.
+  await card.locator('[data-slot="0"]').click();
+  await page.fill("#li-modal [name=url]", "http://not-secure.example/a.png");
+  await page.click("#li-modal button[type=submit]");
+  assert.match(await page.locator("#li-modal .li-form-error").innerText(), /https/);
+  await page.fill("#li-modal [name=url]", "https://raw.githubusercontent.com/example/app/screenshots/phone/home.jpg");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  // The left screen: an upload (Enter opens it too).
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await card.locator('[data-slot="1"]').focus();
+  await page.keyboard.press("Enter");
+  await page.setInputFiles("#li-modal [data-pick-file]", { name: "left.png", mimeType: "image/png", buffer: png });
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const srcs = () => card.locator(".pf-mini-phone").evaluateAll((els) => els.map((e) => e.querySelector("img")?.getAttribute("src") || "placeholder"));
+  const s1 = await srcs();
+  assert.equal(s1[0], "https://raw.githubusercontent.com/example/app/screenshots/phone/home.jpg");
+  assert.match(s1[1], /^blob:/);
+  assert.equal(s1[2], "placeholder");
+  assert.deepEqual(await page.locator("#li-ce .ce-cardslots .ce-chiptoggle.on").allInnerTexts(), ["Front (middle)", "Left"]);
+  // Leave the front one empty again: it's a placeholder.
+  await page.locator('#li-ce .ce-cardslots [data-path="0"]').click();
+  await page.click("#li-modal [data-pick-clear]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.equal((await srcs())[0], "placeholder");
+  // Save: the portfolio's card shows the same screens.
+  await page.click('#li-ce [data-act="save"]');
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  const saved = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    return state.settings.preferences.portfolio.site.cases.find((c) => c.id === "hotel").cardShots;
+  });
+  assert.equal(saved.length, 3);
+  assert.equal(saved[0], "");
+  assert.match(saved[1], /^blob:/);
+  const hotel = page.locator("#li-pf-preview .pf-card").nth(2);
+  await page.waitForFunction(() => document.querySelectorAll("#li-pf-preview .pf-card")[2]?.querySelectorAll(".pf-mini-phone img").length === 1);
+  assert.equal(await hotel.locator(".pf-mini-phone .pf-screen-ph").count(), 2);
+  // A project with screenshots: pick one of them for the right screen; the others become placeholders until chosen.
+  await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("guxo"));
+  await card.waitFor();
+  const third = await page.locator("#li-ce .pf-shots .ce-shot img").nth(2).getAttribute("src");
+  await card.locator('[data-slot="2"]').click();
+  await page.locator("#li-modal .ce-pick__shot").nth(2).click();
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  assert.deepEqual(await srcs(), ["placeholder", "placeholder", third]);
+  await page.click('#li-ce [data-act="cancel"]');
+  await page.click("#li-modal button[type=submit]"); // discard
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  // A tablet project without pictures: one tablet with a placeholder screen.
+  await page.evaluate(async () => {
+    const { saveSite, currentSite, portfolioChanged } = await import(new URL("app/views/portfolio-site.js", location.href).href);
+    const site = currentSite();
+    site.cases[2] = { ...site.cases[2], device: "tablet", cardShots: undefined };
+    await saveSite(site);
+    portfolioChanged();
+  });
+  await page.waitForFunction(() => document.querySelectorAll("#li-pf-preview .pf-card")[2]?.querySelector(".pf-tablet .pf-screen-ph"));
   assert.deepEqual(page.errors, []);
   await page.close();
 });
