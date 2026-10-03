@@ -1042,7 +1042,7 @@ test("portfolio: Try the app opens the live app in a phone frame on computers", 
   await openAllSections(page);
   await page.locator('#li-pf-cases [data-case-card="hidgo"]').click();
   await page.click('#li-ce [data-act="settings"]');
-  await page.uncheck("#li-modal [name=phone]");
+  await page.selectOption("#li-modal [name=device]", "computer");
   await page.click("#li-modal button[type=submit]");
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.click('#li-ce [data-act="save"]');
