@@ -2229,7 +2229,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
       const pf = r(".pf"), bar = getComputedStyle(document.querySelector(".pf-bars"), "::after"), lines = getComputedStyle(document.querySelector(".pf-bars"), "::before");
       return { left: pf.left, right: innerWidth - pf.right, barColor: bar.backgroundColor, drift: lines.animationName, resume: (() => { const b = document.querySelector(".pf-s-top .pf-resume-btn"), i = b.querySelector("svg").getBoundingClientRect(), l = b.querySelector("span").getBoundingClientRect(), page = document.querySelector(".pf").getBoundingClientRect(), hero = document.querySelector(".pf-s-hero").getBoundingClientRect();
           const st = getComputedStyle(b);
-          return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), b.classList.contains("pf-btn--solid"), st.borderTopLeftRadius === "999px", Math.round(b.getBoundingClientRect().height), l.left >= i.right, Math.abs(Math.round((l.top + l.height / 2) - (i.top + i.height / 2))) <= 1, Math.abs(Math.round(page.right - b.getBoundingClientRect().right)), b.getBoundingClientRect().bottom <= hero.top]; })(),
+          return [b.textContent.trim(), Math.round(i.width), b.getAttribute("href").slice(0, 7), b.classList.contains("pf-btn--outline") && st.backgroundColor === "rgba(0, 0, 0, 0)", st.borderTopLeftRadius === "999px", Math.round(b.getBoundingClientRect().height), l.left >= i.right, Math.abs(Math.round((l.top + l.height / 2) - (i.top + i.height / 2))) <= 1, Math.abs(Math.round(page.right - b.getBoundingClientRect().right)), b.getBoundingClientRect().bottom <= hero.top]; })(),
         heroButtons: document.querySelectorAll(".pf-s-actions .pf-btn").length, icons, iconGap: row.top - photo.bottom, iconRight: photo.right - row.right, barLines: lines.backgroundImage, stripBg,
         stats: [...document.querySelectorAll(".pf-s-stats > div")].map((d) => [getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector("b")).color, d.className]), statsGap: getComputedStyle(document.querySelector(".pf-s-stats")).rowGap,
         bars: [...document.querySelectorAll(".pf-bars")].map((b) => b.getAttribute("aria-hidden")), sections: document.querySelectorAll(".pf-section").length,
@@ -2240,8 +2240,13 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     assert.equal(m.drift, "pf-bars-drift", "the bars drift");
     assert.deepEqual(m.icons.map(([l, svg, text]) => [l, svg, text]), [["Instagram", true, ""], ["LinkedIn", true, ""], ["Behance", true, ""], ["GitHub", true, ""]], "icon buttons (named for screen readers), GitHub added from the profile");
     assert.equal(m.icons[3][3], "https://github.com/someone");
-    assert.deepEqual(m.resume, ["Resume", 16, "mailto:", true, true, 39, true, true, 0, true], "the resume button: top-right of the page, solid like Download PDF (39px), a 16px icon with Resume to its right");
+    assert.deepEqual(m.resume, ["Resume", 16, "mailto:", true, true, 39, true, true, 0, true], "the resume button: top-right of the page, outline only (39px), a 16px icon with Resume to its right");
     assert.equal(m.heroButtons, 0, "no View projects / Contact me buttons");
+    await page.hover(".pf-s-top .pf-resume-btn");
+    await page.waitForTimeout(250);
+    const hovered = await page.evaluate(() => { const c = getComputedStyle(document.querySelector(".pf-s-top .pf-resume-btn")); return [c.backgroundColor, c.color]; });
+    assert.notEqual(hovered[0], "rgba(0, 0, 0, 0)", "filled on hover");
+    assert.notEqual(hovered[0], hovered[1], "readable on hover");
     assert.equal(Math.round(m.iconGap), 8, "8px under the photo");
     assert.ok(Math.abs(m.iconRight) < 1, "lined up with the photo's right edge");
     assert.match(m.barLines, / 6px, rgba\(0, 0, 0, 0\) 6px, rgba\(0, 0, 0, 0\) 13px\)$/, `6px bars, 7px gaps: ${m.barLines}`);
@@ -2361,7 +2366,12 @@ test("portfolio page: featured projects slide in one row (arrows, dots, swipe on
   s = await state(phone);
   assert.ok(s.width > 0.8 && s.width < 0.9, `a card is ~85% wide: ${s.width}`);
   assert.deepEqual([s.inView, s.nav, s.dots, s.current], [1, false, 3, 0], "one in view, no arrows, dots");
-  await phone.evaluate(() => document.querySelector(".pf-rail").scrollBy({ left: 400 }));
+  // The card in view sits in the middle of the screen, before and after a swipe.
+  const offCentre = (i) => phone.evaluate((i) => { const b = document.querySelectorAll(".pf-rail__item")[i].getBoundingClientRect(); return Math.round(b.left + b.width / 2 - innerWidth / 2); }, i);
+  assert.ok(Math.abs(await offCentre(0)) <= 1, `first card centred: ${await offCentre(0)}px off`);
+  await phone.evaluate(() => document.querySelector(".pf-rail").scrollBy({ left: 200 }));
   await phone.waitForFunction(() => document.querySelectorAll(".pf-rail-dot")[1]?.getAttribute("aria-current") === "true");
+  await phone.waitForTimeout(300);
+  assert.ok(Math.abs(await offCentre(1)) <= 1, `second card snaps to the centre: ${await offCentre(1)}px off`);
   await phone.close();
 });

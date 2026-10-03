@@ -103,9 +103,11 @@
   font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;line-height:1.2;}
 .pf-btn--solid{background:var(--accent);color:var(--surface);}
 .pf-btn--outline{background:transparent;color:var(--accent);}
-/* The resume button: top-right of the page, styled like Download PDF (solid), with a small document icon. */
+/* The resume button: top-right of the page, the size of Download PDF; outline only, filled on hover / focus / tap. */
 .pf-s-top{display:flex;justify-content:flex-end;margin:0 0 8px;}
 .pf-resume-btn svg{width:16px;height:16px;flex:none;}
+.pf-resume-btn{transition:background-color .15s, color .15s;}
+.pf-resume-btn:hover, .pf-resume-btn:focus-visible, .pf-resume-btn:active{background:var(--accent);color:var(--surface);}
 .pf-btn--disabled{border-color:var(--line);color:var(--ink-3);cursor:default;}
 .pf-s-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center;padding:12px 0 28px;}
 .pf-s-eyebrow{margin:0 0 6px;font-size:16px;color:var(--ink-2);}
@@ -138,7 +140,7 @@
 .pf-s-stats .is-hi b, .pf-s-stats .is-hi span{color:#FFFFFF;}
 .pf-cards{display:grid;grid-template-columns:repeat(auto-fit, minmax(min(260px, 100%), 1fr));gap:16px;}
 /* Featured projects: one sliding row that snaps to a card. 3 in view on a laptop, 2 on a
-   tablet (up to 700px), 1 (up to 520px, with the next one peeking) on a phone. Arrows and dots appear only when it overflows. */
+   tablet (up to 700px), 1 centred (up to 520px, neighbours peeking) on a phone. Arrows and dots appear only when it overflows. */
 .pf-rail-head{position:relative;}
 .pf-rail-nav{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;gap:8px;}
 .pf-rail-nav[hidden], .pf-rail-dots[hidden]{display:none;}
@@ -154,7 +156,8 @@
 .pf-rail-dot{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:var(--line);cursor:pointer;transition:width .2s, background-color .2s;}
 .pf-rail-dot[aria-current="true"]{width:22px;background:var(--accent);}
 @container pf (max-width:700px){ .pf-rail{grid-auto-columns:calc((100% - var(--pf-rail-gap)) / 2);} }
-@container pf (max-width:520px){ .pf-rail{--pf-rail-gap:12px;grid-auto-columns:85%;} .pf-rail-nav{display:none;} }
+/* Phones: the card in view is centred (85% wide, a sliver of its neighbours on both sides). */
+@container pf (max-width:520px){ .pf-rail{--pf-rail-gap:12px;grid-auto-columns:100%;padding-inline:7.5%;scroll-padding-inline:7.5%;} .pf-rail__item{scroll-snap-align:center;} .pf-rail-nav{display:none;} }
 @media (prefers-reduced-motion: reduce){ .pf-rail{scroll-behavior:auto;} }
 .pf-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;}
 .pf-card__thumb{aspect-ratio:16/10;background:linear-gradient(135deg, var(--accent-soft), var(--surface-2));display:flex;align-items:center;justify-content:center;overflow:hidden;}

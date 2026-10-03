@@ -98,7 +98,7 @@ function home(data, live) {
   const s = data.site, h = s.hero || {}, name = h.name || data.about?.name || "";
   const icons = socialIcons(s, data.about), portrait = img(s.portrait, `Portrait of ${name}`, "pf-s-portrait");
   const social = icons ? `<nav class="pf-socials" aria-label="Social">${icons}</nav>` : "";
-  const resumeCls = "pf-btn pf-btn--solid pf-resume-btn"; // same look as the resume page's Download PDF
+  const resumeCls = "pf-btn pf-btn--outline pf-resume-btn"; // fills like Download PDF on hover
   const resume = hasResume(s) ? `<a class="${resumeCls}" href="#page=resume" data-resume>${RESUME_ICON}<span>Resume</span></a>` : link(s.resume, `${RESUME_ICON}<span>Resume</span>`, resumeCls);
   return `
   ${resume ? `<div class="pf-s-top">${resume}</div>` : ""}
