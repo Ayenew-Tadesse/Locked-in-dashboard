@@ -897,3 +897,13 @@ html.app-mode:not(.li-page) .li-view{min-height:100vh;min-height:100dvh;}
 
 /* Import a project file: what it will add. */
 .li-import-list { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; gap: .4rem; }
+/* Under a project on the Projects page: its case study, milestones and tasks. */
+.li-project-links{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin-top:6px;font-size:12.5px;}
+button.li-link{background:none;border:0;padding:0;cursor:pointer;font:inherit;font-size:12.5px;}
+/* Case study form: a picture linked by its address, and adding one. */
+.li-pf-imgs figure{position:relative;}
+.li-pf-auto{position:absolute;left:4px;bottom:4px;padding:1px 6px;border-radius:999px;background:rgb(0 0 0 / .65);color:#fff;font-size:10.5px;}
+.li-pf-urladd{display:inline-flex;gap:6px;align-items:center;flex:1 1 260px;min-width:0;}
+.li-pf-urladd input{flex:1;min-width:0;}
+.li-pf-imgs figure{min-width:72px;min-height:88px;background:var(--surface-2);border-radius:8px;}
+.li-pf-imgs img{min-width:72px;max-width:160px;object-fit:cover;}

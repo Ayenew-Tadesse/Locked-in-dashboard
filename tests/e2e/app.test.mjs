@@ -2706,7 +2706,7 @@ test("import a project file: project, milestones, tasks and case study, never tw
   const text = await preview.innerText();
   assert.match(text, /Project Ethio School Platform with 7 checklist items/);
   assert.match(text, /7 milestones with 32 tasks/);
-  assert.match(text, /Case study Ethio School Platform with 7 pictures, on your portfolio/);
+  assert.match(text, /Case study Ethio School Platform with 7 auto-updating pictures, on your portfolio/);
   await page.click('#li-modal button[type="submit"]');
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.locator('[data-project] .li-project-row-name', { hasText: "Ethio School Platform" }).waitFor();
@@ -2809,6 +2809,47 @@ test("tablet case study: screenshots in a line with a slider; Try the app switch
   await page.click(".pf-device-switch [data-device=tablet]");
   await page.waitForSelector(".pf-phone--tablet");
   await page.keyboard.press("Escape");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("projects: case study, milestones and tasks follow the project (rename, link, delete)", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/ethio-school-platform.json", import.meta.url).pathname);
+  await page.locator("[data-pack-preview]").getByText("This will add:").waitFor();
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  const row = page.locator("[data-project]", { hasText: "Ethio School Platform" });
+  await row.locator("[data-open-case]").waitFor();
+  assert.match(await row.locator(".li-project-links").innerText(), /7 milestones · 32 tasks/);
+
+  // Rename it and move its web app: everything linked follows.
+  await row.locator("[data-edit]").click();
+  await page.fill("#li-modal [name=name]", "Ethio School");
+  await page.fill("#li-modal [name=link_web]", "https://school.example.com");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.getByText("Project saved · 1 case study, 7 milestones and 32 tasks updated").waitFor();
+  const after = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const c = state.settings.preferences.portfolio.site.cases.find((x) => x.id === "ethio-school-platform");
+    return { project: c.project, live: c.liveUrl, ms: state.milestones.filter((m) => m.category === "Ethio School").length,
+      tasks: state.tasks.filter((t) => t.category === "Ethio School").length };
+  });
+  assert.deepEqual(after, { project: "Ethio School", live: "https://school.example.com/login", ms: 7, tasks: 32 });
+  await page.locator("[data-project]", { hasText: "Ethio School" }).locator("[data-open-case]").waitFor();
+
+  // Delete it: the case study stays on the portfolio, unlinked.
+  await page.locator("[data-project]", { hasText: "Ethio School" }).locator("[data-delete]").click();
+  await page.locator("#li-modal button[type=submit], #li-modal [data-confirm]").first().click();
+  await page.getByText("Ethio School deleted · 1 case study unlinked").waitFor();
+  const left = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const c = state.settings.preferences.portfolio.site.cases.find((x) => x.id === "ethio-school-platform");
+    return { kept: !!c, project: c?.project };
+  });
+  assert.deepEqual(left, { kept: true, project: "" });
   assert.deepEqual(page.errors, []);
   await page.close();
 });

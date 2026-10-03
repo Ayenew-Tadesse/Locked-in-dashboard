@@ -30,7 +30,7 @@ function previewHtml(pack, plan) {
     ${project ? row(plan.project === "add", project) : ""}
     ${pack.milestones.length ? row(plan.milestones.add > 0, `${plural(plan.milestones.add, "milestone")} with ${plural(plan.tasks, "task")}${plan.milestones.skip ? ` (${plan.milestones.skip} you already have, skipped)` : ""}`) : ""}
     ${plan.case ? row(plan.case === "add", plan.case === "add"
-      ? `Case study <b>${esc(pack.caseStudy.title)}</b>${plan.images ? ` with ${plural(plan.images, "picture")}` : ""}, on your portfolio`
+      ? `Case study <b>${esc(pack.caseStudy.title)}</b>${plan.images ? ` with ${plural(plan.images, "picture")}` : ""}${plan.linkedImages ? `${plan.images ? " and" : " with"} ${plural(plan.linkedImages, "auto-updating picture")}` : ""}, on your portfolio`
       : `Case study <b>${esc(pack.caseStudy.title)}</b> is already in your portfolio (kept as it is)`) : ""}
   </ul>`;
 }

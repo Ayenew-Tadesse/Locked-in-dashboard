@@ -89,7 +89,8 @@ export function openMilestoneForm(ms = {}) {
     body: `
       <label class="li-field full">Name<input name="title" required maxlength="200" value="${esc(m.title || "")}" placeholder="e.g. Launch personal portfolio"></label>
       <label class="li-field full">Description<textarea name="description" rows="2">${esc(m.description || "")}</textarea></label>
-      <label class="li-field">Category<input name="category" maxlength="60" value="${esc(m.category || "")}"></label>
+      <label class="li-field">Project or category <small class="li-muted">(pick a project to link it)</small><input name="category" maxlength="60" list="li-ms-projects" value="${esc(m.category || "")}">
+        <datalist id="li-ms-projects">${(state.projects || []).map((p) => `<option value="${esc(p.name)}">`).join("")}</datalist></label>
       <label class="li-field">Priority<select name="priority">${options(Object.entries(PRIORITIES).map(([k, v]) => [k, v.label]), m.priority)}</select></label>
       <label class="li-field">Start date<input type="date" name="start_date" value="${esc(m.start_date || "")}"></label>
       <label class="li-field">Deadline<input type="date" name="deadline" value="${esc(m.deadline || "")}"></label>
