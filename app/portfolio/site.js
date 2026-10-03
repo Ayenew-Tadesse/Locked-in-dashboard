@@ -43,7 +43,7 @@ const SOCIAL_ICONS = {
 // Contact cards: a filled icon (picked from the link or label), the label, the value.
 // The whole card is the link (call, email, open the profile).
 const filled = (d) => `<svg class="pf-cc__icon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
-const CONTACT_ICONS = {
+export const CONTACT_ICONS = {
   phone: filled("M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"),
   email: filled("M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm.8 2v.3l8.2 5.2 8.2-5.2V7l-8.2 5.1z"),
   linkedin: filled("M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm3.3 7.2H5v8.3h2.3zM6.2 5.5a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm4.1 4.7v8.3h2.3v-4.3c0-1.2.4-2 1.5-2s1.4.9 1.4 2v4.3h2.3v-4.8c0-2.4-1.3-3.6-3.1-3.6-1.4 0-2 .7-2.3 1.2v-1.1z"),

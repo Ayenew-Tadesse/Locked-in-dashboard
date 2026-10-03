@@ -2552,3 +2552,90 @@ test("case studies on the page: the card, comparison table, information architec
   assert.deepEqual(page.errors, []);
   await page.close();
 });
+
+test("portfolio: edit the home page on the page (intro, photo, numbers, skills, contact, sections), save, cancel, case studies", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  const ce = (sel) => page.locator(`#li-ce ${sel}`);
+  await page.click("#li-pf-onpage");
+  await page.waitForSelector("#li-ce.ce-site");
+  assert.equal(await ce('[data-k="hero.name"]').innerText(), "Ayenew Shiferaw");
+
+  // Introduction: text in place, Open to chips, Looking for.
+  await page.fill('#li-ce [data-k="hero.role"]', "Senior Product Designer");
+  await page.fill('#li-ce [data-k="hero.description"]', "I design calm, fast booking flows.");
+  await ce('[data-act="open"][data-path="relocation"]').click();
+  assert.equal(await ce('[data-act="open"][data-path="relocation"]').getAttribute("aria-pressed"), "true");
+  await page.fill('#li-ce [data-k="hero.roles"]', "Lead UX");
+  // Photo: tap to replace.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  const chooser = page.waitForEvent("filechooser");
+  await ce('[data-act="img"][data-path="portrait"]').click();
+  await (await chooser).setFiles({ name: "me.png", mimeType: "image/png", buffer: png });
+  await page.waitForFunction(() => /^blob:/.test(document.querySelector('#li-ce [data-path="portrait"] img')?.src || ""));
+  // Numbers: edit one, add a fourth (then no more + Number).
+  await page.fill('#li-ce [data-k="stats.0.num"]', "4+");
+  await ce('[data-act="stat"]').click();
+  await page.keyboard.type("12");
+  await page.fill('#li-ce [data-k="stats.3.label"]', "Awards");
+  assert.equal(await ce('[data-act="stat"]').count(), 0, "up to four numbers");
+  // Key skills: remove one, add a group with a skill.
+  const skill0 = await ce('[data-k="skills.0.items.0"]').innerText();
+  await ce('[data-act="del"][data-path="skills.0.items.0"]').click();
+  await ce('[data-act="group"]').click();
+  await page.keyboard.type("Languages");
+  const g = (await ce(".pf-s-skill").count()) - 1;
+  await ce(`[data-act="item"][data-path="skills.${g}.items"]`).click();
+  await page.keyboard.type("Amharic");
+  // Contact: add one with a link (it shows as a social icon too); hide Milestones.
+  await ce('.ce-sec [data-act="contact"]').click();
+  await page.keyboard.type("GitHub");
+  const ci = (await ce(".pf-cc").count()) - 1;
+  await page.fill(`#li-ce [data-k="contact.${ci}.value"]`, "Ayenew-Tadesse");
+  await page.fill(`#li-ce [data-k="contact.${ci}.href"]`, "https://github.com/Ayenew-Tadesse");
+  await ce('[data-act="toggle"][data-path="milestones"]').click();
+  assert.equal(await ce('[data-act="toggle"][data-path="milestones"]').getAttribute("aria-pressed"), "false");
+  // Settings: the resume link.
+  await ce('[data-act="settings"]').click();
+  await page.fill("#li-modal [name=resume]", "https://example.com/cv.pdf");
+  await page.click("#li-modal button[type=submit]");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await ce('[data-act="save"]').click();
+  await page.waitForSelector("#li-ce", { state: "detached" });
+
+  // What a hiring manager sees.
+  await page.waitForFunction(() => /Senior Product Designer/.test(document.querySelector("#li-pf-preview")?.textContent || ""));
+  const pv = page.locator("#li-pf-preview");
+  const text = await pv.innerText();
+  assert.match(text, /Senior Product Designer[\s\S]*I design calm, fast booking flows\.[\s\S]*Open to relocation[\s\S]*Looking for: Lead UX/i);
+  assert.match(text, /4\+[\s\S]*12[\s\S]*Awards/);
+  assert.match(text, /Languages[\s\S]*Amharic/);
+  assert.ok(!text.includes(skill0), "the removed skill is gone");
+  assert.equal(await pv.locator('.pf-cc[data-icon="github"]').getAttribute("href"), "https://github.com/Ayenew-Tadesse");
+  assert.equal(await pv.locator('.pf-socials .pf-social[aria-label="GitHub"]').count(), 1, "web links show as social icons");
+  assert.equal(await pv.locator("#pf-milestones").count(), 0, "hidden section");
+  assert.match(await pv.locator(".pf-s-portrait").getAttribute("src"), /^blob:/);
+  assert.equal(await pv.locator(".pf-resume-btn").getAttribute("href"), "https://example.com/cv.pdf");
+  // The form shows the saved values too.
+  assert.equal(await page.inputValue("#li-pf-form [name=role]"), "Senior Product Designer");
+
+  // Cancel with changes asks; discarding keeps what was saved.
+  await page.click("#li-pf-onpage");
+  await page.fill('#li-ce [data-k="hero.role"]', "Not saved");
+  await ce('[data-act="cancel"]').click();
+  await page.click("#li-modal button[type=submit]"); // Discard
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  assert.equal(await page.inputValue("#li-pf-form [name=role]"), "Senior Product Designer");
+
+  // A case-study card opens the case-study editor; cancelling it comes back here.
+  await page.click("#li-pf-onpage");
+  await ce('[data-act="case"][data-path="hidgo"]').click();
+  await page.waitForSelector("#li-ce:not(.ce-site)");
+  assert.equal(await ce('.pf-case [data-k="title"]').innerText(), "Hid-Go Flight Booking App");
+  await ce('[data-act="cancel"]').click();
+  await page.waitForSelector("#li-ce.ce-site");
+  await ce('[data-act="cancel"]').click();
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});

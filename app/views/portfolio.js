@@ -137,6 +137,7 @@ export function renderPortfolioPage(el) {
   const bar = document.getElementById("li-pagebar-actions");
   const editor = wireEditor(el, {
     saved() { drawPreview(); announceSaved(); },
+    rerender() { renderPortfolioPage(el); announceSaved(); },
     draft(p) { draft = p; drawPreview(); },
     reload() { renderPortfolioPage(el); },
     dirty(on) {
