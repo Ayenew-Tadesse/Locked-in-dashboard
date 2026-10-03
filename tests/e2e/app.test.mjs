@@ -2749,7 +2749,8 @@ test("import a project file: project, milestones, tasks and case study, never tw
   await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("ethio-school-platform"));
   await page.waitForSelector("#li-ce .pf-shots--wide");
   assert.equal(await page.locator("#li-ce .pf-flow--wide li").count(), 4);
-  assert.equal(await page.locator("#li-ce .pf-tablet").count(), 7, "every screenshot in a tablet frame");
+  assert.equal(await page.locator("#li-ce .pf-shots .pf-tablet, #li-ce .pf-flow .pf-tablet").count(), 7, "every screenshot in a tablet frame");
+  assert.equal(await page.locator("#li-ce .ce-card .pf-card__thumb .pf-tablet").count(), 1, "the card shows its first screenshot in a tablet");
 
   // "Try the app" opens the live app in a landscape tablet (1180 × 820 screen).
   await page.keyboard.press("Escape");
@@ -2901,6 +2902,33 @@ test("projects: one order for the Projects page, case studies and portfolio (bot
   assert.deepEqual(await orders(), { projects: "Guxo Flights,Ethio School Platform,Gexi,Guxo", cases: "ethio-school-platform,guxo,hotel,hidgo" });
   // The portfolio's Featured projects show the same order.
   assert.deepEqual((await page.locator("#li-pf-preview .pf-card h3").allInnerTexts()).slice(0, 2), ["Ethio School Platform", "Guxo Bus Booking App"]);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("portfolio cards: phone apps show three phones, tablet apps their tablet, none the name", async () => {
+  const page = await open("portfolio", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  const preview = page.locator("#li-pf-preview");
+  await preview.locator(".pf-card").first().waitFor();
+  const thumbs = () => preview.locator(".pf-card__thumb").evaluateAll((els) => els.map((t) => ({
+    phones: t.querySelectorAll(".pf-mini-phone img").length, tablet: t.querySelectorAll(".pf-tablet img").length, word: t.querySelector(":scope > span")?.textContent || "",
+  })));
+  assert.deepEqual(await thumbs(), [{ phones: 3, tablet: 0, word: "" }, { phones: 3, tablet: 0, word: "" }, { phones: 0, tablet: 0, word: "Hotel Booking" }]);
+  // The first screenshot sits in front, in the middle.
+  const mid = await preview.locator(".pf-card").first().locator(".pf-mini-phone").evaluateAll((els) => els.map((e) => ({ order: getComputedStyle(e).order, z: getComputedStyle(e).zIndex })));
+  assert.deepEqual(mid[0], { order: "2", z: "2" });
+  // A tablet app: its first screenshot in a tablet frame; with one screenshot, one phone.
+  await page.evaluate(async () => {
+    const { saveSite, currentSite, portfolioChanged } = await import(new URL("app/views/portfolio-site.js", location.href).href);
+    const site = currentSite();
+    site.cases[0] = { ...site.cases[0], device: "tablet" };
+    site.cases[1] = { ...site.cases[1], shots: site.cases[1].shots.slice(0, 1) };
+    await saveSite(site);
+    portfolioChanged();
+  });
+  await page.waitForFunction(() => document.querySelectorAll("#li-pf-preview .pf-card .pf-tablet").length === 1);
+  assert.deepEqual((await thumbs()).slice(0, 2), [{ phones: 0, tablet: 1, word: "" }, { phones: 1, tablet: 0, word: "" }]);
   assert.deepEqual(page.errors, []);
   await page.close();
 });

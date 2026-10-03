@@ -10,7 +10,7 @@
 import { state, toast } from "../state.js";
 import { esc, openModal, closeModal } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, getAt, setAt, imgUrl } from "./page-editor.js";
-import { deviceOf, screenFrame } from "../portfolio/site.js";
+import { deviceOf, screenFrame, cardThumb } from "../portfolio/site.js";
 
 export const META = ["Role", "Type", "Platform", "Tools"];
 /** The "Device" choice: what "Try the app" opens in and how screenshots are framed. */
@@ -140,9 +140,8 @@ function styleHtml(st) {
 
 // How it shows on your home page.
 function cardHtml(m) {
-  const shot = imgUrl(m.shots[0]?.src);
   return `<section class="ce-cardwrap"><p class="ce-label">Card on your home page</p>
-    <article class="pf-card ce-card"><div class="pf-card__thumb${shot ? " has-img" : ""}">${shot ? `<img src="${esc(shot)}" alt="">` : `<span>${esc(m.title || "Title")}</span>`}</div>
+    <article class="pf-card ce-card">${cardThumb(m, { word: m.title || "Title" })}
       <div class="pf-card__body">${ed("tag", m.tag, { tag: "p", cls: "pf-card__tag", ph: "Tag, e.g. Mobile App UI/UX" })}${ed("title", m.title, { tag: "h3", ph: "Case study title" })}
         ${ed("cardDesc", m.cardDesc, { tag: "p", cls: "pf-card__desc", ph: "One or two lines for the card", multi: true })}</div></article></section>`;
 }

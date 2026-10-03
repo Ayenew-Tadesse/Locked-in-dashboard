@@ -103,12 +103,25 @@ function projectFor(c, projects) {
     || (projects || []).find((p) => p.name && want.startsWith(p.name.toLowerCase() + " "));
 }
 
+/**
+ * A case study card's picture. Phone apps: up to three screenshots in phone
+ * frames, the first one in front in the middle. Tablet and computer apps: the
+ * first screenshot in its tablet or laptop frame. No screenshots: the name.
+ */
+export function cardThumb(c, { tag = "div", word } = {}) {
+  const shots = (c.shots || []).map((x) => x?.src).filter((src) => img(src));
+  if (!shots.length) return `<${tag} class="pf-card__thumb"><span>${esc(word ?? (c.thumbWord || c.title || ""))}</span></${tag}>`;
+  const alt = (i) => (i ? "" : `${c.title || "App"} screen`);
+  if (deviceOf(c) !== "phone") return `<${tag} class="pf-card__thumb has-img has-frame">${screenFrame(c)(img(shots[0], alt(0)))}</${tag}>`;
+  const phones = shots.slice(0, 3).map((src, i) => `<span class="pf-mini-phone"><span class="pf-mini-phone__screen">${img(src, alt(i))}</span></span>`);
+  return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${phones.length}">${phones.join("")}</${tag}>`;
+}
+
 function caseCard(c, projects) {
-  const shot = c.shots?.[0]?.src;
   const p = projectFor(c, projects);
   const prog = p ? projectProgress(p) : null;
   return `<article class="pf-card">
-    <div class="pf-card__thumb${shot ? " has-img" : ""}">${shot ? img(shot, `${c.title} screen`) : `<span>${esc(c.thumbWord || c.title)}</span>`}</div>
+    ${cardThumb(c)}
     <div class="pf-card__body">
       ${c.tag ? `<p class="pf-card__tag">${esc(c.tag)}</p>` : ""}
       <h3>${esc(c.title)}</h3>
