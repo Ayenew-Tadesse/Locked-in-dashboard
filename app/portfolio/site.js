@@ -103,21 +103,38 @@ function projectFor(c, projects) {
     || (projects || []).find((p) => p.name && want.startsWith(p.name.toLowerCase() + " "));
 }
 
+/** The card's chosen screens ([front, left, right]; a tablet or computer uses the first), or null when none are chosen. */
+export function cardScreens(c) {
+  const list = Array.isArray(c?.cardShots) ? c.cardShots.slice(0, 3).map((x) => (img(x) ? x : "")) : [];
+  return list.some(Boolean) ? [0, 1, 2].map((i) => list[i] || "") : null;
+}
+
+// A screen without a picture yet: soft skeleton blocks (header, cards, button).
+const placeholderScreen = (note) => `<span class="pf-screen-ph" aria-hidden="true"><i class="pf-screen-ph__head"></i><i></i><i></i><i class="pf-screen-ph__short"></i><b></b>${note ? `<em>${note}</em>` : ""}</span>`;
+
 /**
- * A case study card's picture. Phone apps: up to three screenshots in phone
- * frames, the first one in front in the middle. Tablet and computer apps: the
- * first screenshot in its tablet or laptop frame. No screenshots: the name.
+ * A case study card's picture: the same realistic device frame on every card.
+ * Phone apps: three phones, the front one in the middle. Tablet and computer
+ * apps: one tablet or laptop. Screens are the ones you chose for the card
+ * (cardShots), else the first screenshots; a screen without a picture shows
+ * a placeholder, so a project you're still making already has its frame.
+ * opts.slots: mark each screen with data-slot (the editor taps them to choose).
  */
-export function cardThumb(c, { tag = "div", word } = {}) {
-  const shots = (c.shots || []).map((x) => x?.src).filter((src) => img(src));
-  if (!shots.length) return `<${tag} class="pf-card__thumb"><span>${esc(word ?? (c.thumbWord || c.title || ""))}</span></${tag}>`;
+export function cardThumb(c, { tag = "div", slots = false } = {}) {
+  const chosen = cardScreens(c);
+  const shots = chosen || (c.shots || []).map((x) => x?.src).filter((src) => img(src)).slice(0, 3);
   const alt = (i) => (i ? "" : `${c.title || "App"} screen`);
-  if (deviceOf(c) !== "phone") return `<${tag} class="pf-card__thumb has-img has-frame">${screenFrame(c)(img(shots[0], alt(0)))}</${tag}>`;
-  // A status bar (time, camera island, battery) above the screenshot and a home bar below it,
-  // as on a real phone, so the island and the rounded corners never cover the app.
-  const phones = shots.slice(0, 3).map((src, i) => `<span class="pf-mini-phone"><span class="pf-mini-phone__screen">
-    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${img(src, alt(i))}<span class="pf-mini-phone__home" aria-hidden="true"></span></span></span>`);
-  return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${phones.length}">${phones.join("")}</${tag}>`;
+  const slot = (i) => (slots ? ` data-slot="${i}" data-act="cardslot" data-path="${i}" role="button" tabindex="0" aria-label="Choose the ${deviceOf(c) !== "phone" ? "card's" : ["front", "left", "right"][i]} screen"` : "");
+  if (deviceOf(c) !== "phone") {
+    const src = shots[0];
+    const screen = src ? img(src, alt(0)) : `<span class="pf-screen-ph--wide">${placeholderScreen("Screens coming soon")}</span>`;
+    return `<${tag} class="pf-card__thumb has-img has-frame"><span class="pf-card__frame"${slot(0)}>${screenFrame(c)(screen)}</span></${tag}>`;
+  }
+  // Without chosen screens, a project with one or two screenshots shows that many phones; otherwise three.
+  const n = chosen || !shots.length ? 3 : shots.length;
+  const phones = Array.from({ length: n }, (_, i) => `<span class="pf-mini-phone"${slot(i)}><span class="pf-mini-phone__screen">
+    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${shots[i] ? img(shots[i], alt(i)) : placeholderScreen(i === 0 ? "Screens coming soon" : "")}<span class="pf-mini-phone__home" aria-hidden="true"></span></span></span>`);
+  return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
 }
 
 function caseCard(c, projects) {

@@ -21,6 +21,49 @@ const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter
 const joinParas = (list) => (list || []).map((p) => String(p).trim()).filter(Boolean).join("\n\n");
 const clean = (s) => String(s ?? "").trim();
 
+/* ------------------------------------------------------------- card screens */
+
+/**
+ * Choose the picture for one of the card's screens (i: 0 front, 1 left, 2 right):
+ * one of the case study's screenshots, an upload, or an image address (which can
+ * be one that updates itself). "Leave empty" brings back the placeholder screen.
+ */
+function chooseCardScreen(model, i, ctx) {
+  const set = (src) => {
+    model.cardShots = model.cardShots || ["", "", ""];
+    model.cardShots[i] = src;
+    ctx.markDirty();
+    ctx.draw();
+  };
+  const which = deviceOf(model) === "phone" ? ["front (middle)", "left", "right"][i] : "card's";
+  const shots = model.shots.map((x) => imgUrl(x.src)).filter(Boolean);
+  openModal({
+    eyebrow: "Card on your home page", title: `Choose the ${which} screen`, submitLabel: "Use this address", wide: true,
+    body: `${shots.length ? `<div class="li-field full"><span>From this case study's screenshots</span><div class="ce-pick">${shots.map((src) => `<button type="button" class="ce-pick__shot${model.cardShots?.[i] === src ? " on" : ""}" data-pick="${esc(src)}"><img src="${esc(src)}" alt=""></button>`).join("")}</div></div>` : ""}
+      <div class="li-field full"><span>Or upload a picture</span><label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" data-pick-file hidden></label></div>
+      <label class="li-field full">Or paste an image address <small class="li-muted">(https://…; one that updates itself keeps the card up to date)</small><input name="url" type="url" maxlength="500" placeholder="https://…" value="${esc(model.cardShots?.[i] && !shots.includes(model.cardShots[i]) ? model.cardShots[i] : "")}"></label>
+      ${model.cardShots?.[i] ? `<button type="button" class="li-btn small ghost" data-pick-clear>Leave this screen empty (placeholder)</button>` : ""}`,
+    onReady(f) {
+      f.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-pick], [data-pick-clear]");
+        if (!b) return;
+        set(b.dataset.pick || "");
+        closeModal();
+      });
+      f.querySelector("[data-pick-file]").addEventListener("change", async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try { set(await state.store.uploadPortfolioImage(file, file.name)); closeModal(); } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
+      });
+    },
+    async onSubmit(v) {
+      const url = imgUrl(String(v.url || "").trim());
+      if (!url || !/^https:\/\//i.test(url)) throw new Error("Paste an image address starting with https://");
+      set(url);
+    },
+  });
+}
+
 /* ------------------------------------------------------------------ model */
 
 // The case study in an easy-to-edit shape: multi-paragraph text as lists.
@@ -38,6 +81,7 @@ function toModel(c) {
     flow: { title: c.flow?.title || "", intro: c.flow?.intro || "", steps: (c.flow?.steps || []).map((s) => ({ label: s.label || "", src: s.src || "" })) },
     extra: (c.extra || []).map((x) => ({ title: x.title || "", text: paras(x.text) })),
     tag: c.tag || "", cardDesc: c.cardDesc || "",
+    cardShots: Array.isArray(c.cardShots) ? [0, 1, 2].map((i) => c.cardShots[i] || "") : null,
     competitive: { intro: c.competitive?.intro || "", columns: [...(c.competitive?.columns || [])],
       rows: (c.competitive?.rows || []).map((r) => ({ feature: r.feature || "", values: [...(r.values || [])] })) },
     ia: { intro: c.ia?.intro || "", root: c.ia?.root || "", sections: (c.ia?.sections || []).map((x) => ({ title: x.title || "", items: [...(x.items || [])] })) },
@@ -69,6 +113,7 @@ export function fromModel(m) {
     flow: { title: clean(m.flow.title), intro: clean(m.flow.intro), steps: m.flow.steps.map((s) => ({ label: clean(s.label), src: imgUrl(s.src) })).filter((s) => s.label || s.src) },
     extra: m.extra.map((x) => ({ title: clean(x.title), text: joinParas(x.text) })).filter((x) => x.title || x.text),
     tag: clean(m.tag), cardDesc: clean(m.cardDesc),
+    cardShots: m.cardShots?.some((x) => imgUrl(x)) ? m.cardShots.map((x) => imgUrl(x) || "") : undefined,
     competitive: (() => {
       const rows = m.competitive.rows.map((r) => ({ feature: clean(r.feature), values: m.competitive.columns.slice(1).map((_, i) => markOf(r.values[i])) })).filter((r) => r.feature);
       return { intro: clean(m.competitive.intro), columns: rows.length ? m.competitive.columns.map(clean) : [], rows };
@@ -140,10 +185,12 @@ function styleHtml(st) {
 
 // How it shows on your home page.
 function cardHtml(m) {
-  return `<section class="ce-cardwrap"><p class="ce-label">Card on your home page</p>
-    <article class="pf-card ce-card">${cardThumb(m, { word: m.title || "Title" })}
+  const n = deviceOf(m) === "phone" ? 3 : 1, names = n === 1 ? ["Screen"] : ["Front (middle)", "Left", "Right"];
+  return `<section class="ce-cardwrap"><p class="ce-label">Card on your home page <small class="li-muted">(tap a screen to choose its picture)</small></p>
+    <article class="pf-card ce-card">${cardThumb(m, { slots: true })}
       <div class="pf-card__body">${ed("tag", m.tag, { tag: "p", cls: "pf-card__tag", ph: "Tag, e.g. Mobile App UI/UX" })}${ed("title", m.title, { tag: "h3", ph: "Case study title" })}
-        ${ed("cardDesc", m.cardDesc, { tag: "p", cls: "pf-card__desc", ph: "One or two lines for the card", multi: true })}</div></article></section>`;
+        ${ed("cardDesc", m.cardDesc, { tag: "p", cls: "pf-card__desc", ph: "One or two lines for the card", multi: true })}</div></article>
+    <p class="ce-cardslots"><span>Card screens:</span>${names.map((l, i) => `<button type="button" class="ce-chiptoggle${m.cardShots?.[i] ? " on" : ""}" data-act="cardslot" data-path="${i}">${l}</button>`).join("")}</p></section>`;
 }
 
 function render(m) {
@@ -240,6 +287,11 @@ export function openCaseEditor(original, opts) {
       if (ks.join(".") === "competitive.columns") ctx.model.competitive.rows.forEach((r) => r.values.splice(i - 1, 1));
     },
     wire(ctx) {
+      // The card's screens are tappable; Enter or Space opens them too.
+      ctx.page.addEventListener("keydown", (e) => {
+        const slot = e.target.closest?.("[data-slot]");
+        if (slot && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); slot.click(); }
+      });
       ctx.page.addEventListener("change", (e) => {
         const pick = e.target.closest("[data-color]");
         if (!pick) return;
@@ -252,6 +304,7 @@ export function openCaseEditor(original, opts) {
     },
     actions: {
       shots(path, ctx) { ctx.pickImages(path, (src) => ({ src, alt: "" })); return false; },
+      cardslot(i, ctx) { chooseCardScreen(model, Number(i), ctx); return false; },
       persona(path) { const l = getAt(model, path); l.push({ name: "", needs: [], frustrations: [], goals: [] }); return `${path}.${l.length - 1}.name`; },
       flow(path) { const l = getAt(model, path); l.push({ label: "", src: "" }); return `${path}.${l.length - 1}.label`; },
       section(path) { const l = getAt(model, path); l.push({ title: "", text: [""] }); return `${path}.${l.length - 1}.title`; },

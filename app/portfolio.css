@@ -203,9 +203,23 @@
 .pf-card__phones--3 .pf-mini-phone:nth-child(1){order:2;z-index:2;}
 .pf-card__phones--3 .pf-mini-phone:nth-child(2){order:1;margin-right:-6%;transform:scale(.86);transform-origin:right center;}
 .pf-card__phones--3 .pf-mini-phone:nth-child(3){order:3;margin-left:-6%;transform:scale(.86);transform-origin:left center;}
+/* A screen without a picture yet: skeleton blocks in the page's colours. */
+.pf-screen-ph{flex:1;min-height:0;display:flex;flex-direction:column;gap:6%;padding:8% 9%;background:var(--surface);container-type:inline-size;}
+.pf-screen-ph i{display:block;height:12%;border-radius:6px;background:var(--surface-2);}
+.pf-screen-ph .pf-screen-ph__head{height:18%;background:var(--accent-soft);}
+.pf-screen-ph .pf-screen-ph__short{width:60%;}
+.pf-screen-ph b{display:block;height:8%;margin-top:auto;border-radius:6px;background:var(--accent);opacity:.55;}
+.pf-screen-ph em{font-style:normal;font-size:7cqw;line-height:1.3;text-align:center;color:var(--ink-3);}
+.pf-screen-ph--wide{display:flex;aspect-ratio:1180/820;}
+.pf-laptop .pf-screen-ph--wide{aspect-ratio:16/10;}
+.pf-screen-ph--wide .pf-screen-ph{gap:5%;padding:5% 6%;}
+.pf-screen-ph--wide .pf-screen-ph em{font-size:3.4cqw;}
+[data-slot]{cursor:pointer;}
+[data-slot]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 /* Tablet and computer apps: the first screen in its frame. */
 .pf-card__thumb.has-frame{box-sizing:border-box;padding:4% 0;}
-.pf-card__thumb.has-frame > .pf-tablet, .pf-card__thumb.has-frame > .pf-laptop{width:76%;flex:none;}
+.pf-card__frame{display:block;width:76%;flex:none;}
+.pf-card__frame > .pf-tablet, .pf-card__frame > .pf-laptop{width:100%;}
 .pf-card__thumb.has-frame img{height:auto;width:100%;max-width:none;padding:0;}
 .pf-card__body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;}
 .pf-card__tag{margin:0;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
@@ -559,3 +573,10 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .pf-slider__dots button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 @media (prefers-reduced-motion: reduce){ .pf-slider__track{scroll-behavior:auto;} }
 @media print{ .pf-slider__track{flex-wrap:wrap;overflow:visible;} .pf-slider__btn, .pf-slider__dots{display:none;} }
+/* The case-study editor: choosing the card's screens. */
+.ce-cardslots{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0;font-size:13px;color:var(--ink-2);}
+#li-ce.ce-preview .ce-cardslots{display:none;}
+.ce-pick{display:flex;flex-wrap:wrap;gap:10px;}
+.ce-pick__shot{padding:0;border:2px solid var(--line);border-radius:10px;background:var(--surface-2);overflow:hidden;cursor:pointer;width:76px;height:150px;}
+.ce-pick__shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;}
+.ce-pick__shot.on, .ce-pick__shot:hover, .ce-pick__shot:focus-visible{border-color:var(--accent);}
