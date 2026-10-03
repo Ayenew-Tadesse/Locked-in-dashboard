@@ -1,10 +1,23 @@
 // Projects page (☰ menu). The team owner adds, edits, reorders and deletes
 // the team's projects; everyone else sees them read-only.
-import { state, saveProject, deleteProject, moveProject, toast, can } from "../state.js";
+import { state, moveProject, toast, can } from "../state.js";
 import { esc, openModal, confirmDialog, progressBar } from "../ui/dom.js";
 import { PROJECT_STATUSES, LINK_LABELS, projectProgress } from "../core/projects.js";
 import { projectCard } from "./project-cards.js";
 import { openImportDialog } from "../project-import.js";
+import { saveProjectLinked, deleteProjectLinked } from "../project-sync.js";
+import { casesOfProject, milestonesOfProject, tasksOfProject, caseFromProject } from "../core/project-links.js";
+import { currentSite, openCaseStudy, openCaseDraft } from "./portfolio-site.js";
+
+/** "Case study: Open · 7 milestones · 32 tasks" under a project. */
+function linkedLine(p) {
+  const c = casesOfProject(currentSite().cases || [], p)[0];
+  const ms = milestonesOfProject(state.milestones, p).length, ts = tasksOfProject(state.tasks, p).length;
+  return `<div class="li-project-links"><span>Case study:</span> ${c
+    ? `<button type="button" class="li-link" data-open-case="${esc(c.id)}">${esc(c.title)}</button>`
+    : `<button type="button" class="li-link" data-new-case>Create case study</button>`}
+    <span class="li-muted">· ${ms} milestone${ms === 1 ? "" : "s"} · ${ts} task${ts === 1 ? "" : "s"}</span></div>`;
+}
 
 export function renderProjects(el) {
   if (state.projects === null) {
@@ -37,6 +50,7 @@ export function renderProjects(el) {
           <b class="li-project-row-name">${esc(p.name)}</b>${p.code ? ` <small class="li-muted">${esc(p.code)}</small>` : ""}
           <span class="li-pill pj-${esc(p.status)}">${esc(PROJECT_STATUSES[p.status] || "")}</span>
           <div class="li-progress-line">${progressBar(prog.pct, "Checklist")}<span>${prog.total ? `${prog.done}/${prog.total}` : "No checklist"}</span></div>
+          ${linkedLine(p)}
         </div>
         <div class="li-btn-row">
           ${can("edit_projects") ? `<button type="button" class="li-btn small" data-move="-1" aria-label="Move ${esc(p.name)} up"${i === 0 ? " disabled" : ""}>↑</button>
@@ -53,9 +67,12 @@ export function renderProjects(el) {
     const p = list.find((x) => x.id === row.dataset.project);
     row.querySelector("[data-edit]")?.addEventListener("click", () => openProjectForm(p));
     row.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => moveProject(p.id, Number(b.dataset.move)).catch(() => {})));
+    row.querySelector("[data-open-case]")?.addEventListener("click", (e) => openCaseStudy(e.currentTarget.dataset.openCase));
+    row.querySelector("[data-new-case]")?.addEventListener("click", () => openCaseDraft(caseFromProject(p)));
     row.querySelector("[data-delete]")?.addEventListener("click", async () => {
-      if (!(await confirmDialog(`Delete the project "${p.name}"? Its card and checklist go; tasks aren't affected.`, "Delete"))) return;
-      await deleteProject(p.id).then(() => toast(`${p.name} deleted`), () => {});
+      const linked = casesOfProject(currentSite().cases || [], p).length;
+      if (!(await confirmDialog(`Delete the project "${p.name}"? Its card and checklist go; tasks and milestones aren't affected.${linked ? ` Its case study stays on your portfolio, unlinked.` : ""}`, "Delete"))) return;
+      await deleteProjectLinked(p.id).then((n) => toast(n ? `${p.name} deleted · ${n} case stud${n === 1 ? "y" : "ies"} unlinked` : `${p.name} deleted`), () => {});
     });
   });
 }
@@ -105,12 +122,12 @@ export function openProjectForm(p = {}) {
         done: r.querySelector("input[type=checkbox]").checked,
         deadline: r.querySelector(".li-cl-deadline").value.trim() || null,
       })).filter((it) => it.text);
-      await saveProject({
+      const synced = await saveProjectLinked({
         ...(editing ? { id: p.id } : {}),
         name: v.name.trim(), code: v.code.trim() || null, description: v.description.trim() || null, category: v.category.trim() || null, stage: v.stage.trim() || null,
         status: v.status, facts: v.facts.split("\n").map((s) => s.trim()).filter(Boolean), links, checklist,
       });
-      toast(editing ? "Project saved" : "Project added");
+      toast(editing ? (synced ? `Project saved · ${synced} updated` : "Project saved") : "Project added");
     },
   });
 }

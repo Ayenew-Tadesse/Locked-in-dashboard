@@ -107,6 +107,7 @@ export function planImport(pack, { projects, canAddProject, milestones, cases })
     project, milestones: { add: add.length, skip: pack.milestones.length - add.length },
     tasks: add.reduce((n, m) => n + m.tasks.length, 0), case: caseState,
     images: caseState === "add" ? caseImages(pack.caseStudy).filter(([o, k]) => /^data:image\//i.test(o[k])).length : 0,
+    linkedImages: pack.caseStudy ? caseImages(pack.caseStudy).filter(([o, k]) => /^https:\/\//i.test(o[k])).length : 0,
     newMilestones: add,
   };
 }

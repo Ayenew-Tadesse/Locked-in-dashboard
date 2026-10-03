@@ -467,6 +467,12 @@ export function openCaseStudy(id) {
     openForm: (draft) => editCase(c ? { ...draft, id: c.id } : draft, portfolioChanged, onDelete, c) });
 }
 
+/** Start a new case study from a draft (e.g. filled in from a project). */
+export function openCaseDraft(draft) {
+  openCaseEditor(draft, { save: storeCase, onDelete: null, done: portfolioChanged,
+    openForm: (d) => editCase({ ...d, id: "" }, portfolioChanged, null, draft) });
+}
+
 /** Save a case study: replace the one it was (by id), or add it with a fresh id. */
 export async function storeCase(next, original) {
   next = { ...next };
@@ -493,7 +499,12 @@ function editCase(original, done, onDelete, saved = original) {
   const iaText = (c.ia?.sections || []).map((s) => `${s.title}: ${(s.items || []).join("; ")}`).join("\n");
   const colorsText = (c.style?.colors || []).map((x) => `${x.name} ${x.hex}`).join("\n");
 
-  const shotsHtml = () => shots.map((s, i) => `<figure><img src="${esc(imgUrl(s.src))}" alt=""><button type="button" class="li-icon-btn" data-shot-remove="${i}" aria-label="Remove screenshot">&#10005;</button></figure>`).join("");
+  // A picture linked by its address (not uploaded) shows whatever is there now: it updates when its source does.
+  const linked = (u) => /^https?:\/\//i.test(u || "") && !/\/storage\/v1\/object\/public\//.test(u);
+  const shotsHtml = () => shots.map((s, i) => `<figure><img src="${esc(imgUrl(s.src))}" alt="">${linked(s.src) ? `<small class="li-pf-auto">auto-updating</small>` : ""}<button type="button" class="li-icon-btn" data-shot-remove="${i}" aria-label="Remove screenshot">&#10005;</button></figure>`).join("");
+  const shotAdd = `<label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" multiple data-shots hidden></label>
+    <span class="li-pf-urladd"><input type="url" inputmode="url" data-shot-url maxlength="500" placeholder="or paste an image address (https://…)" aria-label="Image address">
+    <button type="button" class="li-btn small" data-shot-url-add>Add</button></span>`;
   const flowHtml = () => flow.map((s, i) => `<div class="li-pf-grouprow li-pf-flowrow">${imgUrl(s.src) ? `<img src="${esc(s.src)}" alt="">` : `<span class="li-pf-noimg">No image</span>`}
       <input data-flow-label="${i}" maxlength="40" value="${esc(s.label || "")}" placeholder="Step, e.g. Search" aria-label="Step name">
       <label class="li-btn small li-pf-upload">Image<input type="file" accept="image/*" data-flow-img="${i}" hidden></label>
@@ -535,7 +546,7 @@ function editCase(original, done, onDelete, saved = original) {
       <fieldset class="full li-pf-group"><legend>Top of the case study</legend>
         <label class="li-field">Status label<input name="pill" maxlength="40" value="${esc(c.pill || "")}" placeholder="Live case study"></label>
         <label class="li-field full">Subtitle<textarea name="subtitle" rows="2" maxlength="400">${esc(c.subtitle || "")}</textarea></label>
-        <div class="li-field full"><span>Screenshots</span><div class="li-pf-imgs" id="li-pf-shots">${shotsHtml()}<label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" multiple data-shots hidden></label></div></div>
+        <div class="li-field full"><span>Screenshots <small class="li-muted">(pictures linked by address update when their source does)</small></span><div class="li-pf-imgs" id="li-pf-shots">${shotsHtml()}${shotAdd}</div></div>
         ${META.map((l) => `<label class="li-field">${l}<input name="meta_${l}" maxlength="120" value="${esc(meta(l))}"></label>`).join("")}
       </fieldset>
       <fieldset class="full li-pf-group"><legend>The story</legend>
@@ -578,7 +589,7 @@ function editCase(original, done, onDelete, saved = original) {
         // The confirm replaces this dialog; if you don't delete, the editor opens again.
         if (!(await onDelete())) editCase(original, done, onDelete, saved);
       });
-      const draw = () => { f.querySelector("#li-pf-shots").innerHTML = shotsHtml() + `<label class="li-btn small li-pf-upload">Upload<input type="file" accept="image/*" multiple data-shots hidden></label>`; };
+      const draw = () => { f.querySelector("#li-pf-shots").innerHTML = shotsHtml() + shotAdd; };
       readPersonas = () => { personas = [...f.querySelectorAll("[data-persona]")].map((row, i) => ({
         photo: personas[i]?.photo || "",
         name: row.querySelector('[data-p="name"]').value.trim(), summary: row.querySelector('[data-p="summary"]').value.trim(),
@@ -599,8 +610,13 @@ function editCase(original, done, onDelete, saved = original) {
         } catch (err) { toast("Couldn't upload: " + err.message, "error"); }
       });
       f.addEventListener("click", (e) => {
-        const b = e.target.closest("[data-shot-remove],[data-flow-remove],[data-persona-remove],[data-persona-photo-remove],#li-pf-persona-add,#li-pf-flow-add");
+        const b = e.target.closest("[data-shot-remove],[data-shot-url-add],[data-flow-remove],[data-persona-remove],[data-persona-photo-remove],#li-pf-persona-add,#li-pf-flow-add");
         if (!b) return;
+        if (b.matches("[data-shot-url-add]")) {
+          const u = f.querySelector("[data-shot-url]").value.trim();
+          if (!/^https:\/\/\S+$/i.test(u)) { toast("Paste an image address that starts with https://", "error"); return; }
+          shots.push({ src: u, alt: "" }); draw();
+        }
         if (b.matches("[data-shot-remove]")) { shots.splice(Number(b.dataset.shotRemove), 1); draw(); }
         if (b.matches("[data-flow-remove]")) { readFlow(); flow.splice(Number(b.dataset.flowRemove), 1); f.querySelector("#li-pf-flow").innerHTML = flowHtml(); }
         if (b.matches("#li-pf-flow-add")) { readFlow(); flow.push({ label: "", src: "" }); f.querySelector("#li-pf-flow").innerHTML = flowHtml(); }
