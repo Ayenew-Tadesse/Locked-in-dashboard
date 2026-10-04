@@ -2968,13 +2968,13 @@ test("portfolio cards: title, type of app, devices, then two lines of descriptio
           below: card.querySelector(".pf-card__thumb").getBoundingClientRect().bottom <= card.querySelector("h3").getBoundingClientRect().top };
       });
     }, site);
-    // Behind the screens: the app's main button colour at 50%; without one, the page's main button colour at 50%.
+    // Behind the screens: a gradient of the app's main button colour (50% to 10%); without one, of the page's main button colour.
     const tints = await page.evaluate(() => {
-      const bg = (el) => getComputedStyle(el).backgroundColor;
-      const probe = (css) => { const d = document.createElement("div"); d.style.background = css; document.querySelector(".pf").append(d); const v = bg(d); d.remove(); return v; };
+      const bg = (el) => getComputedStyle(el).backgroundImage;
+      const probe = (c) => { const d = document.createElement("div"); d.style.background = `linear-gradient(135deg, color-mix(in srgb, ${c} 50%, transparent), color-mix(in srgb, ${c} 10%, transparent))`; document.querySelector(".pf").append(d); const v = bg(d); d.remove(); return v; };
       const thumbs = [...document.querySelectorAll(".pf-rail__item:not([data-rail-copy]) .pf-card__thumb")];
-      const accent = bg(document.querySelector(".pf-btn--solid"));
-      return { app: bg(thumbs[0]) === probe("color-mix(in srgb, #0f6b4c 50%, transparent)"), page: bg(thumbs[1]) === probe(`color-mix(in srgb, ${accent} 50%, transparent)`), sample: bg(thumbs[0]) };
+      const accent = getComputedStyle(document.querySelector(".pf-btn--solid")).backgroundColor;
+      return { app: bg(thumbs[0]) === probe("#0f6b4c"), page: bg(thumbs[1]) === probe(accent), sample: bg(thumbs[0]) };
     });
     assert.deepEqual({ app: tints.app, page: tints.page }, { app: true, page: true }, tints.sample);
     const order = ["h3", "pf-card__tag", "pf-card__devices", "pf-card__desc"];
