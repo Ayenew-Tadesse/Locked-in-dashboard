@@ -2968,10 +2968,10 @@ test("portfolio cards: title, type of app, devices, then two lines of descriptio
           below: card.querySelector(".pf-card__thumb").getBoundingClientRect().bottom <= card.querySelector("h3").getBoundingClientRect().top };
       });
     }, site);
-    // Behind the screens: a gradient of the app's main button colour (50% to 10%); without one, of the page's main button colour.
+    // Behind the screens: a gradient of the app's main button colour (full strength to 10%); without one, of the page's main button colour.
     const tints = await page.evaluate(() => {
       const bg = (el) => getComputedStyle(el).backgroundImage;
-      const probe = (c) => { const d = document.createElement("div"); d.style.background = `linear-gradient(135deg, color-mix(in srgb, ${c} 50%, transparent), color-mix(in srgb, ${c} 10%, transparent))`; document.querySelector(".pf").append(d); const v = bg(d); d.remove(); return v; };
+      const probe = (c) => { const d = document.createElement("div"); d.style.background = `linear-gradient(135deg, ${c}, color-mix(in srgb, ${c} 10%, transparent))`; document.querySelector(".pf").append(d); const v = bg(d); d.remove(); return v; };
       const thumbs = [...document.querySelectorAll(".pf-rail__item:not([data-rail-copy]) .pf-card__thumb")];
       const accent = getComputedStyle(document.querySelector(".pf-btn--solid")).backgroundColor;
       return { app: bg(thumbs[0]) === probe("#0f6b4c"), page: bg(thumbs[1]) === probe(accent), sample: bg(thumbs[0]) };
