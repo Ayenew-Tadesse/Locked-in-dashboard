@@ -17,10 +17,27 @@ const ICONS = `<svg width="17" height="11" viewBox="0 0 17 11" aria-hidden="true
   <svg width="15" height="11" viewBox="0 0 15 11" aria-hidden="true"><path d="M7.5 2.2c2.1 0 4 .8 5.4 2.1l1.1-1.1A9.2 9.2 0 0 0 7.5.6 9.2 9.2 0 0 0 1 3.2l1.1 1.1a7.7 7.7 0 0 1 5.4-2.1Zm0 3.2c1.2 0 2.3.5 3.2 1.2l1.1-1.1a6.1 6.1 0 0 0-8.6 0l1.1 1.1c.9-.7 2-1.2 3.2-1.2Zm0 3.1c-.4 0-.8.2-1.1.5L7.5 10l1.1-1c-.3-.3-.7-.5-1.1-.5Z"/></svg>
   <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true"><rect x=".5" y=".5" width="21" height="11" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="16" height="8" rx="2"/><path d="M23 4v4c.8-.3 1.3-1.1 1.3-2S23.8 4.3 23 4Z" opacity=".5"/></svg>`;
 
+/**
+ * The app's address with a fresh "v" each time, so browsers and the host's
+ * cache (GitHub Pages keeps pages ~10 minutes) always load the newest version.
+ */
+export function freshUrl(url) {
+  try {
+    const u = new URL(url, location.href);
+    if (!/^https?:$/.test(u.protocol)) return url;
+    u.searchParams.set("v", Date.now().toString(36));
+    return u.href;
+  } catch { return url; }
+}
+
 /** Handle a click on a "Try the app" link; true when the phone opened. */
 export function tryInPhone(e) {
   const a = e.target.closest?.("a[data-try]");
-  if (!a || small() || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return false;
+  if (!a) return false;
+  // Whichever way it opens (the phone frame, a new tab, this tab), it's the newest version.
+  a.dataset.url ??= a.getAttribute("href");
+  a.href = freshUrl(a.dataset.url);
+  if (small() || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return false;
   e.preventDefault();
   openPhone(a.href, a.dataset.try || "", a, a.dataset.device === "tablet" ? "tablet" : "phone");
   return true;
