@@ -107,6 +107,26 @@ export function describeSync(plan) {
   return bits.length > 1 ? `${bits.slice(0, -1).join(", ")} and ${bits.at(-1)}` : bits[0] || "";
 }
 
+const DEVICES = ["phone", "tablet", "computer", "both"];
+/** What a case study needs so its app shows on `device` (chosen on the project form); null when it already does or none is chosen. */
+export function caseDevicePatch(c, device) {
+  if (!DEVICES.includes(device)) return null;
+  const now = DEVICES.includes(c?.device) ? c.device : c?.phone === false ? "computer" : "phone";
+  return now === device ? null : { device, phone: device === "phone" || device === "both" };
+}
+
+/** Adds the project form's device choice to a sync plan's case-study patches (one patch per case study). */
+export function withCaseDevice(plan, cases, device) {
+  const out = plan.cases.map((x) => ({ ...x, patch: { ...x.patch } }));
+  for (const c of cases || []) {
+    const d = caseDevicePatch(c, device);
+    if (!d) continue;
+    const hit = out.find((x) => x.id === c.id);
+    if (hit) Object.assign(hit.patch, d); else out.push({ id: c.id, patch: d });
+  }
+  return { ...plan, cases: out };
+}
+
 /** A case study started from a project: its name, description and link filled in. */
 export function caseFromProject(p) {
   return {

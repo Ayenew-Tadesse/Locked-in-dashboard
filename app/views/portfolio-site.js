@@ -675,7 +675,7 @@ function editCase(original, done, onDelete, saved = original) {
         ...c,
         id: c.id || "",
         title: v.title.trim(), tag: v.tag.trim(), cardDesc: v.cardDesc.trim(), status: v.status === "progress" ? "progress" : "live",
-        liveUrl: v.liveUrl.trim(), device: v.device, phone: v.device === "phone", project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
+        liveUrl: v.liveUrl.trim(), device: v.device, phone: ["phone", "both"].includes(v.device), project: v.project || "", pill: v.pill.trim(), subtitle: v.subtitle.trim(),
         shots, meta: [...META.map((l) => ({ label: l, value: v["meta_" + l].trim() })), ...(c.meta || []).filter((m) => !META.includes(m.label))].filter((m) => m.value),
         overview: v.overview.trim(), problem: v.problem.trim(), insight: v.insight.trim(), solution: v.solution.trim(), outcome: v.outcome.trim(),
         process: { intro: v.processIntro.trim(), steps: lines(v.processSteps) },

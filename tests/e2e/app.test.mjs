@@ -3104,6 +3104,59 @@ test("projects: a new project gets its case study, in progress, in the project's
   await page.close();
 });
 
+test("phone and computer: chosen on the project form, the card shows a laptop with a phone in front", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  await page.click("#li-project-add");
+  await page.fill("#li-modal [name=name]", "Gexi Desk");
+  await page.selectOption("#li-modal [name=device]", "both");
+  await page.click("#li-modal button[type=submit]");
+  await page.getByText("Project added · case study created").waitFor();
+  const deviceOf = () => page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const c = state.settings.preferences.portfolio.site.cases.find((y) => y.project === "Gexi Desk");
+    return c && [c.device, c.phone];
+  });
+  assert.deepEqual(await deviceOf(), ["both", true]);
+  // The card: one laptop and one phone (placeholders for now); the phone stands in front, at the lower right, inside the picture.
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  const card = page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card", { hasText: "Gexi Desk" });
+  await card.waitFor();
+  assert.equal(await card.locator(".pf-card__both .pf-laptop").count(), 1);
+  assert.equal(await card.locator(".pf-card__both > .pf-mini-phone").count(), 1);
+  assert.equal(await card.locator(".pf-screen-ph").count(), 2);
+  await card.scrollIntoViewIfNeeded();
+  const [thumb, pc, ph] = await Promise.all([".pf-card__thumb", ".pf-laptop", ".pf-mini-phone"].map((q) => card.locator(q).boundingBox()));
+  assert.ok(ph.x > pc.x + pc.width / 2 && ph.x < pc.x + pc.width, "the phone overlaps the laptop's right half");
+  for (const b of [pc, ph]) assert.ok(b.x >= thumb.x && b.y >= thumb.y && b.x + b.width <= thumb.x + thumb.width + 0.5 && b.y + b.height <= thumb.y + thumb.height + 0.5, "nothing cut off");
+  // The case study editor: two card screens to choose, Computer and Phone.
+  await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const c = state.settings.preferences.portfolio.site.cases.find((y) => y.project === "Gexi Desk");
+    (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy(c.id);
+  });
+  await page.locator("#li-ce .ce-card").waitFor();
+  assert.deepEqual(await page.locator("#li-ce .ce-cardslots button").allInnerTexts(), ["Computer", "Phone"]);
+  assert.equal(await page.locator("#li-ce .ce-card [data-slot]").count(), 2);
+  await page.locator("#li-ce .ce-card [data-slot='1']").click();
+  await page.getByText("Choose the phone screen").waitFor();
+  await page.click("#li-modal .modal-close");
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.click('#li-ce [data-act="cancel"]');
+  await page.waitForSelector("#li-ce", { state: "detached" });
+  // Back on the project form: it shows the case study's device; changing it updates the case study.
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  await page.locator("[data-project]", { hasText: "Gexi Desk" }).locator("[data-edit]").click();
+  assert.equal(await page.locator("#li-modal [name=device]").inputValue(), "both");
+  await page.selectOption("#li-modal [name=device]", "phone");
+  await page.click("#li-modal button[type=submit]");
+  await page.getByText("Project saved · 1 case study updated").waitFor();
+  assert.deepEqual(await deviceOf(), ["phone", true]);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("portfolio: once, every project without a case study gets one (in order, no duplicates, deleted ones stay deleted)", async () => {
   const page = await open("projects", { width: 1280, height: 900 });
   await seedPortfolio(page);

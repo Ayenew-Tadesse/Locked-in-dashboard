@@ -2,7 +2,7 @@
 // its case studies (and so the portfolio), milestones and tasks
 // (core/project-links.js decides what changes). Used by the Projects page.
 import { state, saveProject, deleteProject, placeProject, reload, refresh, toast } from "./state.js";
-import { planProjectSync, planProjectDelete, describeSync, caseOrderFromProjects, casesOfProject, caseFromProject } from "./core/project-links.js";
+import { planProjectSync, planProjectDelete, describeSync, caseOrderFromProjects, casesOfProject, caseFromProject, caseDevicePatch, withCaseDevice } from "./core/project-links.js";
 import { currentSite, saveSite, portfolioChanged, storeCase } from "./views/portfolio-site.js";
 import { hasSite } from "./portfolio/site.js";
 
@@ -20,11 +20,11 @@ async function patchCases(patches) {
 
 /**
  * A new project gets its case study: one is created "In progress" (its card shows
- * placeholder screens) from the project's name, category, description, link and
- * facts, in the project's place in the order. One that already has the name is
+ * placeholder screens) from the project's name, category, description, link,
+ * facts and the device chosen on the form, in the project's place in the order. One that already has the name is
  * linked instead. Returns "created", "linked" or "" (when it didn't finish).
  */
-async function caseForNewProject(p) {
+async function caseForNewProject(p, device) {
   if (!hasSite(currentSite())) return ""; // a portfolio not set up as a site yet stays as it is
   try {
     const site = currentSite();
@@ -32,10 +32,11 @@ async function caseForNewProject(p) {
     const mine = casesOfProject(site.cases, p);
     let result = "linked";
     if (mine.length) {
-      mine.forEach((c) => { c.project = p.name; });
+      mine.forEach((c) => { c.project = p.name; }); // an existing case study keeps its own device
       await saveSite(site);
     } else {
-      await storeCase({ ...caseFromProject(p), status: "progress" });
+      const base = caseFromProject(p);
+      await storeCase({ ...base, ...caseDevicePatch(base, device), status: "progress" });
       result = "created";
     }
     const after = currentSite();
@@ -51,14 +52,16 @@ async function caseForNewProject(p) {
 }
 
 /**
- * Saves a project; its case studies, milestones and tasks follow. Returns what was
+ * Saves a project; its case studies, milestones and tasks follow (and the device
+ * chosen on the form, e.g. "both", goes to its case studies). Returns what was
  * updated ("" if nothing); for a new project, "created" or "linked" (its case study).
  */
-export async function saveProjectLinked(p) {
+export async function saveProjectLinked(p, { device } = {}) {
   const before = p.id ? state.projects.find((x) => x.id === p.id) : null;
   const saved = await saveProject(p);
-  if (!before) return caseForNewProject(saved);
-  const plan = planProjectSync(before, saved, { cases: currentSite().cases || [], milestones: state.milestones, tasks: state.tasks });
+  if (!before) return caseForNewProject(saved, device);
+  const cases = currentSite().cases || [];
+  const plan = withCaseDevice(planProjectSync(before, saved, { cases, milestones: state.milestones, tasks: state.tasks }), casesOfProject(cases, before), device);
   if (!plan.cases.length && !plan.milestones.length && !plan.tasks.length) return "";
   try {
     await patchCases(plan.cases);

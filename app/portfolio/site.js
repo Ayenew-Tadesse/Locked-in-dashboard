@@ -18,14 +18,16 @@ const img = (src, alt, cls = "") => {
   const url = typeof src === "string" && (/^https?:\/\//i.test(src) || /^data:image\//i.test(src) || /^blob:/i.test(src)) ? src : null;
   return url ? `<img class="${cls}" src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy">` : "";
 };
-/** What a case study's app runs on: "phone" (the default), "tablet" or "computer" (older ones: phone: false). */
-export const deviceOf = (c) => (["phone", "tablet", "computer"].includes(c?.device) ? c.device : c?.phone === false ? "computer" : "phone");
+/** What a case study's app runs on: "phone" (the default), "tablet", "computer" or "both" (phone and computer; older ones: phone: false). */
+export const deviceOf = (c) => (["phone", "tablet", "computer", "both"].includes(c?.device) ? c.device : c?.phone === false ? "computer" : "phone");
+/** Are the case study's screenshots phone screens? (Phone apps, and apps for phone and computer.) */
+export const phoneShots = (c) => ["phone", "both"].includes(deviceOf(c));
 /** A website's screenshot in a laptop frame (screen with bezel and camera, on a base). */
 export const laptop = (html) => (html ? `<span class="pf-laptop"><span class="pf-laptop__screen">${html}</span></span>` : "");
 /** A screenshot in a landscape tablet (even bezel, front camera). */
 export const tablet = (html) => (html ? `<span class="pf-tablet"><span class="pf-tablet__screen">${html}</span></span>` : "");
 /** How a case study's screenshots are framed: phones as they are; tablets and computers wide, in their device. */
-export const screenFrame = (c) => ({ phone: String, tablet, computer: laptop })[deviceOf(c)];
+export const screenFrame = (c) => ({ phone: String, both: String, tablet, computer: laptop })[deviceOf(c)];
 const link = (href, label, cls = "pf-btn pf-btn--outline") => {
   const url = safeUrl(href) || (/^mailto:|^tel:/i.test(href || "") ? href : null);
   return url ? `<a class="${cls}" href="${esc(url)}"${/^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : ""}>${label}</a>` : "";
@@ -35,7 +37,7 @@ const link = (href, label, cls = "pf-btn pf-btn--outline") => {
 const tryLink = (c, label, cls) => {
   const a = link(c.liveUrl, label, cls);
   const device = deviceOf(c);
-  return a && device !== "computer" ? a.replace("<a ", `<a data-try="${esc(c.title || "")}" data-device="${device}" `) : a;
+  return a && device !== "computer" ? a.replace("<a ", `<a data-try="${esc(c.title || "")}" data-device="${device === "tablet" ? "tablet" : "phone"}" `) : a;
 };
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
 const SOCIAL = { linkedin: "LinkedIn", behance: "Behance", dribbble: "Dribbble", instagram: "Instagram", github: "GitHub", website: "Website" };
@@ -97,7 +99,7 @@ function socialIcons(s, about) {
 }
 
 
-/** The card's chosen screens ([front, left, right]; a tablet or computer uses the first), or null when none are chosen. */
+/** The card's chosen screens ([front, left, right]; a tablet or computer uses the first; phone and computer: [computer, phone]), or null when none are chosen. */
 export function cardScreens(c) {
   const list = Array.isArray(c?.cardShots) ? c.cardShots.slice(0, 3).map((x) => (img(x) ? x : "")) : [];
   return list.some(Boolean) ? [0, 1, 2].map((i) => list[i] || "") : null;
@@ -105,11 +107,17 @@ export function cardScreens(c) {
 
 // A screen without a picture yet: soft skeleton blocks (header, cards, button).
 const placeholderScreen = (note) => `<span class="pf-screen-ph" aria-hidden="true"><i class="pf-screen-ph__head"></i><i></i><i></i><i class="pf-screen-ph__short"></i><b></b>${note ? `<em>${note}</em>` : ""}</span>`;
+const widePlaceholder = (note) => `<span class="pf-screen-ph--wide">${placeholderScreen(note)}</span>`;
+// One small phone on a card (status bar, then the screenshot or a placeholder).
+const miniPhone = (src, alt, attrs, note) => `<span class="pf-mini-phone"${attrs}><span class="pf-mini-phone__screen">
+    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${src ? img(src, alt) : placeholderScreen(note)}</span></span>`;
+const SLOT_NAMES = { phone: ["front", "left", "right"], both: ["computer", "phone"] };
 
 /**
  * A case study card's picture: the same realistic device frame on every card.
  * Phone apps: three phones, the front one in the middle. Tablet and computer
- * apps: one tablet or laptop. Screens are the ones you chose for the card
+ * apps: one tablet or laptop. Phone and computer: a laptop with a phone in
+ * front of it at the lower right. Screens are the ones you chose for the card
  * (cardShots), else the first screenshots; a screen without a picture shows
  * a placeholder, so a project you're still making already has its frame.
  * opts.slots: mark each screen with data-slot (the editor taps them to choose).
@@ -118,16 +126,20 @@ export function cardThumb(c, { tag = "div", slots = false } = {}) {
   const chosen = cardScreens(c);
   const shots = chosen || (c.shots || []).map((x) => x?.src).filter((src) => img(src)).slice(0, 3);
   const alt = (i) => (i ? "" : `${c.title || "App"} screen`);
-  const slot = (i) => (slots ? ` data-slot="${i}" data-act="cardslot" data-path="${i}" role="button" tabindex="0" aria-label="Choose the ${deviceOf(c) !== "phone" ? "card's" : ["front", "left", "right"][i]} screen"` : "");
-  if (deviceOf(c) !== "phone") {
+  const device = deviceOf(c);
+  const slot = (i) => (slots ? ` data-slot="${i}" data-act="cardslot" data-path="${i}" role="button" tabindex="0" aria-label="Choose the ${SLOT_NAMES[device]?.[i] || "card's"} screen"` : "");
+  if (device === "both") {
+    const pc = laptop(shots[0] ? img(shots[0], alt(0)) : widePlaceholder("Screens coming soon"));
+    return `<${tag} class="pf-card__thumb has-img has-frame pf-card__both"><span class="pf-card__frame"${slot(0)}>${pc}</span>${miniPhone(shots[1], alt(1), slot(1), "")}</${tag}>`;
+  }
+  if (device !== "phone") {
     const src = shots[0];
-    const screen = src ? img(src, alt(0)) : `<span class="pf-screen-ph--wide">${placeholderScreen("Screens coming soon")}</span>`;
+    const screen = src ? img(src, alt(0)) : widePlaceholder("Screens coming soon");
     return `<${tag} class="pf-card__thumb has-img has-frame"><span class="pf-card__frame"${slot(0)}>${screenFrame(c)(screen)}</span></${tag}>`;
   }
   // Without chosen screens, a project with one or two screenshots shows that many phones; otherwise three.
   const n = chosen || !shots.length ? 3 : shots.length;
-  const phones = Array.from({ length: n }, (_, i) => `<span class="pf-mini-phone"${slot(i)}><span class="pf-mini-phone__screen">
-    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${shots[i] ? img(shots[i], alt(i)) : placeholderScreen(i === 0 ? "Screens coming soon" : "")}</span></span>`);
+  const phones = Array.from({ length: n }, (_, i) => miniPhone(shots[i], alt(i), slot(i), i === 0 ? "Screens coming soon" : ""));
   return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
 }
 
@@ -280,7 +292,7 @@ const MARK = { yes: "&#10003;", partial: "&#8776;", no: "&#8212;" };
 function shotsHtml(c) {
   const list = (c.shots || []).map((s) => screenFrame(c)(img(s.src, s.alt || c.title))).filter(Boolean);
   if (!list.length) return "";
-  if (deviceOf(c) === "phone") return `<div class="pf-shots">${list.join("")}</div>`;
+  if (phoneShots(c)) return `<div class="pf-shots">${list.join("")}</div>`;
   if (list.length < 2) return `<div class="pf-shots pf-shots--wide">${list[0]}</div>`;
   return `<div class="pf-slider" data-slider>
       <div class="pf-slider__track" tabindex="0" role="region" aria-label="Screenshots of ${esc(c.title || "the app")} (${list.length})">
@@ -318,7 +330,7 @@ function casePage(data, c) {
       <tbody>${c.competitive.rows.map((r) => `<tr><td>${esc(r.feature)}</td>${(r.values || []).map((v) => `<td class="${esc(v)}" aria-label="${esc(v)}">${MARK[v] || esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : "")}
     ${block("Key insight", c.insight ? `<blockquote class="pf-insight">${esc(c.insight)}</blockquote>` : "")}
     ${block("Information architecture", c.ia?.sections?.length ? `${intro(c.ia.intro)}<div class="pf-ia">${c.ia.root ? `<div class="pf-ia__root">${esc(c.ia.root)}</div>` : ""}<div class="pf-ia__sections">${c.ia.sections.map((s) => `<div><h3>${esc(s.title)}</h3><ul>${(s.items || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : "")}
-    ${block(c.flow?.title || "User flow", c.flow?.steps?.length ? `${intro(c.flow.intro)}<ol class="pf-flow${deviceOf(c) !== "phone" ? " pf-flow--wide" : ""}">${c.flow.steps.map((s) => `<li>${screenFrame(c)(img(s.src, s.label))}<span>${esc(s.label)}</span></li>`).join("")}</ol>` : "")}
+    ${block(c.flow?.title || "User flow", c.flow?.steps?.length ? `${intro(c.flow.intro)}<ol class="pf-flow${phoneShots(c) ? "" : " pf-flow--wide"}">${c.flow.steps.map((s) => `<li>${screenFrame(c)(img(s.src, s.label))}<span>${esc(s.label)}</span></li>`).join("")}</ol>` : "")}
     ${block("Solution", paras(c.solution))}
     ${block("UI style guide", c.style && (c.style.colors?.length || c.style.font) ? `${intro(c.style.intro)}
       ${c.style.colors?.length ? `<h3 class="pf-h3">Color palette</h3><div class="pf-swatches">${c.style.colors.map((x) => `<div><i style="background:${/^#[0-9a-f]{3,8}$/i.test(x.hex) ? x.hex : "transparent"}"></i><b>${esc(x.name)}</b><span>${esc(x.hex)}</span></div>`).join("")}</div>` : ""}

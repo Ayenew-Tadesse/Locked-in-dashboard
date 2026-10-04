@@ -8,6 +8,8 @@ import { openImportDialog } from "../project-import.js";
 import { saveProjectLinked, deleteProjectLinked, placeProjectLinked } from "../project-sync.js";
 import { casesOfProject, milestonesOfProject, tasksOfProject, caseFromProject } from "../core/project-links.js";
 import { currentSite, openCaseStudy, openCaseDraft } from "./portfolio-site.js";
+import { deviceField } from "./case-editor.js";
+import { deviceOf } from "../portfolio/site.js";
 
 /** "Case study: Open · 7 milestones · 32 tasks" under a project. */
 function linkedLine(p) {
@@ -100,6 +102,7 @@ export function openProjectForm(p = {}) {
         <label class="li-field full">Description <small class="li-muted">(shown on the Overview card)</small><input name="description" maxlength="300" placeholder="e.g. Book flights across Ethiopia" value="${esc(p.description || "")}"></label>
         <label class="li-field">Category<input name="category" maxlength="120" placeholder="e.g. Flight booking" value="${esc(p.category || "")}"></label>
         <label class="li-field">Stage<input name="stage" maxlength="120" placeholder="e.g. Case study drafted" value="${esc(p.stage || "")}"></label>
+        ${deviceField(deviceOf(casesOfProject(currentSite().cases || [], p)[0]), "its case study and portfolio card")}
         <label class="li-field">Status<select name="status">${Object.entries(PROJECT_STATUSES).map(([k, v]) => `<option value="${k}"${(p.status || "idle") === k ? " selected" : ""}>${v}</option>`).join("")}</select></label>
         <label class="li-field full">Key facts <small class="li-muted">(one per line)</small><textarea name="facts" rows="3" maxlength="3000">${esc((p.facts || []).join("\n"))}</textarea></label>
         ${Object.entries(LINK_LABELS).map(([k, label]) => `<label class="li-field">${label} link<input name="link_${k}" type="url" maxlength="300" placeholder="https://" value="${esc(p.links?.[k] || "")}"></label>`).join("")}
@@ -129,7 +132,7 @@ export function openProjectForm(p = {}) {
         ...(editing ? { id: p.id } : {}),
         name: v.name.trim(), code: v.code.trim() || null, description: v.description.trim() || null, category: v.category.trim() || null, stage: v.stage.trim() || null,
         status: v.status, facts: v.facts.split("\n").map((s) => s.trim()).filter(Boolean), links, checklist,
-      });
+      }, { device: v.device });
       toast(editing ? (synced ? `Project saved · ${synced} updated` : "Project saved")
         : { created: "Project added · case study created", linked: "Project added · linked to its case study" }[synced] || "Project added");
     },
