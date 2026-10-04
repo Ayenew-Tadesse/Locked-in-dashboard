@@ -2333,7 +2333,7 @@ test("portfolio page: the numbers count up when seen, then every 10 seconds", as
   }
 });
 
-test("portfolio page: featured projects slide in one row (arrows, dots, swipe on phones)", async () => {
+test("portfolio page: featured projects slide in one row that loops (arrows, dots, swipe on phones)", async () => {
   const many = { ...PORTFOLIO_SITE, cases: [...PORTFOLIO_SITE.cases, ...PORTFOLIO_SITE.cases.map((c) => ({ ...c, id: c.id + "-2", title: c.title + " II" }))] };
   const draw = async (page, site) => page.evaluate(async (site) => {
     const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
@@ -2343,9 +2343,10 @@ test("portfolio page: featured projects slide in one row (arrows, dots, swipe on
     setupRails(root);
   }, site);
   const state = (page) => page.evaluate(() => {
-    const r = document.querySelector(".pf-rail"), items = [...r.children], nav = document.querySelector(".pf-rail-nav");
+    const r = document.querySelector(".pf-rail"), items = [...r.querySelectorAll(":scope > :not([data-rail-copy])")], nav = document.querySelector(".pf-rail-nav");
     const inView = items.filter((i) => { const b = i.getBoundingClientRect(), v = r.getBoundingClientRect(); return b.left >= v.left - 1 && b.right <= v.right + 1; }).length;
-    return { role: r.getAttribute("role"), items: items.length, inView, scroll: Math.round(r.scrollLeft), step: items[1].offsetLeft - items[0].offsetLeft,
+    return { role: r.getAttribute("role"), items: items.length, copies: r.querySelectorAll("[data-rail-copy]").length,
+      copiesHidden: [...r.querySelectorAll("[data-rail-copy]")].every((c) => c.getAttribute("aria-hidden") === "true"), inView, scroll: Math.round(r.scrollLeft), step: items[1].offsetLeft - items[0].offsetLeft,
       nav: !nav.hidden && getComputedStyle(nav).display !== "none", dots: document.querySelectorAll(".pf-rail-dot").length,
       current: [...document.querySelectorAll(".pf-rail-dot")].findIndex((d) => d.getAttribute("aria-current") === "true"),
       prev: document.querySelector('[data-rail="prev"]').disabled, next: document.querySelector('[data-rail="next"]').disabled,
@@ -2360,25 +2361,35 @@ test("portfolio page: featured projects slide in one row (arrows, dots, swipe on
     return page;
   };
 
-  // Laptop, six projects: three in view, arrows and dots.
+  // Laptop, six projects: three in view, arrows and a dot per project; the row loops.
   const page = await open(1080, 900);
   await draw(page, many);
   let s = await state(page);
   assert.equal(s.role, "list");
-  assert.deepEqual([s.items, s.inView, s.nav, s.dots, s.current, s.prev, s.next], [6, 3, true, 4, 0, true, false], "3 in view, arrows, 4 stops");
+  assert.deepEqual([s.items, s.copies, s.copiesHidden, s.inView, s.nav, s.dots, s.current, s.prev, s.next], [6, 6, true, 3, true, 6, 0, false, false], "3 in view, copies on each end, arrows always on");
+  const current = () => page.evaluate(() => [...document.querySelectorAll(".pf-rail-dot")].findIndex((d) => d.getAttribute("aria-current") === "true"));
+  const settled = (i) => page.waitForFunction((i) => [...document.querySelectorAll(".pf-rail-dot")].findIndex((d) => d.getAttribute("aria-current") === "true") === i, i);
+  const start = s.scroll;
   await page.click('[data-rail="next"]');
-  await page.waitForFunction(() => document.querySelector(".pf-rail").scrollLeft > 0);
+  await settled(1);
   s = await state(page);
-  assert.ok(Math.abs(s.scroll - s.step) <= 1, `next slides one card: ${s.scroll} vs ${s.step}`);
-  await page.waitForFunction(() => document.querySelectorAll('.pf-rail-dot[aria-current="true"]')[0] === document.querySelectorAll(".pf-rail-dot")[1]);
+  assert.ok(Math.abs(s.scroll - start - s.step) <= 1, `next slides one card: ${s.scroll - start} vs ${s.step}`);
   await page.locator(".pf-rail-dot").last().click();
-  await page.waitForFunction(() => document.querySelector('[data-rail="next"]').disabled);
+  await settled(5);
+  // Past the last one comes the first again (and the row is back on the real cards).
+  await page.click('[data-rail="next"]');
+  await settled(0);
+  await page.waitForTimeout(400);
   s = await state(page);
-  assert.deepEqual([s.current, s.prev, s.next], [3, false, true], "the last dot goes to the end");
+  assert.ok(Math.abs(s.scroll - start) <= 1, `back on the first real card: ${s.scroll} vs ${start}`);
+  // Before the first one comes the last.
+  await page.click('[data-rail="prev"]');
+  await settled(5);
+  assert.equal(await current(), 5);
   // Three projects all fit: no arrows or dots.
   await draw(page, PORTFOLIO_SITE);
   s = await state(page);
-  assert.deepEqual([s.inView, s.nav, s.dots], [3, false, 0], "nothing to slide");
+  assert.deepEqual([s.inView, s.nav, s.dots, s.copies], [3, false, 0, 0], "nothing to slide, so no loop");
   await page.close();
 
   // Phone: one card with the next peeking, swiped (no arrows), dots follow.
@@ -2386,14 +2397,22 @@ test("portfolio page: featured projects slide in one row (arrows, dots, swipe on
   await draw(phone, PORTFOLIO_SITE);
   s = await state(phone);
   assert.ok(s.width > 0.8 && s.width < 0.9, `a card is ~85% wide: ${s.width}`);
-  assert.deepEqual([s.inView, s.nav, s.dots, s.current], [1, false, 3, 0], "one in view, no arrows, dots");
+  assert.deepEqual([s.inView, s.dots, s.current], [1, 3, 0], "one in view, dots");
   // The card in view sits in the middle of the screen, before and after a swipe.
-  const offCentre = (i) => phone.evaluate((i) => { const b = document.querySelectorAll(".pf-rail__item")[i].getBoundingClientRect(); return Math.round(b.left + b.width / 2 - innerWidth / 2); }, i);
+  const offCentre = (i) => phone.evaluate((i) => { const b = document.querySelectorAll(".pf-rail__item:not([data-rail-copy])")[i].getBoundingClientRect(); return Math.round(b.left + b.width / 2 - innerWidth / 2); }, i);
   assert.ok(Math.abs(await offCentre(0)) <= 1, `first card centred: ${await offCentre(0)}px off`);
   await phone.evaluate(() => document.querySelector(".pf-rail").scrollBy({ left: 200 }));
   await phone.waitForFunction(() => document.querySelectorAll(".pf-rail-dot")[1]?.getAttribute("aria-current") === "true");
   await phone.waitForTimeout(300);
   assert.ok(Math.abs(await offCentre(1)) <= 1, `second card snaps to the centre: ${await offCentre(1)}px off`);
+  // Swiping back past the first card shows the last.
+  await phone.evaluate(() => document.querySelector(".pf-rail").scrollBy({ left: -200 }));
+  await phone.waitForFunction(() => document.querySelectorAll(".pf-rail-dot")[0]?.getAttribute("aria-current") === "true");
+  await phone.waitForTimeout(300);
+  await phone.evaluate(() => document.querySelector(".pf-rail").scrollBy({ left: -200 }));
+  await phone.waitForFunction(() => document.querySelectorAll(".pf-rail-dot")[2]?.getAttribute("aria-current") === "true");
+  await phone.waitForTimeout(400);
+  assert.ok(Math.abs(await offCentre(2)) <= 1, `the last card, centred: ${await offCentre(2)}px off`);
   await phone.close();
 });
 
@@ -2906,7 +2925,7 @@ test("projects: one order for the Projects page, case studies and portfolio (bot
   await page.getByText("Order saved · projects reordered to match").waitFor();
   assert.deepEqual(await orders(), { projects: "Guxo Flights,Ethio School Platform,Gexi,Guxo", cases: "ethio-school-platform,guxo,hotel,hidgo" });
   // The portfolio's Featured projects show the same order.
-  assert.deepEqual((await page.locator("#li-pf-preview .pf-card h3").allInnerTexts()).slice(0, 2), ["Ethio School Platform", "Guxo Bus Booking App"]);
+  assert.deepEqual((await page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card h3").allInnerTexts()).slice(0, 2), ["Ethio School Platform", "Guxo Bus Booking App"]);
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -3059,7 +3078,7 @@ test("projects: a new project gets its case study, in progress, in the project's
   // On the Projects page it's linked; on the portfolio its card has placeholder phones.
   await page.locator("[data-project]", { hasText: "Gexi Wallet" }).locator("[data-open-case]").waitFor();
   await page.evaluate(() => { location.hash = "#/portfolio"; });
-  const card = page.locator("#li-pf-preview .pf-card", { hasText: "Gexi Wallet" });
+  const card = page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card", { hasText: "Gexi Wallet" });
   await card.waitFor();
   assert.equal(await card.locator(".pf-mini-phone .pf-screen-ph").count(), 3);
   // Hiring managers don't see its status: no "In progress", no percentage; no case study button until it's live.
@@ -3189,4 +3208,42 @@ test("import a project file: update only a case study's screenshots, keeping its
   assert.deepEqual(after.cardShots.map((s) => s.split("/").pop()), ["home.jpg", "results.jpg", "confirm.jpg"]);
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("portfolio cards: the front phone plays through the screens (tap, next screen), pauses on hover, still with reduced motion", async () => {
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  const site = { ...PORTFOLIO_SITE, cases: [{ id: "demo", title: "Demo app", status: "live", shots: ["a", "b", "c"].map((x) => ({ src: `https://img.test/${x}.png` })) }] };
+  const run = async (reducedMotion) => {
+    const page = await browser.newPage({ viewport: { width: 1080, height: 900 }, reducedMotion });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await page.route("https://img.test/**", (r) => r.fulfill({ body: png, contentType: "image/png" }));
+    await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
+    await page.goto(BASE + "portfolio.html?demo=1");
+    await page.waitForSelector("#pf-root:not([aria-busy])");
+    await page.evaluate(async (site) => {
+      const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
+      const { setupDemos } = await import(new URL("app/portfolio/demo.js", location.href).href);
+      const root = document.getElementById("pf-root");
+      root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
+      setupDemos(root);
+    }, site);
+    return page;
+  };
+  const on = (page) => page.evaluate(() => [...document.querySelectorAll("[data-demo] [data-demo-screen]")].findIndex((s) => s.classList.contains("is-on")));
+  const page = await run("no-preference");
+  assert.equal(await page.locator("[data-demo] [data-demo-screen]").count(), 3, "the front phone has every screen");
+  assert.equal(await page.locator(".pf-mini-phone").nth(1).locator("[data-demo]").count(), 0, "only the front phone plays");
+  assert.equal(await on(page), 0);
+  await page.waitForFunction(() => document.querySelectorAll("[data-demo] [data-demo-screen]")[1].classList.contains("is-on"), null, { timeout: 6000 });
+  // Hovering the card pauses it.
+  await page.locator(".pf-card").first().hover();
+  const held = await on(page);
+  await page.waitForTimeout(3200);
+  assert.equal(await on(page), held, "paused while hovered");
+  await page.close();
+  // Less motion: it stays on the first screen.
+  const still = await run("reduce");
+  await still.waitForTimeout(3200);
+  assert.equal(await on(still), 0);
+  await still.close();
 });

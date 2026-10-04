@@ -585,3 +585,14 @@ p.ce-t, h1.ce-t, h3.ce-t, div.ce-t{display:block;}
 .ce-movebtn:hover:not(:disabled), .ce-movebtn:focus-visible{border-color:var(--accent);color:var(--accent);}
 .ce-movebtn:disabled{opacity:.35;cursor:default;}
 #li-ce.ce-preview .ce-casemoves, #li-ce.ce-preview .ce-place{display:none;}
+/* The front phone's demo (demo.js): screens slide in after a tap. */
+.pf-demo{position:relative;display:block;flex:1;min-height:0;overflow:hidden;}
+.pf-card__thumb .pf-demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;opacity:0;transform:translateX(18%);
+  transition:transform .45s cubic-bezier(.22,.61,.36,1), opacity .45s ease;}
+.pf-card__thumb .pf-demo img.is-on{opacity:1;transform:none;}
+.pf-card__thumb .pf-demo img.is-leaving{opacity:0;transform:translateX(-18%);}
+.pf-demo__tap{position:absolute;left:50%;top:72%;width:22%;aspect-ratio:1;margin:-11% 0 0 -11%;border-radius:50%;background:rgb(255 255 255 / .55);
+  box-shadow:0 0 0 2px rgb(15 26 45 / .25);opacity:0;transform:scale(.4);pointer-events:none;}
+.pf-demo__tap.is-tapping{animation:pf-tap .55s ease-out;}
+@keyframes pf-tap{0%{opacity:0;transform:scale(.4);}30%{opacity:1;transform:scale(.8);}100%{opacity:0;transform:scale(1.3);}}
+@media (prefers-reduced-motion: reduce){ .pf-card__thumb .pf-demo img{transition:none;} .pf-demo__tap{display:none;} }

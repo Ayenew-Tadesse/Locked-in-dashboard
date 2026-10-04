@@ -11,6 +11,7 @@ import { tryInPhone } from "../portfolio/phone.js";
 import "../portfolio/slider.js"; // screenshot sliders on case studies
 import { countStats } from "../portfolio/count.js";
 import { setupRails } from "../portfolio/rail.js";
+import { setupDemos } from "../portfolio/demo.js";
 
 let previewView = null; // the case study open in the preview
 
@@ -121,10 +122,10 @@ export function renderPortfolioPage(el) {
   const drawPreview = () => {
     el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView });
     countStats(el.querySelector("#li-pf-preview"));
-    setupRails(el.querySelector("#li-pf-preview"));
+    setupRails(el.querySelector("#li-pf-preview")); setupDemos(el.querySelector("#li-pf-preview"));
   };
   countStats(el.querySelector("#li-pf-preview"));
-  setupRails(el.querySelector("#li-pf-preview"));
+  setupRails(el.querySelector("#li-pf-preview")); setupDemos(el.querySelector("#li-pf-preview"));
   // Links inside the preview: open a case study, go back home, or scroll to a section.
   el.querySelector("#li-pf-preview").addEventListener("click", (e) => {
     if (tryInPhone(e)) return;

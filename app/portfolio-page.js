@@ -8,6 +8,7 @@ import { tryInPhone } from "./portfolio/phone.js";
 import "./portfolio/slider.js"; // screenshot sliders on case studies
 import { countStats } from "./portfolio/count.js";
 import { setupRails } from "./portfolio/rail.js";
+import { setupDemos } from "./portfolio/demo.js";
 import { mergeCommits } from "./core/portfolio.js";
 import { fetchCommits, commitsByDay, githubUser } from "./core/github.js";
 
@@ -134,6 +135,7 @@ function render(data, keepScroll = false) {
   root.removeAttribute("aria-busy");
   countStats(root);
   setupRails(root);
+  setupDemos(root);
   if (keepScroll) window.scrollTo(0, y);
 }
 window.addEventListener("hashchange", () => { if (current) { render(current); window.scrollTo(0, 0); } });
