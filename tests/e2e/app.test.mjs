@@ -3154,3 +3154,39 @@ test("portfolio: reorder case studies with top / up / down / bottom, on the page
   assert.deepEqual(page.errors, []);
   await page.close();
 });
+
+test("import a project file: update only a case study's screenshots, keeping its text", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  const before = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const c = state.settings.preferences.portfolio.site.cases.find((x) => x.id === "guxo");
+    return { title: c.title, cardDesc: c.cardDesc, overview: c.overview, shots: c.shots.length };
+  });
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/guxo-bus.json", import.meta.url).pathname);
+  const only = page.locator("[data-shots-only]"), replace = page.locator("[data-replace-case]");
+  await only.waitFor();
+  assert.match(await page.locator("[data-pack-preview]").innerText(), /Update only the screenshots of my "Guxo Bus Booking App" case study \(keep my text\)/);
+  // The two choices exclude each other.
+  await replace.check();
+  await only.check();
+  assert.equal(await replace.isChecked(), false);
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.getByText("Imported: screenshots updated").waitFor();
+  const after = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const cases = state.settings.preferences.portfolio.site.cases;
+    const c = cases.find((x) => x.id === "guxo");
+    return { title: c.title, cardDesc: c.cardDesc, overview: c.overview, shots: c.shots.map((s) => s.src), cardShots: c.cardShots, n: cases.length };
+  });
+  assert.deepEqual({ title: after.title, cardDesc: after.cardDesc, overview: after.overview }, { title: before.title, cardDesc: before.cardDesc, overview: before.overview });
+  assert.equal(after.n, 3, "no second case study");
+  assert.equal(after.shots.length, 7);
+  assert.ok(after.shots.every((s) => s.startsWith("https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/")));
+  assert.deepEqual(after.cardShots.map((s) => s.split("/").pop()), ["home.jpg", "results.jpg", "confirm.jpg"]);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
