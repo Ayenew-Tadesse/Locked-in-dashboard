@@ -126,8 +126,14 @@ export function cardThumb(c, { tag = "div", slots = false } = {}) {
   }
   // Without chosen screens, a project with one or two screenshots shows that many phones; otherwise three.
   const n = chosen || !shots.length ? 3 : shots.length;
+  // The front phone "is being used": it plays through the project's screens (a tap,
+  // then the next screen slides in; demo.js runs it). Not in the editors (slots).
+  const all = [...new Set([shots[0], ...(c.shots || []).map((x) => x?.src)].filter((src) => img(src)))].slice(0, 6);
+  const demo = !slots && shots[0] && all.length > 1
+    ? `<span class="pf-demo" data-demo>${all.map((src, i) => img(src, alt(i), i ? "" : "is-on").replace("<img ", "<img data-demo-screen ")).join("")}<i class="pf-demo__tap" aria-hidden="true"></i></span>`
+    : "";
   const phones = Array.from({ length: n }, (_, i) => `<span class="pf-mini-phone"${slot(i)}><span class="pf-mini-phone__screen">
-    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${shots[i] ? img(shots[i], alt(i)) : placeholderScreen(i === 0 ? "Screens coming soon" : "")}</span></span>`);
+    <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${i === 0 && demo ? demo : shots[i] ? img(shots[i], alt(i)) : placeholderScreen(i === 0 ? "Screens coming soon" : "")}</span></span>`);
   return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
 }
 
