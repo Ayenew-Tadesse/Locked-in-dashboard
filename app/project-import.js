@@ -3,7 +3,7 @@
 // else (your sign-in and the database's rules). Nothing is added twice.
 import { state, saveProject, reload, toast, can } from "./state.js";
 import { esc, openModal } from "./ui/dom.js";
-import { parsePack, planImport, packRows, caseImages } from "./core/project-pack.js";
+import { parsePack, planImport, packRows, caseImages, screenshotsPatch } from "./core/project-pack.js";
 import { currentSite, storeCase, portfolioChanged } from "./views/portfolio-site.js";
 
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -80,13 +80,13 @@ export async function importPack(pack, onStep = () => {}, { replaceCase = false,
     added.push(plural(plan.milestones.add, "milestone"), plural(plan.tasks, "task"));
   }
   // Screenshots only: the case study you have keeps everything you wrote; its
-  // screenshots (and the card's screens, when the file has them) come from the file.
+  // pictures (screenshots, card screens, user flow) and device come from the file.
   if (plan.case === "exists" && shotsOnly && !replaceCase) {
     const mine = existingCase(pack.caseStudy);
     const total = caseImages(pack.caseStudy).filter(([o, k]) => /^data:image\//i.test(o[k])).length;
     const c = await uploadImages(pack.caseStudy, (n) => onStep(`Uploading picture ${n} of ${total}…`));
     onStep("Updating the screenshots…");
-    await storeCase({ ...mine, shots: c.shots || [], ...(Array.isArray(c.cardShots) ? { cardShots: c.cardShots } : {}) }, mine);
+    await storeCase({ ...mine, ...screenshotsPatch(mine, c) }, mine);
     portfolioChanged();
     added.push("screenshots updated");
     await reload();

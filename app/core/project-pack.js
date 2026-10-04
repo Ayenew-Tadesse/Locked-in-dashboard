@@ -89,6 +89,25 @@ export function caseImages(c) {
 }
 
 /**
+ * "Update only the screenshots": what a case study you already have takes from the
+ * file's one, keeping your text. Its screenshots; the card's screens and the device
+ * (phone, computer…) when the file has them; and the user-flow pictures, step by
+ * step (your step names stay; steps the file adds come with theirs).
+ */
+export function screenshotsPatch(mine, file) {
+  const patch = { shots: file?.shots || [] };
+  if (Array.isArray(file?.cardShots)) patch.cardShots = file.cardShots;
+  if (["phone", "tablet", "computer", "both"].includes(file?.device)) Object.assign(patch, { device: file.device, phone: file.device === "phone" || file.device === "both" });
+  const from = (file?.flow?.steps || []).filter((s) => s?.src);
+  if (from.length) {
+    const own = mine?.flow?.steps || [];
+    const steps = own.map((s, i) => (from[i] ? { ...s, src: from[i].src } : s)).concat(from.slice(own.length));
+    patch.flow = { ...(mine?.flow || {}), title: mine?.flow?.title || file.flow.title || "", intro: mine?.flow?.intro || file.flow.intro || "", steps };
+  }
+  return patch;
+}
+
+/**
  * What importing would do, given what you already have:
  * { project: "add"|"exists"|"no_team"|"no_permission"|null, milestones: {add, skip}, tasks, case: "add"|"exists"|null, images }.
  */

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parsePack, planImport, packRows, caseImages, PACK_KIND } from "../../app/core/project-pack.js";
+import { parsePack, planImport, packRows, caseImages, PACK_KIND, screenshotsPatch } from "../../app/core/project-pack.js";
 
 const base = () => ({
   kind: PACK_KIND, version: 1,
@@ -69,4 +69,20 @@ test("rows: milestones track their tasks; done work counts as done", () => {
 test("case images are found in shots, flow steps and persona photos", () => {
   const c = { shots: [{ src: "a" }], flow: { steps: [{ src: "b" }, { src: "" }] }, personas: { items: [{ photo: "c" }, {}] } };
   assert.deepEqual(caseImages(c).map(([o, k]) => o[k]), ["a", "b", "c"]);
+});
+
+test("update only the screenshots: pictures and device from the file, your words stay", () => {
+  const mine = { title: "Mine", device: "tablet", cardShots: ["a"], flow: { title: "My flow", intro: "Mine", steps: [{ label: "I post", src: "t1" }, { label: "They submit", src: "t2" }] } };
+  const file = { title: "Theirs", device: "both", shots: [{ src: "p0" }], cardShots: ["c0", "c1", ""],
+    flow: { title: "Their flow", steps: [{ label: "Post", src: "p1" }, { label: "Submit", src: "p2" }, { label: "Grade", src: "p3" }] } };
+  const patch = screenshotsPatch(mine, file);
+  assert.deepEqual(patch.shots, [{ src: "p0" }]);
+  assert.deepEqual(patch.cardShots, ["c0", "c1", ""]);
+  assert.deepEqual([patch.device, patch.phone], ["both", true]);
+  assert.deepEqual(patch.flow, { title: "My flow", intro: "Mine", steps: [{ label: "I post", src: "p1" }, { label: "They submit", src: "p2" }, { label: "Grade", src: "p3" }] });
+  assert.equal(patch.title, undefined, "no text from the file");
+  // A file without card screens, device or flow leaves yours alone.
+  assert.deepEqual(screenshotsPatch(mine, { shots: [] }), { shots: [] });
+  // No flow of your own yet: the file's.
+  assert.deepEqual(screenshotsPatch({}, file).flow.steps.map((s) => s.label), ["Post", "Submit", "Grade"]);
 });
