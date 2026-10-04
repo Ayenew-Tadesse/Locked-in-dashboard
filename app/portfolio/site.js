@@ -125,7 +125,7 @@ export const cardTint = (c) => (HEX.test(String(c?.style?.button || "").trim()) 
  * front of it at the lower right. Screens are the ones you chose for the card
  * (cardShots), else the first screenshots; a screen without a picture shows
  * a placeholder, so a project you're still making already has its frame.
- * Behind the screens: the app's main button colour at 50% (cardTint), else the page's.
+ * Behind the screens: a gradient of the app's main button colour (cardTint), else the page's.
  * opts.slots: mark each screen with data-slot (the editor taps them to choose).
  */
 export function cardThumb(c, { tag = "div", slots = false } = {}) {
