@@ -10,7 +10,7 @@
 import { state, toast } from "../state.js";
 import { esc, openModal, closeModal } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, getAt, setAt, imgUrl } from "./page-editor.js";
-import { deviceOf, phoneShots, screenFrame, cardThumb } from "../portfolio/site.js";
+import { deviceOf, phoneShots, screenFrame, cardThumb, DEVICE_LABELS } from "../portfolio/site.js";
 
 export const META = ["Role", "Type", "Platform", "Tools"];
 /** The "Device" choice: what "Try the app" opens in and how screenshots are framed. */
@@ -188,7 +188,8 @@ function cardHtml(m) {
   const names = { phone: ["Front (middle)", "Left", "Right"], both: ["Computer", "Phone"] }[deviceOf(m)] || ["Screen"];
   return `<section class="ce-cardwrap"><p class="ce-label">Card on your home page <small class="li-muted">(tap a screen to choose its picture)</small></p>
     <article class="pf-card ce-card">${cardThumb(m, { slots: true })}
-      <div class="pf-card__body">${ed("tag", m.tag, { tag: "p", cls: "pf-card__tag", ph: "Tag, e.g. Mobile App UI/UX" })}${ed("title", m.title, { tag: "h3", ph: "Case study title" })}
+      <div class="pf-card__body">${ed("title", m.title, { tag: "h3", ph: "Case study title" })}${ed("tag", m.tag, { tag: "p", cls: "pf-card__tag", ph: "Type of app, e.g. Mobile App UI/UX" })}
+        <p class="pf-card__devices" title="Change it in Settings">${DEVICE_LABELS[deviceOf(m)]}</p>
         ${ed("cardDesc", m.cardDesc, { tag: "p", cls: "pf-card__desc", ph: "One or two lines for the card", multi: true })}</div></article>
     <p class="ce-cardslots"><span>Card screens:</span>${names.map((l, i) => `<button type="button" class="ce-chiptoggle${m.cardShots?.[i] ? " on" : ""}" data-act="cardslot" data-path="${i}">${l}</button>`).join("")}</p></section>`;
 }

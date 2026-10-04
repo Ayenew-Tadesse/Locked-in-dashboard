@@ -2563,7 +2563,7 @@ test("case studies on the page: the card, comparison table, information architec
 
   // What a hiring manager sees.
   const card = page.locator("#li-pf-preview .pf-card", { hasText: "Hid-Go Flights" });
-  assert.match(await card.innerText(), /Flights · UX[\s\S]*Hid-Go Flights[\s\S]*Book a domestic flight in four steps/i);
+  assert.match(await card.innerText(), /Hid-Go Flights[\s\S]*Flights · UX[\s\S]*Phone[\s\S]*Book a domestic flight in four steps/i);
   await page.locator('#li-pf-preview [data-case="hidgo"]').first().click();
   await page.locator("#li-pf-preview .pf-case__title").waitFor();
   const table = page.locator("#li-pf-preview .pf-compare");
@@ -2944,6 +2944,37 @@ test("projects: one order for the Projects page, case studies and portfolio (bot
   assert.deepEqual((await page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card h3").allInnerTexts()).slice(0, 2), ["Ethio School Platform", "Guxo Bus Booking App"]);
   assert.deepEqual(page.errors, []);
   await page.close();
+});
+
+test("portfolio cards: title, type of app, devices, then two lines of description at most (public page)", async () => {
+  const site = structuredClone(PORTFOLIO_SITE);
+  site.cases[0] = { ...site.cases[0], device: "both", cardDesc: "A long description. ".repeat(20).trim() };
+  site.cases[1] = { ...site.cases[1], device: "tablet", cardDesc: "Short." };
+  for (const width of [1280, 390]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await page.route(/\/config\.js(\?|$)/, (r) => r.fulfill({ contentType: "application/javascript", body: "window.LOCKEDIN_CONFIG = {};" }));
+    await page.goto(BASE + "portfolio.html?demo=1");
+    await page.waitForSelector("#pf-root:not([aria-busy])");
+    const cards = await page.evaluate(async (site) => {
+      const { renderPortfolio } = await import(new URL("app/portfolio/render.js", location.href).href);
+      const root = document.getElementById("pf-root");
+      root.innerHTML = renderPortfolio({ site, about: { name: "Test" }, projects: [], tasks: [] }, {});
+      return [...document.querySelectorAll(".pf-rail__item:not([data-rail-copy]) .pf-card")].slice(0, 3).map((card) => {
+        const body = card.querySelector(".pf-card__body"), desc = card.querySelector(".pf-card__desc");
+        const line = parseFloat(getComputedStyle(desc).lineHeight) || parseFloat(getComputedStyle(desc).fontSize) * 1.5;
+        return { order: [...body.children].map((e) => e.className || e.tagName.toLowerCase()).filter((x) => x !== "pf-card__cta"),
+          devices: card.querySelector(".pf-card__devices").textContent, lines: Math.round(desc.getBoundingClientRect().height / line), cut: desc.scrollHeight > desc.clientHeight + 1,
+          below: card.querySelector(".pf-card__thumb").getBoundingClientRect().bottom <= card.querySelector("h3").getBoundingClientRect().top };
+      });
+    }, site);
+    const order = ["h3", "pf-card__tag", "pf-card__devices", "pf-card__desc"];
+    assert.deepEqual(cards[0], { order, devices: "Phone and computer", lines: 2, cut: true, below: true }, `long description, ${width}px`);
+    assert.deepEqual(cards[1], { order, devices: "Tablet", lines: 1, cut: false, below: true }, `short description, ${width}px`);
+    assert.equal(cards[2].devices, "Phone");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.close();
+  }
 });
 
 test("portfolio cards: phone apps show three phones, tablet apps their tablet, none the name", async () => {
