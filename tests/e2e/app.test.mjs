@@ -2273,7 +2273,7 @@ test("portfolio page: side margins, joined stats and the animated navy bar strip
     const [white, navy] = ["rgb(255, 255, 255)", "rgb(3, 4, 94)"];
     assert.deepEqual(m.stats, [["rgba(0, 0, 0, 0)", navy, ""], [navy, white, "is-hi"], ["rgba(0, 0, 0, 0)", navy, ""]], "white boxes with navy text; the middle one navy with white text");
     assert.equal(m.stripBg, white);
-    assert.deepEqual(m.numSize, ["26px 400", "26px 400", "26px 400"], "the numbers are 26px (twice the label), regular weight");
+    assert.deepEqual(m.numSize, ["20px 400", "20px 400", "20px 400"], "the numbers are 20px (bigger than the 13px label), regular weight");
     assert.equal(m.labelSize, "13px");
     assert.deepEqual(m.contacts, [["phone", true, "center", "A"], ["email", true, "center", "A"], ["linkedin", true, "center", "A"]], "contact cards: icon, centred, a link");
     assert.equal(m.foot, `© ${new Date().getFullYear()} Ayenew Shiferaw. All rights reserved.`);
