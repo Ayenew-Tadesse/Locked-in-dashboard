@@ -219,6 +219,10 @@
 .pf-card__frame{display:block;width:76%;flex:none;}
 .pf-card__frame > .pf-tablet, .pf-card__frame > .pf-laptop{width:100%;}
 .pf-card__thumb.has-frame img{height:auto;width:100%;max-width:none;padding:0;}
+/* Phone and computer apps: the laptop to the left, a phone standing in front of it at the lower right. */
+.pf-card__both{position:relative;justify-content:flex-start;}
+.pf-card__both > .pf-card__frame{width:74%;margin-left:6%;}
+.pf-card__both > .pf-mini-phone{position:absolute;right:7%;bottom:6%;height:74%;z-index:2;}
 .pf-card__body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1;}
 .pf-card__tag{margin:0;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
 .pf-card h3{margin:0;font-size:17px;}

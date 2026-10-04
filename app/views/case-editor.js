@@ -10,12 +10,12 @@
 import { state, toast } from "../state.js";
 import { esc, openModal, closeModal } from "../ui/dom.js";
 import { openPageEditor, ed, add, del, paraList, getAt, setAt, imgUrl } from "./page-editor.js";
-import { deviceOf, screenFrame, cardThumb } from "../portfolio/site.js";
+import { deviceOf, phoneShots, screenFrame, cardThumb } from "../portfolio/site.js";
 
 export const META = ["Role", "Type", "Platform", "Tools"];
 /** The "Device" choice: what "Try the app" opens in and how screenshots are framed. */
-export const deviceField = (d) => `<label class="li-field">Device <small class="li-muted">("Try the app" and screenshots)</small><select name="device">
-  ${[["phone", "Phone"], ["tablet", "Tablet (landscape)"], ["computer", "Computer (website)"]].map(([k, l]) => `<option value="${k}"${d === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
+export const deviceField = (d, note = '"Try the app" and screenshots') => `<label class="li-field">Device <small class="li-muted">(${note})</small><select name="device">
+  ${[["phone", "Phone"], ["tablet", "Tablet (landscape)"], ["computer", "Computer (website)"], ["both", "Phone and computer"]].map(([k, l]) => `<option value="${k}"${d === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
 const clone = (x) => JSON.parse(JSON.stringify(x ?? {}));
 const paras = (t) => String(t || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 const joinParas = (list) => (list || []).map((p) => String(p).trim()).filter(Boolean).join("\n\n");
@@ -35,7 +35,7 @@ function chooseCardScreen(model, i, ctx) {
     ctx.markDirty();
     ctx.draw();
   };
-  const which = deviceOf(model) === "phone" ? ["front (middle)", "left", "right"][i] : "card's";
+  const which = { phone: ["front (middle)", "left", "right"], both: ["computer", "phone"] }[deviceOf(model)]?.[i] || "card's";
   const shots = model.shots.map((x) => imgUrl(x.src)).filter(Boolean);
   openModal({
     eyebrow: "Card on your home page", title: `Choose the ${which} screen`, submitLabel: "Use this address", wide: true,
@@ -185,7 +185,7 @@ function styleHtml(st) {
 
 // How it shows on your home page.
 function cardHtml(m) {
-  const n = deviceOf(m) === "phone" ? 3 : 1, names = n === 1 ? ["Screen"] : ["Front (middle)", "Left", "Right"];
+  const names = { phone: ["Front (middle)", "Left", "Right"], both: ["Computer", "Phone"] }[deviceOf(m)] || ["Screen"];
   return `<section class="ce-cardwrap"><p class="ce-label">Card on your home page <small class="li-muted">(tap a screen to choose its picture)</small></p>
     <article class="pf-card ce-card">${cardThumb(m, { slots: true })}
       <div class="pf-card__body">${ed("tag", m.tag, { tag: "p", cls: "pf-card__tag", ph: "Tag, e.g. Mobile App UI/UX" })}${ed("title", m.title, { tag: "h3", ph: "Case study title" })}
@@ -194,7 +194,7 @@ function cardHtml(m) {
 }
 
 function render(m) {
-  const frame = screenFrame(m), wide = deviceOf(m) !== "phone"; // tablets and computers: screenshots in their device
+  const frame = screenFrame(m), wide = !phoneShots(m); // tablets and computers: screenshots in their device
   return `${cardHtml(m)}
   <article class="pf-case ce-case">
     ${ed("pill", m.pill, { tag: "p", cls: "pf-pill", ph: "Status label, e.g. Live case study" })}
@@ -264,7 +264,7 @@ export function openCaseEditor(original, opts) {
       });
     },
     async onSubmit(v) {
-      Object.assign(model, { status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), device: v.device, phone: v.device === "phone", project: v.project || "" });
+      Object.assign(model, { status: v.status === "progress" ? "progress" : "live", liveUrl: v.liveUrl.trim(), device: v.device, phone: ["phone", "both"].includes(v.device), project: v.project || "" });
       ctx.markDirty();
     },
   });

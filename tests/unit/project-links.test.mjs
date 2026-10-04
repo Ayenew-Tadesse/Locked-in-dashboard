@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { casesOfProject, milestonesOfProject, tasksOfProject, planProjectSync, planProjectDelete, describeSync, caseFromProject, caseOrderFromProjects, projectOrderFromCases } from "../../app/core/project-links.js";
+import { casesOfProject, milestonesOfProject, tasksOfProject, planProjectSync, planProjectDelete, describeSync, caseFromProject, caseOrderFromProjects, projectOrderFromCases, caseDevicePatch, withCaseDevice } from "../../app/core/project-links.js";
 
 const before = { id: "p1", name: "Ethio School Platform", description: "One platform for the school.", links: { web: "https://ethio-school-platform.vercel.app" } };
 const cases = [
@@ -83,4 +83,28 @@ test("one order: projects follow the case studies, projects without one stay put
   assert.deepEqual(projectOrderFromCases(projects, cs), ["d", "b", "c", "a"]);
   assert.equal(projectOrderFromCases(projects, [cs[2], cs[0]]), null, "already in order");
   assert.equal(projectOrderFromCases(projects, [{ id: "x", title: "Nothing" }]), null);
+});
+
+test("device from the project form: only case studies that show something else change", () => {
+  assert.deepEqual(caseDevicePatch({ device: "phone" }, "both"), { device: "both", phone: true });
+  assert.deepEqual(caseDevicePatch({}, "computer"), { device: "computer", phone: false });
+  assert.equal(caseDevicePatch({ device: "both" }, "both"), null);
+  assert.equal(caseDevicePatch({}, "phone"), null, "no device yet means phone");
+  assert.equal(caseDevicePatch({ phone: false }, "computer"), null, "older case studies: phone: false is a computer");
+  assert.equal(caseDevicePatch({ device: "phone" }, undefined), null, "no choice, no change");
+  assert.equal(caseDevicePatch({ device: "phone" }, "watch"), null);
+});
+
+test("device from the project form joins the rename patches", () => {
+  const after = { ...before, name: "ESP" };
+  const plan = withCaseDevice(planProjectSync(before, after, { cases }), casesOfProject(cases, before), "both");
+  const esp = plan.cases.find((x) => x.id === "esp");
+  assert.equal(esp.patch.project, "ESP");
+  assert.equal(esp.patch.device, "both");
+  assert.equal(plan.cases.filter((x) => x.id === "esp").length, 1, "one patch per case study");
+  assert.ok(!plan.cases.some((x) => x.id === "other"));
+  // Only the device changed: one patch each, and the sync says so.
+  const only = withCaseDevice({ cases: [], milestones: [], tasks: [] }, [{ id: "a", device: "phone" }, { id: "b", device: "both" }], "both");
+  assert.deepEqual(only.cases, [{ id: "a", patch: { device: "both", phone: true } }]);
+  assert.equal(describeSync(only), "1 case study");
 });
