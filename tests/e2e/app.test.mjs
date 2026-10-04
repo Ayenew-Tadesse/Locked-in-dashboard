@@ -1025,7 +1025,10 @@ test("portfolio: Try the app opens the live app in a phone frame on computers", 
   const phone = page.locator(".pf-phone-overlay");
   await phone.waitFor();
   assert.equal(await phone.getAttribute("role"), "dialog");
-  assert.equal(await phone.locator("iframe").getAttribute("src"), "https://ayenew-tadesse.github.io/hid-go/");
+  // Always the newest version: a fresh "v" each time skips the browser's and the host's saved copy.
+  const src = await phone.locator("iframe").getAttribute("src");
+  assert.match(src, /^https:\/\/ayenew-tadesse\.github\.io\/hid-go\/\?v=[0-9a-z]+$/);
+  assert.equal(await phone.locator("a", { hasText: "Open full screen" }).getAttribute("href"), src);
   assert.equal(await page.frameLocator(".pf-phone-overlay iframe").locator("h1").innerText(), "Hid-Go app", "the app runs inside");
   const size = await phone.locator(".pf-phone__screen").boundingBox();
   assert.ok(Math.abs(size.width / size.height - 390 / 844) < 0.01, "a phone-shaped screen");
@@ -1060,6 +1063,7 @@ test("portfolio: Try the app opens the live app in a phone frame on computers", 
   const popup = small.waitForEvent("popup");
   await small.locator("#li-pf-preview a[data-try]").first().click();
   await (await popup).close();
+  assert.match(await small.locator("#li-pf-preview a[data-try]").first().getAttribute("href"), /^https:\/\/ayenew-tadesse\.github\.io\/hid-go\/\?v=[0-9a-z]+$/, "the newest version there too");
   assert.equal(await small.locator(".pf-phone-overlay").count(), 0);
   await small.close();
 });
