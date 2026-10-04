@@ -20,6 +20,8 @@ const img = (src, alt, cls = "") => {
 };
 /** What a case study's app runs on: "phone" (the default), "tablet", "computer" or "both" (phone and computer; older ones: phone: false). */
 export const deviceOf = (c) => (["phone", "tablet", "computer", "both"].includes(c?.device) ? c.device : c?.phone === false ? "computer" : "phone");
+/** What the card says the app runs on. */
+export const DEVICE_LABELS = { phone: "Phone", tablet: "Tablet", computer: "Computer", both: "Phone and computer" };
 /** Are the case study's screenshots phone screens? (Phone apps, and apps for phone and computer.) */
 export const phoneShots = (c) => ["phone", "both"].includes(deviceOf(c));
 /** A website's screenshot in a laptop frame (screen with bezel and camera, on a base). */
@@ -144,15 +146,17 @@ export function cardThumb(c, { tag = "div", slots = false } = {}) {
 }
 
 // No project status reaches the public page (progress, "In progress"): a case study
-// that isn't live yet simply has no "View case study" button.
+// that isn't live yet simply has no "View case study" button. Under the screens: the
+// title, the type of app, the devices it runs on, then the description (two lines at most).
 function caseCard(c) {
   const cta = c.status === "progress" ? tryLink(c, "Try the app &#8599;")
     : `<a class="pf-btn pf-btn--solid" href="#case=${esc(c.id)}" data-case="${esc(c.id)}">View case study</a>${tryLink(c, "Try the app &#8599;")}`;
   return `<article class="pf-card">
     ${cardThumb(c)}
     <div class="pf-card__body">
-      ${c.tag ? `<p class="pf-card__tag">${esc(c.tag)}</p>` : ""}
       <h3>${esc(c.title)}</h3>
+      ${c.tag ? `<p class="pf-card__tag">${esc(c.tag)}</p>` : ""}
+      <p class="pf-card__devices">${DEVICE_LABELS[deviceOf(c)]}</p>
       ${c.cardDesc ? `<p class="pf-card__desc">${esc(c.cardDesc)}</p>` : ""}
       ${cta ? `<div class="pf-card__cta">${cta}</div>` : ""}
     </div>
