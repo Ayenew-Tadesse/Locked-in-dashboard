@@ -56,7 +56,7 @@ async function uploadImages(c, onStep) {
 }
 
 /** Adds what's new from the file. Returns a short summary of what was added. */
-export async function importPack(pack, onStep = () => {}, { replaceCase = false } = {}) {
+export async function importPack(pack, onStep = () => {}, { replaceCase = false, shotsOnly = false } = {}) {
   const plan = planFor(pack);
   const added = [];
   let projectId = null;
@@ -78,6 +78,19 @@ export async function importPack(pack, onStep = () => {}, { replaceCase = false 
       await state.store.importData(packRows(plan.newMilestones, state.store.newId));
     }
     added.push(plural(plan.milestones.add, "milestone"), plural(plan.tasks, "task"));
+  }
+  // Screenshots only: the case study you have keeps everything you wrote; its
+  // screenshots (and the card's screens, when the file has them) come from the file.
+  if (plan.case === "exists" && shotsOnly && !replaceCase) {
+    const mine = existingCase(pack.caseStudy);
+    const total = caseImages(pack.caseStudy).filter(([o, k]) => /^data:image\//i.test(o[k])).length;
+    const c = await uploadImages(pack.caseStudy, (n) => onStep(`Uploading picture ${n} of ${total}…`));
+    onStep("Updating the screenshots…");
+    await storeCase({ ...mine, shots: c.shots || [], ...(Array.isArray(c.cardShots) ? { cardShots: c.cardShots } : {}) }, mine);
+    portfolioChanged();
+    added.push("screenshots updated");
+    await reload();
+    return added;
   }
   const existing = plan.case === "exists" && replaceCase ? existingCase(pack.caseStudy) : null;
   if (plan.case === "add" || existing) {
@@ -115,7 +128,11 @@ export function openImportDialog() {
           const plan = planFor(pack);
           const nothing = plan.project !== "add" && !plan.milestones.add && plan.case !== "add";
           preview.innerHTML = `<p><b>${nothing ? "Everything in this file is already in your dashboard." : "This will add:"}</b></p>${previewHtml(pack, plan)}
-            ${plan.case === "exists" ? `<label class="li-check-row"><input type="checkbox" data-replace-case> Replace my "${esc(existingCase(pack.caseStudy)?.title || pack.caseStudy.title)}" case study with the one in this file</label>` : ""}`;
+            ${plan.case === "exists" ? `<label class="li-check-row"><input type="checkbox" data-shots-only> Update only the screenshots of my "${esc(existingCase(pack.caseStudy)?.title || pack.caseStudy.title)}" case study (keep my text)</label>
+            <label class="li-check-row"><input type="checkbox" data-replace-case> Replace my "${esc(existingCase(pack.caseStudy)?.title || pack.caseStudy.title)}" case study with the one in this file</label>` : ""}`;
+          // The two choices exclude each other.
+          const boxes = [...preview.querySelectorAll("[data-shots-only], [data-replace-case]")];
+          boxes.forEach((b) => b.addEventListener("change", () => { if (b.checked) boxes.forEach((o) => { if (o !== b) o.checked = false; }); }));
         } catch (err) {
           preview.innerHTML = `<p class="li-form-error">${esc(err.message)}</p>`;
         }
@@ -125,7 +142,8 @@ export function openImportDialog() {
       if (!pack) throw new Error("Choose a project file first.");
       const preview = form.querySelector("[data-pack-preview]");
       const replaceCase = !!form.querySelector("[data-replace-case]")?.checked;
-      const added = await importPack(pack, (msg) => { preview.innerHTML = `<p>${esc(msg)}</p>`; }, { replaceCase });
+      const shotsOnly = !!form.querySelector("[data-shots-only]")?.checked;
+      const added = await importPack(pack, (msg) => { preview.innerHTML = `<p>${esc(msg)}</p>`; }, { replaceCase, shotsOnly });
       toast(added.length ? `Imported: ${added.join(", ")}` : "Nothing new to import");
     },
   });

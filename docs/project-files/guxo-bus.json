@@ -1,0 +1,49 @@
+{
+  "kind": "locked-in.project-pack",
+  "version": 1,
+  "caseStudy": {
+    "title": "Guxo Bus Booking App",
+    "status": "live",
+    "device": "phone",
+    "phone": true,
+    "tag": "Mobile App UI/UX · Bus booking",
+    "cardDesc": "A sibling app to Guxo Flights, retheming the same booking patterns for intercity bus travel under a fictional operator brand.",
+    "subtitle": "Booking an Ethiopian intercity bus on a phone, from search to e-ticket.",
+    "shots": [
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/home.jpg",
+        "alt": "Search"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/results.jpg",
+        "alt": "Results"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/fare.jpg",
+        "alt": "Choose a fare"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/seat.jpg",
+        "alt": "Pick a seat"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/payment.jpg",
+        "alt": "Pay by phone"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/confirm.jpg",
+        "alt": "You're booked"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/ticket.jpg",
+        "alt": "E-ticket"
+      }
+    ],
+    "cardShots": [
+      "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/home.jpg",
+      "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/results.jpg",
+      "https://raw.githubusercontent.com/Ayenew-Tadesse/Guxo/screenshots/phone/confirm.jpg"
+    ],
+    "liveUrl": "https://ayenew-tadesse.github.io/Guxo/"
+  }
+}
