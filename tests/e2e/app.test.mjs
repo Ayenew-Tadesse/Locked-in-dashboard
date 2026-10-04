@@ -2948,8 +2948,8 @@ test("projects: one order for the Projects page, case studies and portfolio (bot
 
 test("portfolio cards: title, type of app, devices, then two lines of description at most (public page)", async () => {
   const site = structuredClone(PORTFOLIO_SITE);
-  site.cases[0] = { ...site.cases[0], device: "both", cardDesc: "A long description. ".repeat(20).trim() };
-  site.cases[1] = { ...site.cases[1], device: "tablet", cardDesc: "Short." };
+  site.cases[0] = { ...site.cases[0], device: "both", cardDesc: "A long description. ".repeat(20).trim(), style: { ...site.cases[0].style, button: "#0f6b4c" } };
+  site.cases[1] = { ...site.cases[1], device: "tablet", cardDesc: "Short.", style: { ...site.cases[1].style, button: "" } };
   for (const width of [1280, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } });
     await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -2968,6 +2968,15 @@ test("portfolio cards: title, type of app, devices, then two lines of descriptio
           below: card.querySelector(".pf-card__thumb").getBoundingClientRect().bottom <= card.querySelector("h3").getBoundingClientRect().top };
       });
     }, site);
+    // Behind the screens: the app's main button colour at 50%; without one, the page's main button colour at 50%.
+    const tints = await page.evaluate(() => {
+      const bg = (el) => getComputedStyle(el).backgroundColor;
+      const probe = (css) => { const d = document.createElement("div"); d.style.background = css; document.querySelector(".pf").append(d); const v = bg(d); d.remove(); return v; };
+      const thumbs = [...document.querySelectorAll(".pf-rail__item:not([data-rail-copy]) .pf-card__thumb")];
+      const accent = bg(document.querySelector(".pf-btn--solid"));
+      return { app: bg(thumbs[0]) === probe("color-mix(in srgb, #0f6b4c 50%, transparent)"), page: bg(thumbs[1]) === probe(`color-mix(in srgb, ${accent} 50%, transparent)`), sample: bg(thumbs[0]) };
+    });
+    assert.deepEqual({ app: tints.app, page: tints.page }, { app: true, page: true }, tints.sample);
     const order = ["h3", "pf-card__tag", "pf-card__devices", "pf-card__desc"];
     assert.deepEqual(cards[0], { order, devices: "Phone and computer", lines: 2, cut: true, below: true }, `long description, ${width}px`);
     assert.deepEqual(cards[1], { order, devices: "Tablet", lines: 1, cut: false, below: true }, `short description, ${width}px`);

@@ -182,7 +182,8 @@
 @container pf (max-width:520px){ .pf-rail{--pf-rail-gap:12px;grid-auto-columns:100%;padding-inline:7.5%;scroll-padding-inline:7.5%;} .pf-rail__item{scroll-snap-align:center;} .pf-rail-nav{display:none;} }
 @media (prefers-reduced-motion: reduce){ .pf-rail{scroll-behavior:auto;} }
 .pf-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;}
-.pf-card__thumb{aspect-ratio:16/10;background:linear-gradient(135deg, var(--accent-soft), var(--surface-2));display:flex;align-items:center;justify-content:center;overflow:hidden;}
+/* Behind the screens: the app's main button colour (its style guide) at 50%, else the page's main button colour. */
+.pf-card__thumb{aspect-ratio:16/10;background:color-mix(in srgb, var(--pf-thumb, var(--accent)) 50%, transparent);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .pf-card__thumb span{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:34px;color:var(--accent);}
 .pf-card__thumb img{height:100%;width:auto;max-width:100%;object-fit:contain;padding:12px 0 0;}
 /* Phone apps: up to three screens in phone frames, the first in front in the middle. */
