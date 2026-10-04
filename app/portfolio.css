@@ -183,8 +183,8 @@
 @media (prefers-reduced-motion: reduce){ .pf-rail{scroll-behavior:auto;} }
 .pf-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;}
 /* Behind the screens: a diagonal gradient of the app's main button colour (its style guide; else the page's main
-   button colour), 50% at the top left fading to 10% at the bottom right. */
-.pf-card__thumb{aspect-ratio:16/10;background:linear-gradient(135deg, color-mix(in srgb, var(--pf-thumb, var(--accent)) 50%, transparent), color-mix(in srgb, var(--pf-thumb, var(--accent)) 10%, transparent));display:flex;align-items:center;justify-content:center;overflow:hidden;}
+   button colour), full strength at the top left fading to 10% at the bottom right. */
+.pf-card__thumb{aspect-ratio:16/10;background:linear-gradient(135deg, var(--pf-thumb, var(--accent)), color-mix(in srgb, var(--pf-thumb, var(--accent)) 10%, transparent));display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .pf-card__thumb span{font-family:'Big Shoulders Display', sans-serif;font-weight:800;font-size:34px;color:var(--accent);}
 .pf-card__thumb img{height:100%;width:auto;max-width:100%;object-fit:contain;padding:12px 0 0;}
 /* Phone apps: up to three screens in phone frames, the first in front in the middle. */
