@@ -2771,16 +2771,20 @@ test("import a project file: project, milestones, tasks and case study, never tw
     return { n: cases.filter((x) => x.title === "Ethio School Platform").length, older: c.subtitle === "an older version",
       ms: state.milestones.filter((m) => m.title.startsWith("ESP ")).length, device: c.device, live: c.liveUrl };
   });
-  assert.deepEqual(after, { n: 1, older: false, ms: 7, device: "tablet", live: "https://ethio-school-platform.vercel.app/login" });
+  assert.deepEqual(after, { n: 1, older: false, ms: 7, device: "both", live: "https://ethio-school-platform.vercel.app/login" });
 
-  // A tablet app's case study shows its screenshots in tablets, wide.
+  // A phone and computer app: phone screenshots on the case study; the card's laptop shows the computer picture, its phone the phone one.
   await page.evaluate(async () => (await import(new URL("app/views/portfolio-site.js", location.href).href)).openCaseStudy("ethio-school-platform"));
-  await page.waitForSelector("#li-ce .pf-shots--wide");
-  assert.equal(await page.locator("#li-ce .pf-flow--wide li").count(), 4);
-  assert.equal(await page.locator("#li-ce .pf-shots .pf-tablet, #li-ce .pf-flow .pf-tablet").count(), 7, "every screenshot in a tablet frame");
-  assert.equal(await page.locator("#li-ce .ce-card .pf-card__thumb .pf-tablet").count(), 1, "the card shows its first screenshot in a tablet");
+  await page.waitForSelector("#li-ce .ce-card .pf-card__both");
+  assert.equal(await page.locator("#li-ce .pf-shots--wide, #li-ce .pf-flow--wide").count(), 0, "phone screenshots, not wide");
+  assert.equal(await page.locator("#li-ce .pf-flow li").count(), 4);
+  const pictures = await page.locator("#li-ce .pf-shots img, #li-ce .pf-flow img").evaluateAll((els) => els.map((e) => e.getAttribute("src")));
+  assert.equal(pictures.length, 7);
+  assert.ok(pictures.every((src) => src.includes("/screenshots/phone/")), "every case study picture is a phone screenshot");
+  assert.match(await page.locator("#li-ce .ce-card .pf-laptop img").getAttribute("src"), /\/screenshots\/computer\/landing\.jpg$/);
+  assert.match(await page.locator("#li-ce .ce-card .pf-card__both > .pf-mini-phone img").getAttribute("src"), /\/screenshots\/phone\/admin-dashboard\.jpg$/);
 
-  // "Try the app" opens the live app in a landscape tablet (1180 × 820 screen).
+  // The phone preview also shows a tablet: a landscape 1180 × 820 screen.
   await page.keyboard.press("Escape");
   const tab = await page.evaluate(async () => {
     const { openPhone, closePhone } = await import(new URL("app/portfolio/phone.js", location.href).href);
@@ -2813,6 +2817,14 @@ test("tablet case study: screenshots in a line with a slider; Try the app switch
   await page.locator("[data-pack-preview]").getByText("This will add:").waitFor();
   await page.click('#li-modal button[type="submit"]');
   await page.waitForSelector("#li-modal", { state: "detached" });
+  // Shown as a tablet app.
+  await page.evaluate(async () => {
+    const { saveSite, currentSite, portfolioChanged } = await import(new URL("app/views/portfolio-site.js", location.href).href);
+    const site = currentSite();
+    site.cases.find((c) => c.id === "ethio-school-platform").device = "tablet";
+    await saveSite(site);
+    portfolioChanged();
+  });
   await page.goto(page.url().replace(/#.*$/, "#/portfolio"));
   await page.locator('#li-pf-preview [data-case="ethio-school-platform"]').first().click();
   const slider = page.locator("#li-pf-preview [data-slider]");
@@ -3227,6 +3239,40 @@ test("portfolio: reorder case studies with top / up / down / bottom, on the page
   });
   assert.deepEqual(await page.locator("#li-pf-cases .li-pf-place").allInnerTexts(), ["1", "2", "3"]);
   assert.equal(await form("guxo", "top").isDisabled(), true);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("import: update only the screenshots also brings the device, card screens and user-flow pictures", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  const file = new URL("../../docs/project-files/ethio-school-platform.json", import.meta.url).pathname;
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", file);
+  await page.locator("[data-pack-preview]").getByText("This will add:").waitFor();
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  // An older case study: a tablet app with tablet pictures, your own step names and words.
+  await page.evaluate(async () => {
+    const { saveSite, currentSite } = await import(new URL("app/views/portfolio-site.js", location.href).href);
+    const site = currentSite(), c = site.cases.find((x) => x.id === "ethio-school-platform");
+    const tablet = (src) => src.replace("/screenshots/phone/", "/screenshots/tablet/");
+    Object.assign(c, { device: "tablet", phone: false, cardShots: [], cardDesc: "My words",
+      shots: c.shots.map((x) => ({ ...x, src: tablet(x.src) })), flow: { ...c.flow, steps: c.flow.steps.map((x, i) => ({ label: `My step ${i + 1}`, src: tablet(x.src) })) } });
+    await saveSite(site);
+  });
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", file);
+  await page.locator("[data-shots-only]").check();
+  await page.click('#li-modal button[type="submit"]');
+  await page.getByText("Imported: screenshots updated").waitFor();
+  const c = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const x = state.settings.preferences.portfolio.site.cases.find((y) => y.id === "ethio-school-platform");
+    return { device: x.device, cardDesc: x.cardDesc, card: x.cardShots.map((u) => u.split("/screenshots/")[1] || ""),
+      shots: x.shots.every((y) => y.src.includes("/screenshots/phone/")), steps: x.flow.steps.map((y) => `${y.label}: ${y.src.split("/screenshots/")[1]}`) };
+  });
+  assert.deepEqual(c, { device: "both", cardDesc: "My words", card: ["computer/landing.jpg", "phone/admin-dashboard.jpg", ""], shots: true,
+    steps: ["My step 1: phone/flow-1-post.jpg", "My step 2: phone/flow-2-submit.jpg", "My step 3: phone/flow-3-grade.jpg", "My step 4: phone/flow-4-parent.jpg"] });
   assert.deepEqual(page.errors, []);
   await page.close();
 });

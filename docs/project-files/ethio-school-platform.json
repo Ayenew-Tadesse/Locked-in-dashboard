@@ -324,23 +324,28 @@
   "status": "live",
   "pill": "Live case study",
   "liveUrl": "https://ethio-school-platform.vercel.app/login",
-  "device": "tablet",
+  "device": "both",
   "tag": "Web App · Product design & build",
   "cardDesc": "One platform for a whole school: attendance, homework, grades and parent communication, designed phone-first for Ethiopian schools.",
   "subtitle": "A school management and learning platform where leaders, teachers, students and parents work from the same up-to-date picture.",
   "shots": [
    {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/landing.jpg",
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/landing.jpg",
     "alt": "Landing page: One Platform for the Entire School"
    },
    {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/admin-dashboard.jpg",
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/admin-dashboard.jpg",
     "alt": "Administrator dashboard: school numbers, attendance trend and students requiring attention"
    },
    {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/reports.jpg",
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/reports.jpg",
     "alt": "Reports: classes side by side and subject averages"
    }
+  ],
+  "cardShots": [
+   "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/computer/landing.jpg",
+   "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/admin-dashboard.jpg",
+   ""
   ],
   "meta": [
    {
@@ -498,19 +503,19 @@
    "steps": [
     {
      "label": "Teacher posts homework",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/flow-1-post.jpg"
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/flow-1-post.jpg"
     },
     {
      "label": "Student submits",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/flow-2-submit.jpg"
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/flow-2-submit.jpg"
     },
     {
      "label": "Teacher grades with feedback",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/flow-3-grade.jpg"
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/flow-3-grade.jpg"
     },
     {
      "label": "Parent sees the grade",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/tablet/flow-4-parent.jpg"
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/ethio-school-platform/screenshots/phone/flow-4-parent.jpg"
     }
    ]
   },
