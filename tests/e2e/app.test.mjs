@@ -2799,6 +2799,39 @@ test("import a project file: project, milestones, tasks and case study, never tw
   await page.close();
 });
 
+test("import the Awaa Braids project file: project, milestones and an in-progress case study with phone screens", async () => {
+  const page = await open("projects", { width: 1280, height: 900 });
+  await seedPortfolio(page);
+  await page.evaluate(() => { location.hash = "#/projects"; });
+  await page.click("#li-project-import");
+  await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/awaa-braids.json", import.meta.url).pathname);
+  const preview = page.locator("[data-pack-preview]");
+  await preview.getByText("This will add:").waitFor();
+  assert.match(await preview.innerText(), /Project Awaa Braids with 5 checklist items/);
+  assert.match(await preview.innerText(), /5 milestones with 27 tasks/);
+  assert.match(await preview.innerText(), /Case study Awaa Braids with 7 auto-updating pictures/);
+  await page.click('#li-modal button[type="submit"]');
+  await page.waitForSelector("#li-modal", { state: "detached" });
+  await page.locator("[data-project] .li-project-row-name", { hasText: "Awaa Braids" }).waitFor();
+  const c = await page.evaluate(async () => {
+    const { state } = await import(new URL("app/state.js", location.href).href);
+    const x = state.settings.preferences.portfolio.site.cases.find((y) => y.id === "awaa-braids");
+    const ms = state.milestones.filter((m) => m.title.startsWith("AWB "));
+    return { status: x.status, device: x.device, project: x.project, button: x.style.button, flow: x.flow.steps.length, ms: ms.length, done: ms.filter((m) => m.status === "completed").length };
+  });
+  assert.deepEqual(c, { status: "progress", device: "phone", project: "Awaa Braids", button: "#6d2e5b", flow: 4, ms: 5, done: 1 });
+  // On the portfolio: three phones with the app's screens, Try the app, and no status or case study button yet.
+  await page.evaluate(() => { location.hash = "#/portfolio"; });
+  const card = page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card", { hasText: "Awaa Braids" });
+  await card.waitFor();
+  assert.deepEqual(await card.locator(".pf-mini-phone img").evaluateAll((els) => els.map((e) => e.getAttribute("src").split("/").pop())), ["customer-home.jpg", "landing.jpg", "admin-today.jpg"]);
+  assert.match(await card.innerText(), /Phone/);
+  assert.match(await card.innerText(), /Try the app/);
+  assert.doesNotMatch(await card.innerText(), /In progress|View case study/);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
 test("import: a file that isn't a project file is refused before anything is saved", async () => {
   const page = await open("settings");
   await page.click("#li-import-pack");
