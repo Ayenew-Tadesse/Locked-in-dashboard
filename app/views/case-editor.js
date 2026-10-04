@@ -247,6 +247,7 @@ export function openCaseEditor(original, opts) {
     const sample = page.querySelector("[data-btn-sample]"), sw = page.querySelector('[data-swatch="button"]');
     if (sample) { sample.style.background = ok ? b : ""; sample.style.borderColor = ok ? b : ""; }
     if (sw) sw.style.background = ok ? b : "transparent";
+    page.querySelector(".ce-card .pf-card__thumb")?.style.setProperty("--pf-thumb", ok ? b : "var(--accent)"); // the card's background follows
   };
 
   // Settings: what isn't visible text on the page.

@@ -114,6 +114,9 @@ const widePlaceholder = (note) => `<span class="pf-screen-ph--wide">${placeholde
 const miniPhone = (src, alt, attrs, note) => `<span class="pf-mini-phone"${attrs}><span class="pf-mini-phone__screen">
     <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${src ? img(src, alt) : placeholderScreen(note)}</span></span>`;
 const SLOT_NAMES = { phone: ["front", "left", "right"], both: ["computer", "phone"] };
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+/** The app's main button colour (its style guide), which tints the card behind its screens; "" uses the page's. */
+export const cardTint = (c) => (HEX.test(String(c?.style?.button || "").trim()) ? String(c.style.button).trim() : "");
 
 /**
  * A case study card's picture: the same realistic device frame on every card.
@@ -122,6 +125,7 @@ const SLOT_NAMES = { phone: ["front", "left", "right"], both: ["computer", "phon
  * front of it at the lower right. Screens are the ones you chose for the card
  * (cardShots), else the first screenshots; a screen without a picture shows
  * a placeholder, so a project you're still making already has its frame.
+ * Behind the screens: the app's main button colour at 50% (cardTint), else the page's.
  * opts.slots: mark each screen with data-slot (the editor taps them to choose).
  */
 export function cardThumb(c, { tag = "div", slots = false } = {}) {
@@ -129,20 +133,21 @@ export function cardThumb(c, { tag = "div", slots = false } = {}) {
   const shots = chosen || (c.shots || []).map((x) => x?.src).filter((src) => img(src)).slice(0, 3);
   const alt = (i) => (i ? "" : `${c.title || "App"} screen`);
   const device = deviceOf(c);
+  const tint = cardTint(c) ? ` style="--pf-thumb:${cardTint(c)}"` : "";
   const slot = (i) => (slots ? ` data-slot="${i}" data-act="cardslot" data-path="${i}" role="button" tabindex="0" aria-label="Choose the ${SLOT_NAMES[device]?.[i] || "card's"} screen"` : "");
   if (device === "both") {
     const pc = laptop(shots[0] ? img(shots[0], alt(0)) : widePlaceholder("Screens coming soon"));
-    return `<${tag} class="pf-card__thumb has-img has-frame pf-card__both"><span class="pf-card__frame"${slot(0)}>${pc}</span>${miniPhone(shots[1], alt(1), slot(1), "")}</${tag}>`;
+    return `<${tag}${tint} class="pf-card__thumb has-img has-frame pf-card__both"><span class="pf-card__frame"${slot(0)}>${pc}</span>${miniPhone(shots[1], alt(1), slot(1), "")}</${tag}>`;
   }
   if (device !== "phone") {
     const src = shots[0];
     const screen = src ? img(src, alt(0)) : widePlaceholder("Screens coming soon");
-    return `<${tag} class="pf-card__thumb has-img has-frame"><span class="pf-card__frame"${slot(0)}>${screenFrame(c)(screen)}</span></${tag}>`;
+    return `<${tag}${tint} class="pf-card__thumb has-img has-frame"><span class="pf-card__frame"${slot(0)}>${screenFrame(c)(screen)}</span></${tag}>`;
   }
   // Without chosen screens, a project with one or two screenshots shows that many phones; otherwise three.
   const n = chosen || !shots.length ? 3 : shots.length;
   const phones = Array.from({ length: n }, (_, i) => miniPhone(shots[i], alt(i), slot(i), i === 0 ? "Screens coming soon" : ""));
-  return `<${tag} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
+  return `<${tag}${tint} class="pf-card__thumb has-img pf-card__phones pf-card__phones--${n}">${phones.join("")}</${tag}>`;
 }
 
 // No project status reaches the public page (progress, "In progress"): a case study
