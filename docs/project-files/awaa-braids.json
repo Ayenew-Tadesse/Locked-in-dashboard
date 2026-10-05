@@ -6,21 +6,21 @@
   "code": "AWB",
   "description": "Book braids from your phone and the stylist comes to your home: pick a style, a free time and your address, and the salon confirms it.",
   "category": "Booking app · beauty, home visits",
-  "stage": "MVP built: 6 milestones done, home visits included; connecting a real salon next",
+  "stage": "MVP built: 7 milestones done; demo live, real salon connecting next",
   "status": "good",
   "facts": [
    "Next.js (App Router) + TypeScript + Tailwind, phone first",
    "Supabase: Postgres with Row Level Security on every table",
-   "2 roles: customer and salon admin",
+   "3 roles: customer, stylist and salon admin",
    "Booking rules enforced on the server; the database refuses double-booking",
    "Home visits: ZIP codes 200-209 only, with travel time kept free between visits",
    "Notifications written by the database when an appointment changes",
    "English and Amharic; WCAG 2.1 AA checks on every main screen",
    "Washington, DC area: US dollars and Eastern Time (daylight saving handled)",
-   "Demo salon with fictional people and a guided tour, live on Vercel"
+   "Three websites from one codebase: customers, staff, and a demo with fictional people for the portfolio"
   ],
   "links": {
-   "web": "https://awaa-braids.vercel.app",
+   "web": "https://awaa-braids-demo.vercel.app",
    "repo": "https://github.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-"
   },
   "checklist": [
@@ -50,6 +50,10 @@
    },
    {
     "text": "M6: Home visits: the address step, service area, travel time between visits",
+    "done": true
+   },
+   {
+    "text": "M7: The team: stylist schedules, stylist logins, separate customer, staff and demo websites",
     "done": true
    }
   ]
@@ -318,6 +322,46 @@
      "date": "2026-10-05"
     }
    ]
+  },
+  {
+   "title": "AWB M7: The team and three websites",
+   "category": "Awaa Braids",
+   "priority": "high",
+   "start_date": "2026-10-05",
+   "deadline": "2026-10-05",
+   "description": "The admin runs the team; stylists sign in to their own jobs; customers, staff and the portfolio demo each get their own website.",
+   "tasks": [
+    {
+     "title": "Stylist schedule page: week, time off, upcoming jobs; send the day to the stylist",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Remove a stylist after moving their jobs (history kept)",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Stylist logins: own jobs only, mark done or missed, notifications",
+     "status": "completed",
+     "priority": "high",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Stylists ask to join; the admin adds them from Waiting to join",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Separate customer and staff websites, plus a demo website with no database",
+     "status": "completed",
+     "priority": "high",
+     "date": "2026-10-05"
+    }
+   ]
   }
  ],
  "caseStudy": {
@@ -326,7 +370,7 @@
   "title": "Awaa Braids",
   "status": "live",
   "pill": "Live case study",
-  "liveUrl": "https://awaa-braids.vercel.app/login",
+  "liveUrl": "https://awaa-braids-demo.vercel.app/login",
   "device": "phone",
   "phone": true,
   "tag": "Mobile web app · Product design & build",
@@ -348,6 +392,10 @@
    {
     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-sheet.jpg",
     "alt": "The salon confirms a request, with the address and a map link"
+   },
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/stylist-jobs.jpg",
+    "alt": "A stylist's own jobs, with addresses and map links"
    },
    {
     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-calendar.jpg",
@@ -391,7 +439,8 @@
     "The salon's tools: requests, calendar, styles and prices, working weeks and time off, reports.",
     "Notifications from the database, Amharic, offline and accessibility checks (axe) at four widths.",
     "Home visits: an address step, a service area by ZIP code, and travel time between visits enforced by the database.",
-    "A guided demo tour, a starter salon file and a setup guide for connecting a real salon."
+    "A guided demo tour, a starter salon file and a setup guide for connecting a real salon.",
+    "The team: stylist schedules and logins, and separate websites for customers, staff and the portfolio demo."
    ]
   },
   "problem": "Booking braids by phone call or DM is slow for both sides: the price depends on size and length, a style can take four to six hours, and a stylist who travels to clients needs time between homes. Customers wait for replies and guess at prices; the salon keeps the diary and the addresses in its head or on paper and risks double-booking.",
@@ -499,7 +548,7 @@
   },
   "insight": "For braids, the price and the time are the booking. Showing both up front, for the size and length you pick, removes most of the back-and-forth before anyone talks.",
   "ia": {
-   "intro": "Two roles, three tabs each on phones.",
+   "intro": "Three roles on two real websites (customers; staff), plus a demo website for trying it.",
    "root": "Awaa Braids",
    "sections": [
     {
@@ -507,7 +556,7 @@
      "items": [
       "Front page",
       "Styles and prices",
-      "Sign in, create an account or take the tour"
+      "Customer sign in or sign up"
      ]
     },
     {
@@ -517,6 +566,15 @@
       "Book (5 steps, with your address)",
       "Styles",
       "Account (your address)",
+      "Notifications"
+     ]
+    },
+    {
+     "title": "Stylist (staff website)",
+     "items": [
+      "Jobs (today, coming up, recent)",
+      "Week (hours and time off)",
+      "Account",
       "Notifications"
      ]
     },
@@ -566,7 +624,7 @@
     }
    ]
   },
-  "solution": "A phone-first web app with two sides. Customers book in five steps: a style, then size and length with the price and time adding up, then a time that is really free with any stylist or a favourite, then their address, then review and send. Only ZIP codes in the service area can book, and the address is saved for next time and seen only by the customer and the salon. The salon confirms, declines or moves requests with the customer's number and a map link one tap away, sees each stylist's day and week, edits styles, prices, hours, time off and the service area, and reads simple reports. Booking runs on the server, which works out the price and time and refuses anything outside the rules, including double-booking and visits too close together to travel between.",
+  "solution": "A phone-first web app with two sides. Customers book in five steps: a style, then size and length with the price and time adding up, then a time that is really free with any stylist or a favourite, then their address, then review and send. Only ZIP codes in the service area can book, and the address is saved for next time and seen only by the customer and the salon. The salon confirms, declines or moves requests with the customer's number and a map link one tap away, sees each stylist's day and week, edits styles, prices, hours, time off and the service area, and reads simple reports. Booking runs on the server, which works out the price and time and refuses anything outside the rules, including double-booking and visits too close together to travel between. Stylists sign in on the staff website to see only their own jobs (customer, address with a map link, note, what to collect) and mark them done or missed; the admin adds them to the team, sets their hours and can remove them. Customers and staff use separate websites, and the public demo runs on fictional data with no database.",
   "style": {
    "intro": "Warm and calm, readable on phones in bright light.",
    "font": "System UI",
@@ -600,6 +658,6 @@
     }
    ]
   },
-  "outcome": "Six milestones are live on Vercel with a demo anyone can try and a one-minute guided tour. It is checked by 97 database checks, 88 unit tests and 117 browser tests at phone, tablet and laptop widths, with automatic accessibility checks (WCAG 2.1 AA) in light and dark mode. Next: connecting a real salon with the starter file and the setup guide."
+  "outcome": "Seven milestones are built. The demo, with fictional people and a guided tour, is live for anyone to try, separate from the real customer and staff websites. It is checked by over 130 database checks, 95 unit tests and more than 140 browser tests at phone, tablet and laptop widths, with automatic accessibility checks (WCAG 2.1 AA) in light and dark mode. Next: connecting the real salon."
  }
 }
