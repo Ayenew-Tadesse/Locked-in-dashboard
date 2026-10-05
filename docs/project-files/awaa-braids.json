@@ -6,15 +6,17 @@
   "code": "AWB",
   "description": "Book braiding appointments from your phone: pick a style, choose a free time, and the salon confirms it.",
   "category": "Booking app · beauty",
-  "stage": "MVP: milestone 1 of 5 done",
+  "stage": "MVP built: all 5 milestones done; connecting a real salon next",
   "status": "good",
   "facts": [
    "Next.js (App Router) + TypeScript + Tailwind, phone first",
    "Supabase: Postgres with Row Level Security on every table",
    "2 roles: customer and salon admin",
    "Booking rules enforced on the server; the database refuses double-booking",
+   "Notifications written by the database when an appointment changes",
+   "English and Amharic; WCAG 2.1 AA checks on every main screen",
    "Washington, DC area: US dollars and Eastern Time (daylight saving handled)",
-   "Demo salon with fictional people, live on Vercel"
+   "Demo salon with fictional people and a guided tour, live on Vercel"
   ],
   "links": {
    "web": "https://awaa-braids.vercel.app",
@@ -27,22 +29,22 @@
    },
    {
     "text": "M2: Booking: style, size and length, date and free time, confirm; cancel",
-    "done": false,
+    "done": true,
     "deadline": "Oct 11, 2026"
    },
    {
     "text": "M3: Salon tools: confirm, reschedule, manage styles, stylists and hours",
-    "done": false,
+    "done": true,
     "deadline": "Oct 18, 2026"
    },
    {
     "text": "M4: Reminders, polish, accessibility and Amharic",
-    "done": false,
+    "done": true,
     "deadline": "Oct 25, 2026"
    },
    {
     "text": "M5: Portfolio: guided demo tour, docs, connect a real salon",
-    "done": false,
+    "done": true,
     "deadline": "Nov 1, 2026"
    }
   ]
@@ -122,37 +124,37 @@
    "tasks": [
     {
      "title": "Free-time calculation from hours, time off and bookings (with tests)",
-     "status": "not_started",
+     "status": "completed",
      "priority": "high",
      "date": "2026-10-06"
     },
     {
      "title": "Step 1 and 2: choose a style, then size and length with live price and time",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-07"
     },
     {
      "title": "Step 3: pick a date and a free time, any stylist or a favourite",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-08"
     },
     {
      "title": "Step 4: review and confirm; booked as waiting for confirmation",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-09"
     },
     {
      "title": "Cancel from My appointments (within the salon's notice)",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-10"
     },
     {
      "title": "Browser tests for booking at phone, tablet and laptop widths",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-11"
     }
@@ -168,31 +170,31 @@
    "tasks": [
     {
      "title": "Confirm, decline, reschedule, mark done or no-show",
-     "status": "not_started",
+     "status": "completed",
      "priority": "high",
      "date": "2026-10-13"
     },
     {
      "title": "Calendar: day and week views per stylist",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-14"
     },
     {
      "title": "Manage styles, options and prices",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-15"
     },
     {
      "title": "Manage stylists, working hours and time off",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-16"
     },
     {
      "title": "Simple reports: bookings per week, popular styles, no-show rate",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-17"
     }
@@ -208,25 +210,25 @@
    "tasks": [
     {
      "title": "Notifications: confirmed, changed, reminder the day before",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-21"
     },
     {
      "title": "Empty, loading and error states; offline messages",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-22"
     },
     {
      "title": "Accessibility pass: keyboard, screen readers, contrast",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-23"
     },
     {
      "title": "Amharic translation and a language switch",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-24"
     }
@@ -242,19 +244,25 @@
    "tasks": [
     {
      "title": "Guided demo tour for customer and salon",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-27"
     },
     {
-     "title": "Connect Supabase and add the real salon's styles and hours",
+     "title": "Starter salon file and step-by-step setup guide",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-28"
+    },
+    {
+     "title": "Connect Supabase and add the real salon's styles and hours (starter file and guide ready)",
      "status": "not_started",
      "priority": "medium",
      "date": "2026-10-29"
     },
     {
      "title": "Case study: booking flow pictures and outcome; switch it to Live",
-     "status": "not_started",
+     "status": "completed",
      "priority": "medium",
      "date": "2026-10-31"
     }
@@ -265,8 +273,8 @@
   "id": "awaa-braids",
   "project": "Awaa Braids",
   "title": "Awaa Braids",
-  "status": "progress",
-  "pill": "Case study in progress",
+  "status": "live",
+  "pill": "Live case study",
   "liveUrl": "https://awaa-braids.vercel.app/login",
   "device": "phone",
   "phone": true,
@@ -275,21 +283,33 @@
   "subtitle": "A phone-first booking app for a braiding salon in the Washington, DC area, for customers and the salon itself.",
   "shots": [
    {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/customer-home.jpg",
-    "alt": "Customer home: the next appointment, with status, stylist and price"
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-2-options.jpg",
+    "alt": "Booking: size and length, with the price and time adding up"
    },
    {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/styles.jpg",
-    "alt": "Styles and prices, with sizes and lengths"
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-3-time.jpg",
+    "alt": "Booking: a day and the times that are really free"
    },
    {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/admin-today.jpg",
-    "alt": "The salon's day: appointments, requests and the week in numbers"
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-sheet.jpg",
+    "alt": "The salon confirms, declines or moves a request"
+   },
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-calendar.jpg",
+    "alt": "The salon's calendar: each stylist's day"
+   },
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/notifications.jpg",
+    "alt": "Notifications when an appointment changes"
+   },
+   {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/tour.jpg",
+    "alt": "The guided demo tour"
    }
   ],
   "cardShots": [
    "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/customer-home.jpg",
-   "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/landing.jpg",
+   "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-3-time.jpg",
    "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/admin-today.jpg"
   ],
   "meta": [
@@ -299,7 +319,7 @@
    },
    {
     "label": "Type",
-    "value": "Self-directed product (MVP in progress)"
+    "value": "Self-directed product (MVP)"
    },
    {
     "label": "Platform",
@@ -307,18 +327,19 @@
    },
    {
     "label": "Tools",
-    "value": "Next.js, TypeScript, Tailwind, Supabase, Playwright"
+    "value": "Next.js, TypeScript, Tailwind, Supabase, Vitest, Playwright, axe"
    }
   ],
-  "overview": "Braiding appointments take hours, and many salons still book them through phone calls and direct messages. Awaa Braids lets customers pick a style, see an honest starting price and how long it takes, and request a time that is really free. The salon sees its day at a glance and confirms requests from a phone.\n\nIt is built in five milestones. The first one, the foundation, is live: the front page, sign-in, the customer's appointments, the salon's Today screen, and the database with its security rules.",
+  "overview": "Braiding appointments take hours, and many salons still book them through phone calls and direct messages. Awaa Braids lets customers pick a style, see an honest price and how long it takes for the size and length they choose, and request a time that is really free. The salon runs its day from a phone: it confirms, moves or declines requests, manages styles, stylists and hours, and sees its numbers.\n\nIt was built in five milestones and is live with a demo salon anyone can try, including a one-minute guided tour.",
   "process": {
    "intro": "I started from the rules, not the screens: what a booking needs to be fair to the customer and safe for the salon, written and tested in the database first.",
    "steps": [
     "Brief: two roles (customer and salon), the booking rules (hours, notice, cancelling, no double-booking) and a phone-first flow.",
-    "Data model and security: styles with size and length options, stylists with hours and time off, appointments; Row Level Security and 54 database checks.",
-    "Demo salon with fictional people, using the same visibility rules as the database.",
-    "Customer and salon screens, tested in the browser at phone, tablet and laptop widths.",
-    "Moved to the DC area: US dollars and Eastern Time, with daylight saving handled."
+    "Data model and security first: Row Level Security and server-side booking, tested with database checks.",
+    "Booking in four steps, with free times worked out from hours, time off and other bookings.",
+    "The salon's tools: requests, calendar, styles and prices, working weeks and time off, reports.",
+    "Notifications from the database, Amharic, offline and accessibility checks (axe) at four widths.",
+    "A guided demo tour, a starter salon file and a setup guide for connecting a real salon."
    ]
   },
   "problem": "Booking braids by phone call or DM is slow for both sides: the price depends on size and length, a style can take four to six hours, and the stylist's day fills up in uneven blocks. Customers wait for replies and guess at prices; the salon keeps the diary in its head or on paper and risks double-booking.",
@@ -425,52 +446,62 @@
      "items": [
       "Front page",
       "Styles and prices",
-      "Sign in or create an account"
+      "Sign in, create an account or take the tour"
      ]
     },
     {
      "title": "Customer",
      "items": [
       "Home (next, upcoming and past)",
+      "Book (4 steps)",
       "Styles",
       "Account",
-      "Book (milestone 2)"
+      "Notifications"
      ]
     },
     {
      "title": "Salon admin",
      "items": [
-      "Today (diary, requests, week)",
-      "Styles",
+      "Today (diary and requests)",
+      "Calendar (day and week)",
+      "Salon (styles, team, reports)",
       "Account",
-      "Calendar and settings (milestone 3)"
+      "Notifications"
      ]
     }
    ]
   },
   "flow": {
-   "title": "User flow: from browsing to the salon's day",
-   "intro": "Captured automatically from the live app after every change; the booking steps arrive in milestone 2.",
+   "title": "User flow: booking an appointment",
+   "intro": "Captured automatically from the live app after every change.",
    "steps": [
     {
-     "label": "Browse styles and prices",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/styles.jpg"
+     "label": "Choose a style",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-1-style.jpg"
     },
     {
-     "label": "See your next appointment",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/customer-home.jpg"
+     "label": "Size and length",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-2-options.jpg"
     },
     {
-     "label": "The salon sees its day",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/admin-today.jpg"
+     "label": "Pick a free time",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-3-time.jpg"
     },
     {
-     "label": "Requests to confirm",
-     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/admin-requests.jpg"
+     "label": "Review and send",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-4-review.jpg"
+    },
+    {
+     "label": "Request sent",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-5-sent.jpg"
+    },
+    {
+     "label": "The salon confirms it",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-sheet.jpg"
     }
    ]
   },
-  "solution": "A phone-first web app with two sides. Customers see each style with its starting price and time, then their next, upcoming and past appointments with status and price. The salon sees today's appointments with each customer's phone number, the requests waiting and the week in numbers. Booking runs on the server, which works out the price and time from the style and refuses anything outside the rules, including double-booking.",
+  "solution": "A phone-first web app with two sides. Customers book in four steps: a style, then size and length with the price and time adding up, then a day and a time that is really free with any stylist or a favourite, then review and send. They can cancel within the salon's rules and are told when anything changes. The salon confirms, declines or moves requests with the customer's number one tap away, sees each stylist's day and week, edits styles, prices, hours and time off, and reads simple reports. Booking runs on the server, which works out the price and time and refuses anything outside the rules, including double-booking.",
   "style": {
    "intro": "Warm and calm, readable on phones in bright light.",
    "font": "System UI",
@@ -488,7 +519,7 @@
     },
     {
      "name": "Gold accent",
-     "hex": "#b7791f"
+     "hex": "#8a5a12"
     },
     {
      "name": "Background",
@@ -504,6 +535,6 @@
     }
    ]
   },
-  "outcome": "Milestone 1 is live on Vercel with a demo anyone can try: the front page, sign-in, the customer's appointments and the salon's day, backed by 54 database security checks, 34 unit tests and browser tests at four widths. Next: the booking flow and cancelling, then the salon's tools."
+  "outcome": "All five milestones are live on Vercel with a demo anyone can try and a one-minute guided tour. It is checked by 76 database security checks, 80 unit tests and 109 browser tests at phone, tablet and laptop widths, with automatic accessibility checks (WCAG 2.1 AA) in light and dark mode. Next: connecting a real salon with the starter file and the setup guide."
  }
 }
