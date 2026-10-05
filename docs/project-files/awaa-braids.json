@@ -4,15 +4,16 @@
  "project": {
   "name": "Awaa Braids",
   "code": "AWB",
-  "description": "Book braiding appointments from your phone: pick a style, choose a free time, and the salon confirms it.",
-  "category": "Booking app · beauty",
-  "stage": "MVP built: all 5 milestones done; connecting a real salon next",
+  "description": "Book braids from your phone and the stylist comes to your home: pick a style, a free time and your address, and the salon confirms it.",
+  "category": "Booking app · beauty, home visits",
+  "stage": "MVP built: 6 milestones done, home visits included; connecting a real salon next",
   "status": "good",
   "facts": [
    "Next.js (App Router) + TypeScript + Tailwind, phone first",
    "Supabase: Postgres with Row Level Security on every table",
    "2 roles: customer and salon admin",
    "Booking rules enforced on the server; the database refuses double-booking",
+   "Home visits: ZIP codes 200-209 only, with travel time kept free between visits",
    "Notifications written by the database when an appointment changes",
    "English and Amharic; WCAG 2.1 AA checks on every main screen",
    "Washington, DC area: US dollars and Eastern Time (daylight saving handled)",
@@ -46,6 +47,10 @@
     "text": "M5: Portfolio: guided demo tour, docs, connect a real salon",
     "done": true,
     "deadline": "Nov 1, 2026"
+   },
+   {
+    "text": "M6: Home visits: the address step, service area, travel time between visits",
+    "done": true
    }
   ]
  },
@@ -267,6 +272,52 @@
      "date": "2026-10-31"
     }
    ]
+  },
+  {
+   "title": "AWB M6: Home visits",
+   "category": "Awaa Braids",
+   "priority": "high",
+   "start_date": "2026-10-05",
+   "deadline": "2026-10-05",
+   "description": "No salon to visit: the stylist goes to the customer's home, inside the service area, with travel time between visits.",
+   "tasks": [
+    {
+     "title": "Booking step 4: Where should we come? (address saved for next time)",
+     "status": "completed",
+     "priority": "high",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Service area: ZIP codes starting 200-209, checked by the database",
+     "status": "completed",
+     "priority": "high",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Travel time kept free after each visit (database constraint)",
+     "status": "completed",
+     "priority": "high",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Address with an Open in Maps link for the salon; private to customer and salon",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Salon setting: service area and travel time",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-05"
+    },
+    {
+     "title": "Wording without a salon address, in English and Amharic",
+     "status": "completed",
+     "priority": "medium",
+     "date": "2026-10-05"
+    }
+   ]
   }
  ],
  "caseStudy": {
@@ -279,8 +330,8 @@
   "device": "phone",
   "phone": true,
   "tag": "Mobile web app · Product design & build",
-  "cardDesc": "Book braids from your phone: pick a style, choose a time that's really free, and the salon confirms it.",
-  "subtitle": "A phone-first booking app for a braiding salon in the Washington, DC area, for customers and the salon itself.",
+  "cardDesc": "Book braids from your phone and the stylist comes to your home: pick a style, a free time and your address.",
+  "subtitle": "A phone-first booking app for home-visit braiding in the Washington, DC area, for customers and the salon itself.",
   "shots": [
    {
     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-2-options.jpg",
@@ -291,16 +342,16 @@
     "alt": "Booking: a day and the times that are really free"
    },
    {
+    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-address.jpg",
+    "alt": "Booking: where the stylist should come, inside the service area"
+   },
+   {
     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-sheet.jpg",
-    "alt": "The salon confirms, declines or moves a request"
+    "alt": "The salon confirms a request, with the address and a map link"
    },
    {
     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/salon-calendar.jpg",
     "alt": "The salon's calendar: each stylist's day"
-   },
-   {
-    "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/notifications.jpg",
-    "alt": "Notifications when an appointment changes"
    },
    {
     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/tour.jpg",
@@ -330,7 +381,7 @@
     "value": "Next.js, TypeScript, Tailwind, Supabase, Vitest, Playwright, axe"
    }
   ],
-  "overview": "Braiding appointments take hours, and many salons still book them through phone calls and direct messages. Awaa Braids lets customers pick a style, see an honest price and how long it takes for the size and length they choose, and request a time that is really free. The salon runs its day from a phone: it confirms, moves or declines requests, manages styles, stylists and hours, and sees its numbers.\n\nIt was built in five milestones and is live with a demo salon anyone can try, including a one-minute guided tour.",
+  "overview": "Braiding appointments take hours, and many braiders who work from clients' homes still book through phone calls and direct messages. Awaa Braids lets customers pick a style, see an honest price and how long it takes for the size and length they choose, request a time that is really free, and say where the stylist should come. The salon runs its day from a phone: it confirms, moves or declines requests, sees each address with a map link, manages styles, stylists, hours and the service area, and sees its numbers.\n\nIt was built in six milestones and is live with a demo anyone can try, including a one-minute guided tour.",
   "process": {
    "intro": "I started from the rules, not the screens: what a booking needs to be fair to the customer and safe for the salon, written and tested in the database first.",
    "steps": [
@@ -339,10 +390,11 @@
     "Booking in four steps, with free times worked out from hours, time off and other bookings.",
     "The salon's tools: requests, calendar, styles and prices, working weeks and time off, reports.",
     "Notifications from the database, Amharic, offline and accessibility checks (axe) at four widths.",
+    "Home visits: an address step, a service area by ZIP code, and travel time between visits enforced by the database.",
     "A guided demo tour, a starter salon file and a setup guide for connecting a real salon."
    ]
   },
-  "problem": "Booking braids by phone call or DM is slow for both sides: the price depends on size and length, a style can take four to six hours, and the stylist's day fills up in uneven blocks. Customers wait for replies and guess at prices; the salon keeps the diary in its head or on paper and risks double-booking.",
+  "problem": "Booking braids by phone call or DM is slow for both sides: the price depends on size and length, a style can take four to six hours, and a stylist who travels to clients needs time between homes. Customers wait for replies and guess at prices; the salon keeps the diary and the addresses in its head or on paper and risks double-booking.",
   "personas": {
    "intro": "Proto-personas drawn from the project brief (illustrative, not real people).",
    "items": [
@@ -433,6 +485,15 @@
       "no",
       "yes"
      ]
+    },
+    {
+     "feature": "Comes to your home, with travel time planned",
+     "values": [
+      "partial",
+      "partial",
+      "no",
+      "yes"
+     ]
     }
    ]
   },
@@ -453,9 +514,9 @@
      "title": "Customer",
      "items": [
       "Home (next, upcoming and past)",
-      "Book (4 steps)",
+      "Book (5 steps, with your address)",
       "Styles",
-      "Account",
+      "Account (your address)",
       "Notifications"
      ]
     },
@@ -464,7 +525,7 @@
      "items": [
       "Today (diary and requests)",
       "Calendar (day and week)",
-      "Salon (styles, team, reports)",
+      "Salon (styles, team, home visits, reports)",
       "Account",
       "Notifications"
      ]
@@ -488,6 +549,10 @@
      "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-3-time.jpg"
     },
     {
+     "label": "Where should we come?",
+     "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-address.jpg"
+    },
+    {
      "label": "Review and send",
      "src": "https://raw.githubusercontent.com/Ayenew-Tadesse/Awaa-s-Braid-Appointment-Booking-/screenshots/phone/book-4-review.jpg"
     },
@@ -501,7 +566,7 @@
     }
    ]
   },
-  "solution": "A phone-first web app with two sides. Customers book in four steps: a style, then size and length with the price and time adding up, then a day and a time that is really free with any stylist or a favourite, then review and send. They can cancel within the salon's rules and are told when anything changes. The salon confirms, declines or moves requests with the customer's number one tap away, sees each stylist's day and week, edits styles, prices, hours and time off, and reads simple reports. Booking runs on the server, which works out the price and time and refuses anything outside the rules, including double-booking.",
+  "solution": "A phone-first web app with two sides. Customers book in five steps: a style, then size and length with the price and time adding up, then a time that is really free with any stylist or a favourite, then their address, then review and send. Only ZIP codes in the service area can book, and the address is saved for next time and seen only by the customer and the salon. The salon confirms, declines or moves requests with the customer's number and a map link one tap away, sees each stylist's day and week, edits styles, prices, hours, time off and the service area, and reads simple reports. Booking runs on the server, which works out the price and time and refuses anything outside the rules, including double-booking and visits too close together to travel between.",
   "style": {
    "intro": "Warm and calm, readable on phones in bright light.",
    "font": "System UI",
@@ -535,6 +600,6 @@
     }
    ]
   },
-  "outcome": "All five milestones are live on Vercel with a demo anyone can try and a one-minute guided tour. It is checked by 76 database security checks, 80 unit tests and 109 browser tests at phone, tablet and laptop widths, with automatic accessibility checks (WCAG 2.1 AA) in light and dark mode. Next: connecting a real salon with the starter file and the setup guide."
+  "outcome": "Six milestones are live on Vercel with a demo anyone can try and a one-minute guided tour. It is checked by 97 database checks, 88 unit tests and 117 browser tests at phone, tablet and laptop widths, with automatic accessibility checks (WCAG 2.1 AA) in light and dark mode. Next: connecting a real salon with the starter file and the setup guide."
  }
 }

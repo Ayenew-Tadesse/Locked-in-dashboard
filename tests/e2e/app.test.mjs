@@ -2807,9 +2807,9 @@ test("import the Awaa Braids project file: project, milestones and a live case s
   await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/awaa-braids.json", import.meta.url).pathname);
   const preview = page.locator("[data-pack-preview]");
   await preview.getByText("This will add:").waitFor();
-  assert.match(await preview.innerText(), /Project Awaa Braids with 5 checklist items/);
-  assert.match(await preview.innerText(), /5 milestones with 28 tasks/);
-  assert.match(await preview.innerText(), /Case study Awaa Braids with 12 auto-updating pictures/);
+  assert.match(await preview.innerText(), /Project Awaa Braids with 6 checklist items/);
+  assert.match(await preview.innerText(), /6 milestones with 34 tasks/);
+  assert.match(await preview.innerText(), /Case study Awaa Braids with 13 auto-updating pictures/);
   await page.click('#li-modal button[type="submit"]');
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.locator("[data-project] .li-project-row-name", { hasText: "Awaa Braids" }).waitFor();
@@ -2819,7 +2819,7 @@ test("import the Awaa Braids project file: project, milestones and a live case s
     const ms = state.milestones.filter((m) => m.title.startsWith("AWB "));
     return { status: x.status, device: x.device, project: x.project, button: x.style.button, flow: x.flow.steps.length, ms: ms.length, done: ms.filter((m) => m.status === "completed").length };
   });
-  assert.deepEqual(c, { status: "live", device: "phone", project: "Awaa Braids", button: "#6d2e5b", flow: 6, ms: 5, done: 4 });
+  assert.deepEqual(c, { status: "live", device: "phone", project: "Awaa Braids", button: "#6d2e5b", flow: 7, ms: 6, done: 5 });
   // On the portfolio: three phones with the app's screens, Try the app and the case study, and no status.
   await page.evaluate(() => { location.hash = "#/portfolio"; });
   const card = page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card", { hasText: "Awaa Braids" });
