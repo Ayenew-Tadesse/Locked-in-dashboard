@@ -31,7 +31,7 @@ import { renderPortfolioPage } from "./views/portfolio.js";
 import { renderResumeEditor } from "./views/resume.js";
 import { startGithub, syncPortfolioGithub } from "./github.js";
 import { renderProjectCards } from "./views/project-cards.js";
-import { setupMenu, renderMenuBar, currentTheme, applyTheme } from "./ui/menu.js";
+import { setupMenu, renderMenuBar, currentTheme, applyTheme, openDailyReport } from "./ui/menu.js";
 import { ICONS } from "./ui/icons.js";
 import { initials } from "./views/profile.js";
 import { renderMessages, startMessages } from "./views/messages.js";
@@ -123,11 +123,11 @@ function renderNav(active) {
     sc = $("#li-nav .li-nav-scroll");
     $("#li-nav").insertAdjacentHTML("beforeend", `<div class="li-nav-extra" id="li-nav-extra" aria-label="Menu"></div>`);
     // On computers the tabs are a sidebar: the name on top; Settings, the menu and Log out at the bottom.
-    $("#li-nav").insertAdjacentHTML("afterbegin", `<div class="li-side-logo"><span class="li-side-mark" aria-hidden="true"></span>Locked in</div>`);
-    $("#li-nav").insertAdjacentHTML("beforeend", `<div class="li-side-foot">
-      <a href="#/settings" class="li-nav-link li-side-link" data-side="settings">${ICONS.settings}<span class="li-nav-text">Settings</span></a>
-      <button type="button" class="li-nav-link li-side-link" data-side-logout${document.getElementById("logout-btn")?.hidden !== false ? " hidden" : ""}>${ICONS.logout}<span class="li-nav-text">Log out</span></button>
-    </div>`);
+    $("#li-nav").insertAdjacentHTML("afterbegin", `<div class="li-side-logo"><span class="li-side-mark" aria-hidden="true"></span>Locked In</div>`);
+    // Computers: Projects (Portfolio, Case studies, Resume, View apps) under the tabs;
+    // Profile, Daily report, Settings and Log out at the foot. Phones use the ☰ menu.
+    sc.insertAdjacentHTML("afterend", `<div class="li-side-group" id="li-side-projects"></div>`);
+    $("#li-nav").insertAdjacentHTML("beforeend", `<div class="li-side-foot" id="li-side-foot"></div>`);
     sc.addEventListener("scroll", () => navFades(sc), { passive: true });
     window.addEventListener("resize", () => navFades(sc));
   }
@@ -152,12 +152,55 @@ function renderNav(active) {
     if (on) { a.setAttribute("aria-current", "page"); current = a; } else a.removeAttribute("aria-current");
   });
   renderMenuBar($("#li-nav-extra"));
-  const lo = $("[data-side-logout]");
-  if (lo) lo.hidden = !document.getElementById("logout-btn") || document.getElementById("logout-btn").hidden;
+  renderSideLinks(active);
   if (current && (fresh || active !== navActive)) centerTab(sc, current, !fresh);
   navActive = active;
   navFades(sc);
 }
+// The sidebar's Projects group and foot (computers). Open / closed groups are remembered per device.
+const sideOpen = (k, dflt) => { try { const v = localStorage.getItem("li_side_" + k); return v == null ? dflt : v === "1"; } catch { return dflt; } };
+function renderSideLinks(active) {
+  const group = $("#li-side-projects"), foot = $("#li-side-foot");
+  if (!group || !foot) return;
+  const link = (href, view, icon, label, extra = "") => `<a href="#/${href}" class="li-nav-link li-side-link${active === view ? " active" : ""}"${active === view ? ' aria-current="page"' : ""} data-side="${view}"${extra}>${icon}<span class="li-nav-text">${label}</span></a>`;
+  const own = !state.isColleague;
+  const apps = state.isManager && state.projects !== undefined;
+  const cases = state.settings?.preferences?.portfolio?.site?.cases || [];
+  const projOpen = sideOpen("projects", true), casesOpen = sideOpen("cases", false);
+  const inProjects = ["portfolio", "resume", "projects"].includes(active);
+  group.hidden = !(own || apps);
+  group.innerHTML = `
+    <button type="button" class="li-nav-link li-side-link li-side-head${inProjects ? " has-active" : ""}" data-side-toggle="projects" aria-expanded="${projOpen}" aria-controls="li-side-projects-list">${ICONS.projects}<span class="li-nav-text">Projects</span>${ICONS.caret}</button>
+    <div class="li-side-sub" id="li-side-projects-list"${projOpen ? "" : " hidden"}>
+      ${own ? link("portfolio", "portfolio", ICONS.portfolio, "Portfolio") : ""}
+      ${own ? `<button type="button" class="li-nav-link li-side-link" data-side-toggle="cases" aria-expanded="${casesOpen}" aria-controls="li-side-cases">${ICONS.cases}<span class="li-nav-text">Case studies</span>${ICONS.caret}</button>
+        <div class="li-side-sub li-side-cases" id="li-side-cases"${casesOpen ? "" : " hidden"}>
+          ${cases.map((c) => `<button type="button" class="li-side-case" data-case-open="${esc(c.id)}">${esc(c.title || "Untitled case study")}</button>`).join("")}
+          <button type="button" class="li-side-case li-side-case--new" data-case-open="">+ New case study</button>
+        </div>` : ""}
+      ${own ? link("resume", "resume", ICONS.resume, "Resume") : ""}
+      ${apps ? link("projects", "projects", ICONS.apps, "View apps") : ""}
+    </div>`;
+  const loShown = !!document.getElementById("logout-btn") && !document.getElementById("logout-btn").hidden;
+  foot.innerHTML = `
+    ${link("profile", "profile", ICONS.profile, "Profile")}
+    <button type="button" class="li-nav-link li-side-link" data-side-report>${ICONS.report}<span class="li-nav-text">Daily report</span></button>
+    ${link("settings", "settings", ICONS.settings, "Settings")}
+    ${loShown ? `<button type="button" class="li-nav-link li-side-link" data-side-logout>${ICONS.logout}<span class="li-nav-text">Log out</span></button>` : ""}`;
+}
+document.addEventListener("click", (e) => {
+  const tg = e.target.closest("[data-side-toggle]");
+  if (tg) {
+    const k = tg.dataset.sideToggle, open = tg.getAttribute("aria-expanded") !== "true";
+    try { localStorage.setItem("li_side_" + k, open ? "1" : "0"); } catch { /* this visit only */ }
+    tg.setAttribute("aria-expanded", String(open));
+    document.getElementById(tg.getAttribute("aria-controls")).hidden = !open;
+  }
+  if (e.target.closest("[data-side-report]")) openDailyReport();
+  const cs = e.target.closest(".li-side-case[data-case-open]");
+  if (cs) import("./views/portfolio-site.js").then((m) => m.openCaseStudy(cs.dataset.caseOpen || null));
+});
+
 // The bar above every page: its title, the date, light / dark, and who is signed in.
 function renderTopbar(r) {
   let bar = $("#li-top");
