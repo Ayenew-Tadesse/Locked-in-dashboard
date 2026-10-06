@@ -111,7 +111,7 @@ export function cardScreens(c) {
 const placeholderScreen = (note) => `<span class="pf-screen-ph" aria-hidden="true"><i class="pf-screen-ph__head"></i><i></i><i></i><i class="pf-screen-ph__short"></i><b></b>${note ? `<em>${note}</em>` : ""}</span>`;
 const widePlaceholder = (note) => `<span class="pf-screen-ph--wide">${placeholderScreen(note)}</span>`;
 // One small phone on a card (status bar, then the screenshot or a placeholder).
-const miniPhone = (src, alt, attrs, note) => `<span class="pf-mini-phone"${attrs}><span class="pf-mini-phone__screen">
+export const miniPhone = (src, alt, attrs = "", note = "") => `<span class="pf-mini-phone"${attrs}><span class="pf-mini-phone__screen">
     <span class="pf-mini-phone__status" aria-hidden="true"><i>9:41</i><b></b><u></u></span>${src ? img(src, alt) : placeholderScreen(note)}</span></span>`;
 const SLOT_NAMES = { phone: ["front", "left", "right"], both: ["computer", "phone"] };
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
