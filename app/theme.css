@@ -234,3 +234,10 @@ html[data-theme="light"] .li-ov-card{box-shadow:var(--shadow);}
 @media (max-width:400px){ .li-table th:last-child{width:84px;} .li-table th:nth-last-child(2){width:66px;} .li-ov-card{padding:16px 14px;} }
 .li-pagebar{flex-wrap:wrap;}
 .li-pagebar-actions, .li-pf-modes{flex-wrap:wrap;min-width:0;max-width:100%;}
+/* Phones: the four stat cards stay 2 × 2. */
+@media (max-width:640px){
+  .li-kpis{gap:8px;}
+  .li-tile{min-height:0;padding:14px 14px !important;}
+  .li-tile-icon{top:12px;right:12px;}
+  .li-tile-value{font-size:22px !important;margin-top:6px;}
+}

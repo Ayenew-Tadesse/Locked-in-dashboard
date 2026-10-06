@@ -487,7 +487,8 @@ const legacyHooks = {
 function showMyName() {
   if (state.store?.mode !== "supabase") return;
   const name = displayName(state.profile);
-  const h1 = document.querySelector(".wrap > h1");
+  const h1 = document.querySelector(".li-welcome > h1, .wrap > h1");
+  if (!h1) return;
   if (name && h1.textContent !== name) h1.textContent = name;
 }
 

@@ -1150,7 +1150,7 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
       assert.ok(under(team, tasks), `Team under Tasks at ${width}px`);
       assert.ok(under(obj, team), `Objective under Team at ${width}px`);
     } else {
-      const order = ["#li-menu-btn", ".wrap > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#li-team-card", "#heat-card", "#li-projects", ".obj-section"];
+      const order = ["#li-menu-btn", ".li-welcome > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#li-team-card", "#heat-card", "#li-projects", ".obj-section"];
       const tops = [];
       for (const sel of order) tops.push((await box(sel)).y);
       assert.deepEqual(tops, [...tops].sort((a, b) => a - b), `phone order at ${width}px: ${order.join(" > ")}`);
@@ -1893,12 +1893,12 @@ test("signed in without a greeting: asked once, then greeted by title and name",
   const page = await dbPage({ signedIn: true });
   await page.waitForSelector("#li-modal", { state: "visible" });
   assert.match(await page.textContent("#li-modal-title"), /How should we greet you/);
-  assert.equal(await page.textContent(".wrap > h1"), "aye", "the heading shows their own name, not the original's");
+  assert.equal(await page.textContent(".li-welcome > h1"), "aye", "the heading shows their own name, not the original's");
   await page.fill('#li-modal input[name="name"]', "Ayenew Shiferaw");
   await page.selectOption('#li-modal select[name="greeting"]', "mr");
   await page.click('#li-modal button[type="submit"]');
   await page.waitForSelector("#li-modal", { state: "detached" });
-  assert.equal(await page.textContent(".wrap > h1"), "Mr. Ayenew Shiferaw");
+  assert.equal(await page.textContent(".li-welcome > h1"), "Mr. Ayenew Shiferaw");
   // The Team page lists them by name and title, not email.
   await page.evaluate(() => { location.hash = "#/team"; });
   await page.waitForSelector(".li-person");
@@ -1907,7 +1907,7 @@ test("signed in without a greeting: asked once, then greeted by title and name",
   await page.evaluate(() => { location.hash = "#/profile"; });
   await page.selectOption('#li-profile-form select[name="greeting"]', "none");
   await page.click('#li-profile-form button[type="submit"]');
-  await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
+  await page.waitForFunction(() => document.querySelector(".li-welcome > h1").textContent === "Ayenew Shiferaw");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -1915,7 +1915,7 @@ test("signed in without a greeting: asked once, then greeted by title and name",
 test("before the greeting migration is run, the site still loads (greetings just stay hidden)", async () => {
   const page = await dbPage({ signedIn: true, oldDb: true });
   await page.waitForSelector("#li-nav .li-nav-link");
-  assert.equal(await page.textContent(".wrap > h1"), "aye");
+  assert.equal(await page.textContent(".li-welcome > h1"), "aye");
   assert.equal(await page.locator("#li-modal").count(), 0, "no greeting prompt");
   await page.evaluate(() => { location.hash = "#/team"; });
   await page.waitForSelector(".li-person");
@@ -1925,7 +1925,7 @@ test("before the greeting migration is run, the site still loads (greetings just
   assert.equal(await page.locator('#li-profile-form select[name="greeting"]').count(), 0, "no greeting choice yet");
   await page.fill('#li-profile-form input[name="name"]', "Ayenew Shiferaw");
   await page.click('#li-profile-form button[type="submit"]');
-  await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
+  await page.waitForFunction(() => document.querySelector(".li-welcome > h1").textContent === "Ayenew Shiferaw");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -2175,7 +2175,7 @@ test("☰ menu pages open full screen; Back returns to the same spot on the main
   const back = await page.locator("#li-back").boundingBox();
   assert.ok(back.x < 40 && back.y < 60, "Back sits at the top left");
   assert.equal(await page.evaluate(() => window.scrollY), 0, "the page starts at the top");
-  for (const sel of [".wrap > h1", "#daily-quote", "#li-nav", "#li-menu-btn", ".dash-grid"]) assert.ok(await page.locator(sel).first().isHidden(), `${sel} hidden`);
+  for (const sel of [".li-welcome > h1", "#daily-quote", "#li-nav", "#li-menu-btn", ".dash-grid"]) assert.ok(await page.locator(sel).first().isHidden(), `${sel} hidden`);
   assert.equal(await page.textContent("#li-page-title"), "Projects");
   await page.click("#li-back");
   await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
