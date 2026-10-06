@@ -27,6 +27,7 @@ import { renderAnalytics } from "./views/analytics.js";
 import { renderSettings } from "./views/settings.js";
 import { renderProfile } from "./views/profile.js";
 import { renderProjects } from "./views/projects.js";
+import { renderApps } from "./views/apps.js";
 import { renderPortfolioPage } from "./views/portfolio.js";
 import { renderResumeEditor } from "./views/resume.js";
 import { startGithub, syncPortfolioGithub } from "./github.js";
@@ -55,6 +56,7 @@ const VIEWS = {
   settings: { label: "Settings", render: renderSettings },
   profile: { label: "Profile", render: renderProfile },
   projects: { label: "Projects", render: renderProjects },
+  apps: { label: "View apps", render: renderApps },
   messages: { label: "Messages", render: renderMessages },
   portfolio: { label: "Portfolio", render: renderPortfolioPage },
   resume: { label: "Resume", render: renderResumeEditor },
@@ -166,8 +168,9 @@ function renderSideLinks(active) {
   const own = !state.isColleague;
   const apps = state.isManager && state.projects !== undefined;
   const cases = state.settings?.preferences?.portfolio?.site?.cases || [];
-  const projOpen = sideOpen("projects", true), casesOpen = sideOpen("cases", false);
-  const inProjects = ["portfolio", "resume", "projects"].includes(active);
+  const projOpen = sideOpen("projects", true), casesOpen = sideOpen("cases", false), listOpen = sideOpen("plist", false);
+  const inProjects = ["portfolio", "resume", "projects", "apps"].includes(active);
+  const plist = Array.isArray(state.projects) ? state.projects : [];
   group.hidden = !(own || apps);
   group.innerHTML = `
     <button type="button" class="li-nav-link li-side-link li-side-head${inProjects ? " has-active" : ""}" data-side-toggle="projects" aria-expanded="${projOpen}" aria-controls="li-side-projects-list">${ICONS.projects}<span class="li-nav-text">Projects</span>${ICONS.caret}</button>
@@ -179,7 +182,12 @@ function renderSideLinks(active) {
           <button type="button" class="li-side-case li-side-case--new" data-case-open="">+ New case study</button>
         </div>` : ""}
       ${own ? link("resume", "resume", ICONS.resume, "Resume") : ""}
-      ${apps ? link("projects", "projects", ICONS.apps, "View apps") : ""}
+      ${apps ? link("apps", "apps", ICONS.apps, "View apps") : ""}
+      ${apps ? `<button type="button" class="li-nav-link li-side-link${active === "projects" ? " has-active" : ""}" data-side-toggle="plist" aria-expanded="${listOpen}" aria-controls="li-side-plist">${ICONS.list}<span class="li-nav-text">Projects</span>${ICONS.caret}</button>
+        <div class="li-side-sub li-side-cases" id="li-side-plist"${listOpen ? "" : " hidden"}>
+          <a href="#/projects" class="li-side-case${active === "projects" ? " active" : ""}" data-side-project="">All projects</a>
+          ${plist.map((p) => `<a href="#/projects" class="li-side-case" data-side-project="${esc(p.id)}">${esc(p.name || "Untitled project")}</a>`).join("")}
+        </div>` : ""}
     </div>`;
   const loShown = !!document.getElementById("logout-btn") && !document.getElementById("logout-btn").hidden;
   foot.innerHTML = `
@@ -199,6 +207,18 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("[data-side-report]")) openDailyReport();
   const cs = e.target.closest(".li-side-case[data-case-open]");
   if (cs) import("./views/portfolio-site.js").then((m) => m.openCaseStudy(cs.dataset.caseOpen || null));
+  // A project in the sidebar list: the Projects page, scrolled to it.
+  const sp = e.target.closest("[data-side-project]");
+  if (sp?.dataset.sideProject) {
+    const id = sp.dataset.sideProject;
+    setTimeout(() => {
+      const row = document.querySelector(`[data-project="${CSS.escape(id)}"]`);
+      if (!row) return;
+      row.scrollIntoView({ block: "center" });
+      row.classList.add("li-flash");
+      setTimeout(() => row.classList.remove("li-flash"), 1600);
+    }, 80);
+  }
 });
 
 // The bar above every page: its title, the date, light / dark, and who is signed in.
@@ -295,7 +315,7 @@ document.addEventListener("click", (e) => {
 
 // Pages from the ☰ menu open full screen (no greeting, quote or tabs) with
 // a Back button to the main page.
-const MENU_PAGES = new Set(["profile", "projects", "portfolio", "resume", "settings"]);
+const MENU_PAGES = new Set(["profile", "projects", "apps", "portfolio", "resume", "settings"]);
 let mainHash = "#/", mainScroll = 0, fromMain = false, restoreScroll = null;
 function syncPageMode(r) {
   const page = MENU_PAGES.has(r.name);

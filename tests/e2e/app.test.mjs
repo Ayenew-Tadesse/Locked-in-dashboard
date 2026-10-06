@@ -43,7 +43,7 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await page.goto(BASE + "?demo=1" + (hash ? "#/" + hash : ""));
   // Pages from the ☰ menu open full screen (no tab row).
-  await page.waitForSelector(/^(profile|projects|portfolio|resume|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
+  await page.waitForSelector(/^(profile|projects|apps|portfolio|resume|settings)\b/.test(hash) ? "#li-back" : "#li-nav .li-nav-link");
   page.errors = errors;
   return page;
 }
@@ -357,7 +357,7 @@ test("computers: everything in the sidebar (no ☰); tablets: the ☰ at the rig
   assert.equal(await page.locator("#li-nav .li-side-logo").innerText(), "Locked In");
   const vis = (sel) => page.locator(`#li-nav ${sel}`).evaluateAll((els) => els.filter((e) => e.offsetParent).map((e) => e.innerText.replace(/\s*\d+\+?$/, "").trim()));
   assert.deepEqual(await vis(".li-nav-scroll .li-nav-link"), ["Overview", "Today", "Calendar", "Milestones", "Analytics", "Team"]);
-  assert.deepEqual(await vis("#li-side-projects .li-nav-link"), ["Projects", "Portfolio", "Case studies", "Resume", "View apps"]);
+  assert.deepEqual(await vis("#li-side-projects .li-nav-link"), ["Projects", "Portfolio", "Case studies", "Resume", "View apps", "Projects"]);
   assert.deepEqual(await vis("#li-side-foot .li-nav-link"), ["Profile", "Daily report", "Settings", "Log out"]);
   // Projects folds away (remembered); Case studies opens its list.
   await page.click('[data-side-toggle="projects"]');
@@ -365,6 +365,13 @@ test("computers: everything in the sidebar (no ☰); tablets: the ☰ at the rig
   await page.click('[data-side-toggle="projects"]');
   await page.click('[data-side-toggle="cases"]');
   assert.ok(await page.locator("#li-side-cases .li-side-case--new").isVisible(), "+ New case study");
+  // The projects list: All projects, then each project; one opens the Projects page at its row.
+  await page.click('[data-side-toggle="plist"]');
+  assert.deepEqual(await page.locator("#li-side-plist .li-side-case").allInnerTexts(), ["All projects", "Guxo Flights", "Guxo", "Gexi"]);
+  await page.click('#li-side-plist [data-side-project]:has-text("Gexi")');
+  await page.waitForSelector('[data-project].li-flash');
+  assert.match(await page.locator('[data-project].li-flash').innerText(), /Gexi/);
+  await page.click('[data-side-toggle="plist"]');
   // A page from the sidebar keeps the sidebar, with that page highlighted.
   await page.click('#li-side-foot a[href="#/settings"]');
   await page.waitForSelector(".li-formula");
@@ -383,6 +390,45 @@ test("computers: everything in the sidebar (no ☰); tablets: the ☰ at the rig
   await page.setViewportSize({ width: 390, height: 800 });
   await page.waitForSelector("#li-menu-btn", { state: "visible" });
   assert.ok(await desk.isHidden(), "phones use the top-left ☰");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("View apps: each app on a phone with its name and description; Try the app on live ones", async () => {
+  const page = await open("apps", { width: 1280, height: 860 });
+  await page.waitForSelector(".li-apps");
+  assert.equal(await page.textContent("#li-page-title"), "View apps");
+  const apps = page.locator(".li-app");
+  assert.deepEqual(await apps.locator(".li-app-title").allInnerTexts(), ["Guxo Flights", "Guxo", "Gexi"]);
+  assert.equal(await apps.locator(".pf-mini-phone").count(), 3, "a phone for each");
+  assert.match(await apps.nth(0).locator(".li-app-desc").innerText(), /Flight booking/);
+  const box = await apps.nth(0).locator(".pf-mini-phone").boundingBox(), label = await apps.nth(0).locator(".li-app-label").boundingBox();
+  assert.ok(label.y >= box.y + box.height, "the name and description are under the phone");
+  assert.equal(await apps.nth(0).locator("a[data-try]").count(), 1, "a live app can be tried");
+  assert.equal(await apps.nth(2).locator("a[data-try]").count(), 0, "no live link, nothing to try");
+  await apps.nth(0).locator("a[data-try]").click();
+  await page.waitForSelector(".pf-phone-overlay");
+  await page.keyboard.press("Escape");
+  // The sidebar has it highlighted; phones get it from the ☰ too.
+  assert.equal(await page.locator('#li-side-projects [data-side="apps"]').getAttribute("aria-current"), "page");
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390, "fits a phone");
+  assert.equal(await (await menuItem(page, 'a[href="#/apps"]')).count(), 1);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+});
+
+test("light / dark switch: easy to see in both themes", async () => {
+  const page = await open("", { width: 1280, height: 800 });
+  const contrast = () => page.evaluate(() => {
+    const lum = (c) => { const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map((v) => { v = v / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const a = lum(getComputedStyle(document.querySelector(".li-switch")).backgroundColor), b = lum(getComputedStyle(document.body).backgroundColor);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  });
+  for (let i = 0; i < 2; i++) {
+    assert.ok(await contrast() >= 1.3, `the switch's track stands out from the page (${await page.evaluate(() => document.documentElement.dataset.theme)})`);
+    await page.click(".li-switch");
+  }
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -2006,7 +2052,7 @@ test("☰ menu: Profile, Daily report, Settings, Light / Dark mode (remembered) 
   assert.ok(box.x < 60, "the menu button is on the left");
   await btn.click();
   assert.ok(await page.locator("#li-menu").isVisible());
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
+  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "View apps", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
   // Light background: the row switches it and then offers Dark mode.
   await page.click('#li-menu .li-menu-link:has-text("Light mode")');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
