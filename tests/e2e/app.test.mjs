@@ -343,14 +343,16 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   await page.close();
 });
 
-test("tablets and computers: the ☰ sits at the right of the tab row and opens from the right; phones keep the ☰ on the left", async () => {
+test("computers: a sidebar with More (menu from the right); tablets: the ☰ at the right of the tab row; phones: the ☰ on the left", async () => {
   const page = await open("", { width: 1280, height: 800 });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "the top-left ☰ is hidden on a wide screen");
   const desk = page.locator("#li-menu-btn-desk");
-  const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), b = await desk.boundingBox();
-  assert.ok(Math.abs((tabs.y + tabs.height / 2) - (b.y + b.height / 2)) < 12 && b.x >= tabs.x + tabs.width - 1, "same line, on the right");
-  assert.ok(b.x + b.width > 1280 - 80, "at the right edge");
-  assert.equal(await page.locator("#li-nav-extra .li-nav-link").count(), 0, "no inline menu links");
+  // Computers: the tabs are a sidebar on the left; More (at its foot) opens the menu.
+  const side = await page.locator("#li-nav").boundingBox();
+  assert.ok(side.x < 40 && side.width < 300 && side.height > 600, "a sidebar on the left");
+  const more = await desk.boundingBox();
+  assert.ok(more.y > 450 && more.x < 280, "the ☰ is More, at the foot of the sidebar");
+  assert.equal(await desk.innerText(), "", "an icon with a More label (drawn by CSS)");
   await desk.click();
   assert.equal(await desk.getAttribute("aria-expanded"), "true");
   assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
@@ -1084,6 +1086,8 @@ test("tabs: switching keeps the tab row where it is (no jump); the browser tab s
       await page.waitForFunction((v) => document.querySelector(`#li-nav [data-view="${v}"]`).classList.contains("active"), v);
       assert.equal(await top(), start, `${v} at ${width}px: the tab row didn't move`);
     }
+    // Computers: the sidebar is fixed, so there's nothing to pin.
+    if (width >= 1100) { assert.deepEqual(page.errors, []); await page.close(); continue; }
     // Pinned to the top (scrolled down a long page): it stays pinned and the new page starts just under it.
     await tap("tasks");
     await page.evaluate(() => window.scrollTo(0, 2500));
@@ -1241,7 +1245,7 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.close();
 });
 
-test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings in the ☰ menu", async () => {
+test("Overview layout: welcome card with the quote, sidebar tabs, Tasks card, Settings in the ☰ menu", async () => {
   const requests = [];
   const page = await unlockedPage({ viewport: { width: 1280, height: 900 } });
   page.on("request", (r) => requests.push(r.url()));
@@ -1254,8 +1258,10 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
   const nav = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
-  const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
-  assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
+  // The greeting and quote are one welcome card; the tabs are a sidebar to its left.
+  assert.ok(await page.locator(".li-welcome #daily-quote").isVisible(), "the quote is in the welcome card");
+  const side = await page.locator("#li-nav").boundingBox(), welcome = await page.locator(".li-welcome").boundingBox();
+  assert.ok(side.x + side.width <= welcome.x, "the sidebar sits to the left of the welcome card");
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
   assert.ok(!(await page.locator("#week-card").isVisible()), "the Your score (rings) card is gone");
   assert.equal(await page.locator("#li-overview .card-label", { hasText: "Deadlines" }).count(), 0, "the Deadlines card is gone");

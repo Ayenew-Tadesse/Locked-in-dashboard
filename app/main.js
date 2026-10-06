@@ -31,7 +31,9 @@ import { renderPortfolioPage } from "./views/portfolio.js";
 import { renderResumeEditor } from "./views/resume.js";
 import { startGithub, syncPortfolioGithub } from "./github.js";
 import { renderProjectCards } from "./views/project-cards.js";
-import { setupMenu, renderMenuBar } from "./ui/menu.js";
+import { setupMenu, renderMenuBar, currentTheme, applyTheme } from "./ui/menu.js";
+import { ICONS } from "./ui/icons.js";
+import { initials } from "./views/profile.js";
 import { renderMessages, startMessages } from "./views/messages.js";
 import { setupChatDock, openChat, updateChatBadge } from "./ui/chat-dock.js";
 import { buildTeamDays } from "./core/teamdays.js";
@@ -117,9 +119,15 @@ function renderNav(active) {
   const fresh = !sc || sc.dataset.tabs !== tabs.join();
   if (fresh) {
     $("#li-nav").innerHTML = `<div class="li-nav-scroll" data-tabs="${tabs.join()}">${tabs.map((k) =>
-      `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link" data-view="${k}">${VIEWS[k].label}</a>`).join("")}</div>`;
+      `<a href="#/${k === "overview" ? "" : k}" class="li-nav-link" data-view="${k}">${ICONS[k] || ""}<span class="li-nav-text">${VIEWS[k].label}</span></a>`).join("")}</div>`;
     sc = $("#li-nav .li-nav-scroll");
     $("#li-nav").insertAdjacentHTML("beforeend", `<div class="li-nav-extra" id="li-nav-extra" aria-label="Menu"></div>`);
+    // On computers the tabs are a sidebar: the name on top; Settings, the menu and Log out at the bottom.
+    $("#li-nav").insertAdjacentHTML("afterbegin", `<div class="li-side-logo"><span class="li-side-mark" aria-hidden="true"></span>Locked in</div>`);
+    $("#li-nav").insertAdjacentHTML("beforeend", `<div class="li-side-foot">
+      <a href="#/settings" class="li-nav-link li-side-link" data-side="settings">${ICONS.settings}<span class="li-nav-text">Settings</span></a>
+      <button type="button" class="li-nav-link li-side-link" data-side-logout${document.getElementById("logout-btn")?.hidden !== false ? " hidden" : ""}>${ICONS.logout}<span class="li-nav-text">Log out</span></button>
+    </div>`);
     sc.addEventListener("scroll", () => navFades(sc), { passive: true });
     window.addEventListener("resize", () => navFades(sc));
   }
@@ -144,10 +152,58 @@ function renderNav(active) {
     if (on) { a.setAttribute("aria-current", "page"); current = a; } else a.removeAttribute("aria-current");
   });
   renderMenuBar($("#li-nav-extra"));
+  const lo = $("[data-side-logout]");
+  if (lo) lo.hidden = !document.getElementById("logout-btn") || document.getElementById("logout-btn").hidden;
   if (current && (fresh || active !== navActive)) centerTab(sc, current, !fresh);
   navActive = active;
   navFades(sc);
 }
+// The bar above every page: its title, the date, light / dark, and who is signed in.
+function renderTopbar(r) {
+  let bar = $("#li-top");
+  if (!bar) {
+    bar = document.createElement("header");
+    bar.id = "li-top";
+    bar.className = "li-top";
+    document.querySelector(".wrap").prepend(bar);
+    bar.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-top-theme]");
+      if (t) { applyTheme(currentTheme() === "dark" ? "light" : "dark"); renderTopbar(route()); }
+    });
+  }
+  const p = state.profile || {};
+  const name = displayName(p) || (state.store?.mode === "demo" ? "Preview" : "You");
+  const theme = currentTheme();
+  const title = r.name === "overview" ? "Overview" : VIEWS[r.name]?.label || "";
+  let inner = bar.querySelector(".li-top-inner");
+  if (!inner) { inner = document.createElement("div"); inner.className = "li-top-inner"; bar.append(inner); }
+  inner.innerHTML = `
+    <h2 class="li-top-title">${esc(title)}</h2>
+    <span class="li-top-date">${ICONS.date}<span>${esc(formatDay(state.today, { weekday: "short", month: "short", day: "numeric", year: "numeric" }))}</span></span>
+    <span class="li-top-gap"></span>
+    <button type="button" class="li-switch" data-top-theme role="switch" aria-checked="${theme === "dark"}" aria-label="Dark mode"><span class="li-switch-knob"></span></button>
+    <span class="li-top-who">
+      <span class="li-avatar li-top-avatar" aria-hidden="true">${esc(initials(p.name || name))}</span>
+      <span class="li-top-name"><b>${esc(name)}</b><small>${esc(p.email || (state.store?.mode === "demo" ? "Preview" : ""))}</small></span>
+    </span>`;
+  // The phone's ☰ (from the menu) moves into the bar, at its left.
+  const menuBtn = document.getElementById("li-menu-btn");
+  if (menuBtn && menuBtn.parentElement !== bar) bar.prepend(menuBtn);
+}
+
+// The greeting, journey line and quote become one welcome card (on the Overview).
+function setupWelcome() {
+  if (document.querySelector(".li-welcome")) return;
+  const wrap = document.querySelector(".wrap");
+  const card = document.createElement("section");
+  card.className = "li-welcome";
+  card.setAttribute("aria-label", "Welcome");
+  const parts = [".page-top", ".wrap > h1", "#greet-journey", "#greet-line", "#daily-quote"].map((q) => document.querySelector(q)).filter(Boolean);
+  if (!parts.length) return;
+  wrap.insertBefore(card, parts[0]);
+  parts.forEach((el) => card.append(el));
+}
+
 function centerTab(sc, tab, smooth) {
   // While the page is still hidden (loading) the row has no width: retry once it shows.
   if (!sc.clientWidth) { requestAnimationFrame(() => { if (sc.clientWidth) { centerTab(sc, tab, false); navFades(sc); } }); return; }
@@ -178,6 +234,7 @@ function renderWarnings(active) {
     <button type="button" class="li-icon-btn" data-dismiss="${esc(w.id)}" aria-label="Dismiss">&#10005;</button></div>`).join("");
 }
 document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-side-logout]")) document.getElementById("logout-btn")?.click();
   const d = e.target.closest("[data-dismiss]");
   if (d) {
     const gone = dismissed();
@@ -236,6 +293,8 @@ function render() {
   showMyName();
   const r = route();
   syncPageMode(r);
+  setupWelcome();
+  renderTopbar(r);
   renderNav(r.name);
   renderWarnings(r.name);
   const overview = r.name === "overview";

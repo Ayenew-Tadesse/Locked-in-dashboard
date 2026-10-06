@@ -33,7 +33,7 @@ const map = `<script type="importmap" id="li-versions">${JSON.stringify({ import
 // Each page: its stylesheets, config.js, its entry module, and the import map
 // (placed right after its first stylesheet, before any module script).
 const PAGES = [
-  { file: "index.html", css: ["app/app.css", "app/portfolio.css"], main: "app/main.js" },
+  { file: "index.html", css: ["app/app.css", "app/portfolio.css", "app/theme.css"], main: "app/main.js" },
   { file: "portfolio.html", css: ["app/portfolio.css"], main: "app/portfolio-page.js" },
 ];
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
