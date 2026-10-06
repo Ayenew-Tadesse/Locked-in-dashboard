@@ -526,7 +526,11 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   for (const id of ["#pf-activity", "#pf-projects", "#pf-milestones"]) assert.equal(await preview.locator(id).count(), 1, `${id} in the preview`);
   assert.equal(await preview.locator("#pf-work").count(), 0, "no empty How I work section while there's nothing to say");
   assert.ok(!/\(sample\)/.test(await preview.innerText()), "nothing about colleagues");
-  // Create a link: shown once, with the page address and the secret after #.
+  // It opens on the view: no editor, no links on the page; Edit page and Share link on top.
+  assert.equal(await page.locator("#li-pf-form, #li-pf-list").count(), 0, "just what hiring managers see");
+  assert.match(await page.locator("#li-pagebar-actions").innerText(), /Edit page[\s\S]*Share link[\s\S]*Preview on web/);
+  // Create a link (in the Share link window): shown once, with the page address and the secret after #.
+  await pfShare(page);
   await page.waitForSelector("#li-pf-list .li-empty");
   await page.fill("#li-pf-new [name=name]", "Acme Corp");
   await page.click("#li-pf-new button[type=submit]");
@@ -535,6 +539,8 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.click("#li-modal [data-close]:has-text('Done')");
   const row = page.locator("#li-pf-list li", { hasText: "Acme Corp" });
   assert.match(await row.innerText(), /0 views · expires/);
+  await pfShareClose(page);
+  await pfEdit(page);
   // One "Edit portfolio" card: no duplicate or unused fields.
   for (const gone of ["d_title", "d_years", "headline", "bio", "d_tools", "d_skills", "d_ind[]", "d_collaboration", "d_different", "link_email"])
     assert.equal(await page.locator(`#li-pf-form [name="${gone}"]`).count(), 0, `${gone} is gone`);
@@ -568,7 +574,9 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.evaluate(() => { location.hash = "#/settings"; });
   await page.waitForSelector(".li-formula");
   await page.evaluate(() => { location.hash = "#/portfolio"; });
-  await page.waitForSelector("#li-pf-form");
+  await page.waitForSelector("#li-pf-edit");
+  assert.equal(await page.locator("#li-pf-form").count(), 0, "back on the view");
+  await pfEdit(page);
   assert.equal(await page.inputValue('#li-pf-exp .li-pf-exp-row [data-k=role]'), "Lead designer");
   assert.equal(await page.inputValue("#li-pf-form [name=stat_num_0]"), "5+");
   assert.equal(await page.inputValue("#li-pf-form [name=roles]"), "Lead UX Designer");
@@ -580,6 +588,7 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.waitForTimeout(400); // nothing stale redraws it afterwards
   assert.equal(await page.locator("#li-pf-preview .pf-s-stats").count(), 0);
   // Switch the link off.
+  await pfShare(page);
   await row.locator("[data-revoke-link]").click();
   await page.click("#li-modal button[type=submit]");
   await page.waitForFunction(() => /Switched off/.test(document.querySelector("#li-pf-list").textContent));
@@ -587,10 +596,15 @@ test("portfolio (owner): share links, what's on it, and a live preview", async (
   await page.close();
 });
 
-test("portfolio: Edit and Preview on web (demo): opens a new tab that follows your saves", async () => {
+test("portfolio: Edit page, Done, and Preview on web (demo): opens a new tab that follows your saves", async () => {
   const page = await open("portfolio", { width: 1280, height: 900 });
   const bar = page.locator("#li-pagebar-actions");
-  assert.equal(await bar.locator("#li-pf-edit").getAttribute("aria-current"), "page", "Edit is where you are");
+  await page.waitForSelector("#li-pf-preview .pf-hero, #li-pf-preview .pf-s-hero");
+  assert.equal(await page.locator("#li-pf-form").count(), 0, "opens on the view");
+  assert.equal(await bar.locator("#li-pf-done, #li-pf-save").count(), 0, "no Done or Save until you edit");
+  await pfEdit(page);
+  assert.equal(await bar.locator("#li-pf-edit").count(), 0);
+  assert.match(await bar.innerText(), /Done[\s\S]*Save[\s\S]*Share link[\s\S]*Preview on web/);
   const [tab] = await Promise.all([page.context().waitForEvent("page"), bar.locator("#li-pf-web").click()]);
   await tab.waitForURL(/portfolio\.html\?demo=1&live=1/);
   await tab.waitForSelector(".pf-hero h1, .pf-s-hero h1");
@@ -603,6 +617,16 @@ test("portfolio: Edit and Preview on web (demo): opens a new tab that follows yo
   await tab.waitForURL(/portfolio\.html\?demo=1&live=1/);
   await page.waitForTimeout(300);
   assert.equal(page.context().pages().length, 2, "no second preview tab");
+  // Done with unsaved typing: it's saved, and you're back on the view showing it.
+  await page.fill("#li-pf-form [name=description]", "Designer of calm, quick booking flows");
+  await bar.locator("#li-pf-done").click();
+  await page.waitForSelector("#li-pf-edit");
+  assert.equal(await page.locator("#li-pf-form").count(), 0, "back on the view");
+  assert.match(await page.locator("#li-pf-preview").innerText(), /Designer of calm, quick booking flows/);
+  // Share link opens a window; Escape closes it.
+  await pfShare(page);
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("#li-pf-share-dlg", { state: "detached" });
   // Leaving the page removes the buttons from the top bar.
   await page.evaluate(() => { location.hash = "#/settings"; });
   await page.waitForSelector(".li-formula");
@@ -622,7 +646,7 @@ test("portfolio: Preview on web (database) uses your own private link, reused an
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.waitForSelector("#li-nav .li-nav-link");
   await page.evaluate(() => { location.hash = "#/portfolio"; });
-  await page.waitForSelector("#li-pf-list .li-empty");
+  await page.waitForSelector("#li-pf-edit");
   const [tab] = await Promise.all([page.context().waitForEvent("page"), page.click("#li-pf-web")]);
   await tab.waitForURL(/portfolio\.html\?preview=\d+#t=lip_/);
   await tab.waitForFunction(() => /Version 1/.test(document.body?.textContent || ""));
@@ -632,7 +656,11 @@ test("portfolio: Preview on web (database) uses your own private link, reused an
   assert.ok(new Date(links[0].expires_at) - Date.now() <= 3600000 && new Date(links[0].expires_at) - Date.now() > 3500000, "lasts an hour");
   const token = new URLSearchParams(new URL(tab.url()).hash.slice(1)).get("t");
   assert.deepEqual(await tab.evaluate(() => window.__rpc.filter((c) => c[0] === "portfolio_view").map((c) => c[1])), [{ p_token: token }]);
+  await pfShare(page);
+  await page.waitForSelector("#li-pf-list .li-empty");
   assert.match(await page.locator("#li-pf-list").innerText(), /No links yet/, "your preview link isn't in the list");
+  await pfShareClose(page);
+  await pfEdit(page);
   // Save: the open tab asks for the latest version.
   await page.fill("#li-pf-form [name=description]", "New intro");
   await page.click("#li-pf-save");
@@ -1591,8 +1619,13 @@ async function seedPortfolio(page) {
   }, PORTFOLIO_SITE);
   await page.waitForSelector("#li-nav .li-nav-link");
   await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await pfEdit(page);
   await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
 }
+// The portfolio opens on what hiring managers see; Edit page shows the editor, Share link the links.
+async function pfEdit(page) { await page.click("#li-pf-edit"); await page.waitForSelector("#li-pf-form"); }
+async function pfShare(page) { await page.click("#li-pf-share"); await page.waitForSelector("#li-pf-share-dlg #li-pf-list"); }
+async function pfShareClose(page) { await page.click("#li-pf-share-dlg [data-share-close]"); await page.waitForSelector("#li-pf-share-dlg", { state: "detached" }); }
 const openAllSections = (page) => page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
 
 async function dbPage({ signedIn, oldDb, role, slow, assigned, perms, history }) {
@@ -1630,7 +1663,7 @@ test("admins: their resume and portfolio start blank, with the owner's structure
   assert.doesNotMatch(await page.locator("#li-cv-preview").innerText(), owner, "nor in the preview");
   // Portfolio: the same sections, nothing of the owner's.
   await page.evaluate(() => { location.hash = "#/portfolio"; });
-  await page.waitForSelector("#li-pf-form");
+  await pfEdit(page);
   await page.evaluate(() => document.querySelectorAll(".li-pf-sec").forEach((d) => { d.open = true; }));
   const pfText = await page.locator("#li-pf-editor").evaluate((e) => e.innerText + [...e.querySelectorAll("input, textarea")].map((i) => i.value + " " + i.placeholder).join(" "));
   assert.doesNotMatch(pfText, owner, "no owner details in the portfolio editor (values or hints)");
@@ -2737,6 +2770,7 @@ test("menu: Case studies dropdown opens each one to view (Preview) and edit; sav
   assert.ok(after.some((t) => /Menu-made case study/.test(t)));
   await page.keyboard.press("Escape");
   await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await pfEdit(page);
   await page.waitForFunction(() => [...document.querySelectorAll("#li-pf-cases [data-case-card]")].some((c) => /Menu-made case study/.test(c.textContent)));
   assert.deepEqual(page.errors, []);
   await page.close();
@@ -2980,6 +3014,7 @@ test("projects: one order for the Projects page, case studies and portfolio (bot
 
   // The other way: drag its case study to the front on the Portfolio page; the projects follow.
   await page.evaluate(() => { location.hash = "#/portfolio"; });
+  await pfEdit(page);
   await page.waitForSelector("#li-pf-cases [data-case-card]", { state: "attached" });
   await openAllSections(page);
   await page.locator("#li-pf-cases").scrollIntoViewIfNeeded();

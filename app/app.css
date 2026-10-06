@@ -709,6 +709,8 @@ html:not(.app-mode) .li-team-card{display:none;}
 /* Portfolio (owner): share links and the live preview. */
 .li-pf-new select{flex:none;}
 .li-pf-links li.off{opacity:.55;}
+#li-pf-share-dlg #li-pf-list{margin-top:12px;}
+#li-pf-share-dlg .li-modal{max-width:560px;}
 .li-pf-preview{border:1px solid var(--line);border-radius:12px;padding:20px 16px;background:var(--bg);}
 @media (max-width:560px){ .li-pf-preview{padding:14px 10px;margin:0 -6px;} }
 @media (max-width:640px){ .li-pf-new{flex-wrap:wrap;} .li-pf-new input{flex:1 1 100%;} }

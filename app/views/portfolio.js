@@ -1,5 +1,7 @@
-// Portfolio (owner): what hiring managers see, your share links, and a live
-// preview. The page they open is portfolio.html#t=<link secret>.
+// Portfolio (owner): it opens on what hiring managers see, with Edit page,
+// Share link and Preview on web at the top. Edit page shows the editor (with
+// the live preview under it); Done goes back to the view. Share link opens
+// your share links in a window. The page they open is portfolio.html#t=<link secret>.
 import { state, toast } from "../state.js";
 import { esc, openModal, confirmDialog } from "../ui/dom.js";
 import { formatDay, dayOf } from "../core/dates.js";
@@ -13,6 +15,13 @@ import { countStats } from "../portfolio/count.js";
 import { setupRails } from "../portfolio/rail.js";
 
 let previewView = null; // the case study open in the preview
+// "view" (what hiring managers see) or "edit". Opening the page from elsewhere starts on the view.
+let pfMode = "view";
+let doneAfterSave = false;
+window.addEventListener("hashchange", (e) => {
+  if (location.hash.startsWith("#/portfolio") && !/#\/portfolio/.test(e.oldURL || "")) pfMode = "view";
+  if (!location.hash.startsWith("#/portfolio")) closeShareLinks();
+});
 
 let links; // undefined: not loaded yet; null: the table isn't set up yet
 
@@ -99,24 +108,15 @@ export function renderPortfolioPage(el) {
   if (state.isColleague) { el.innerHTML = `<p class="li-empty">The portfolio is for the team owner.</p>`; return; }
   previewChannel();
   draft = null;
+  const editing = pfMode === "edit";
   el.innerHTML = `
-    ${editorHtml()}
-
-    <section class="li-card" id="li-pf-links">
-      <div class="li-card-head"><span class="card-label">Share links</span></div>
-      <p class="li-sub">One link per company you apply to: each shows your latest saved portfolio, counts its views, and can be switched off on its own.</p>
-      <form class="li-quick-add today-add li-pf-new" id="li-pf-new" autocomplete="off">
-        <input name="name" maxlength="80" required placeholder="Who it's for, e.g. Acme Corp – October" aria-label="Link name">
-        <select name="expires" aria-label="Link expires"><option value="">Never expires</option><option value="30">Expires in 30 days</option><option value="90" selected>Expires in 90 days</option></select>
-        <button type="submit" class="li-btn primary">Create link</button>
-      </form>
-      <div id="li-pf-list">${linksHtml()}</div>
-    </section>
-
+    <div class="li-pf-page" data-mode="${pfMode}">
+    ${editing ? editorHtml() : ""}
     <section class="li-card li-pf-preview-card">
-      <div class="li-card-head"><span class="card-label">Preview: what hiring managers see</span></div>
+      <div class="li-card-head"><span class="card-label">${editing ? "Preview: what hiring managers see" : "What hiring managers see"}</span></div>
       <div class="li-pf-preview" id="li-pf-preview">${renderPortfolio(previewData(), { view: previewView })}</div>
-    </section>`;
+    </section>
+    </div>`;
 
   const drawPreview = () => {
     el.querySelector("#li-pf-preview").innerHTML = renderPortfolio(previewData(), { view: previewView });
@@ -138,10 +138,11 @@ export function renderPortfolioPage(el) {
     el.querySelector(".li-pf-preview-card").scrollIntoView({ block: "start" });
   });
 
-  // The top bar: Edit (you're here), Save, Preview on web.
+  // The top bar: Edit page / Done (and Save while editing), Share link, Preview on web.
   const bar = document.getElementById("li-pagebar-actions");
-  const editor = wireEditor(el, {
-    saved() { drawPreview(); announceSaved(); },
+  const toView = () => { pfMode = "view"; doneAfterSave = false; renderPortfolioPage(el); window.scrollTo(0, 0); };
+  const editor = !editing ? null : wireEditor(el, {
+    saved() { drawPreview(); announceSaved(); if (doneAfterSave) toView(); },
     rerender() { renderPortfolioPage(el); announceSaved(); },
     draft(p) { draft = p; drawPreview(); },
     reload() { renderPortfolioPage(el); },
@@ -155,20 +156,72 @@ export function renderPortfolioPage(el) {
   });
   if (bar) {
     bar.innerHTML = `<div class="li-pf-modes" role="group" aria-label="Portfolio">
-      <button type="button" class="li-btn small on" id="li-pf-edit" aria-current="page"><span class="li-ico" aria-hidden="true">&#9998;</span> Edit</button>
-      <button type="button" class="li-btn small" id="li-pf-save">Save</button>
+      ${editing
+        ? `<button type="button" class="li-btn small primary" id="li-pf-done"><span class="li-ico" aria-hidden="true">&#10003;</span> Done</button>
+           <button type="button" class="li-btn small" id="li-pf-save">Save</button>`
+        : `<button type="button" class="li-btn small primary" id="li-pf-edit"><span class="li-ico" aria-hidden="true">&#9998;</span> Edit page</button>`}
+      <button type="button" class="li-btn small" id="li-pf-share" aria-haspopup="dialog"><span class="li-ico" aria-hidden="true">&#128279;</span> Share link</button>
       <button type="button" class="li-btn small" id="li-pf-web" title="Open your portfolio in a new tab, as a hiring manager sees it. It updates when you save."><span class="li-ico" aria-hidden="true">&#8599;</span> Preview on web</button>
     </div>`;
-    bar.querySelector("#li-pf-edit").addEventListener("click", () => el.querySelector("#li-pf-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-    bar.querySelector("#li-pf-save").addEventListener("click", () => editor.save());
+    bar.querySelector("#li-pf-edit")?.addEventListener("click", () => { pfMode = "edit"; renderPortfolioPage(el); window.scrollTo(0, 0); });
+    bar.querySelector("#li-pf-done")?.addEventListener("click", () => {
+      // Unsaved changes are saved first; the view then shows them.
+      if (editor?.isDirty()) { doneAfterSave = true; editor.save(); } else toView();
+    });
+    bar.querySelector("#li-pf-save")?.addEventListener("click", () => editor.save());
+    bar.querySelector("#li-pf-share").addEventListener("click", () => openShareLinks());
     bar.querySelector("#li-pf-web").addEventListener("click", () => openWebPreview());
   }
 
+  if (links === undefined) {
+    state.store.listPortfolioLinks().then((l) => { links = l; drawLinks(); }, () => { links = []; drawLinks(); });
+  }
+}
+
+// Share links, in a window: one per company, each counting its views and switched off on its own.
+let shareDlg, shareFocus;
+function closeShareLinks() {
+  if (!shareDlg) return;
+  shareDlg.remove();
+  shareDlg = null;
+  document.documentElement.classList.remove("li-modal-open");
+  shareFocus?.focus?.();
+}
+export function openShareLinks() {
+  closeShareLinks();
+  shareFocus = document.activeElement;
+  shareDlg = document.createElement("div");
+  shareDlg.className = "modal-backdrop li-modal-backdrop";
+  shareDlg.id = "li-pf-share-dlg";
+  shareDlg.innerHTML = `
+    <div class="modal li-modal" role="dialog" aria-modal="true" aria-labelledby="li-pf-share-title" id="li-pf-links">
+      <div class="modal-head">
+        <div><h2 class="modal-title" id="li-pf-share-title">Share links</h2></div>
+        <button class="modal-close" type="button" data-share-close aria-label="Close">&#10005;</button>
+      </div>
+      <p class="li-sub">One link per company you apply to: each shows your latest saved portfolio, counts its views, and can be switched off on its own.</p>
+      <form class="li-quick-add today-add li-pf-new" id="li-pf-new" autocomplete="off">
+        <input name="name" maxlength="80" required placeholder="Who it's for, e.g. Acme Corp – October" aria-label="Link name">
+        <select name="expires" aria-label="Link expires"><option value="">Never expires</option><option value="30">Expires in 30 days</option><option value="90" selected>Expires in 90 days</option></select>
+        <button type="submit" class="li-btn primary">Create link</button>
+      </form>
+      <div id="li-pf-list">${linksHtml()}</div>
+    </div>`;
+  document.body.appendChild(shareDlg);
+  document.documentElement.classList.add("li-modal-open");
+  shareDlg.querySelector("[name=name]").focus();
+  shareDlg.addEventListener("click", (e) => { if (e.target === shareDlg || e.target.closest("[data-share-close]")) closeShareLinks(); });
+  shareDlg.addEventListener("keydown", (e) => { if (e.key === "Escape") closeShareLinks(); });
+  wireShareLinks(shareDlg);
+  if (links === undefined) state.store.listPortfolioLinks().then((l) => { links = l; drawLinks(); }, () => { links = []; drawLinks(); });
+}
+
+function wireShareLinks(el) {
   el.querySelector("#li-pf-new").addEventListener("submit", async (e) => {
     e.preventDefault();
     // Check again: the SQL may have been run since this page was opened.
     if (links === null) links = await state.store.listPortfolioLinks().catch(() => null);
-    if (links === null) { toast("Run the portfolio SQL update in Supabase first (20261005000000_portfolio.sql)", "error"); drawLinks(el); return; }
+    if (links === null) { toast("Run the portfolio SQL update in Supabase first (20261005000000_portfolio.sql)", "error"); drawLinks(); return; }
     const f = e.target.elements, name = f.name.value.trim();
     if (!name) return;
     const days = Number(f.expires.value);
@@ -176,7 +229,7 @@ export function renderPortfolioPage(el) {
       const { token, row } = await state.store.createPortfolioLink({ name, expires_at: days ? new Date(Date.now() + days * 86400000).toISOString() : null });
       links = [row, ...(links || [])];
       e.target.reset();
-      drawLinks(el);
+      drawLinks();
       showLink(name, portfolioUrl(token));
     } catch (err) { toast("Couldn't create the link: " + err.message, "error"); }
   });
@@ -185,16 +238,12 @@ export function renderPortfolioPage(el) {
     if (!b) return;
     const l = links.find((x) => x.id === b.dataset.revokeLink);
     if (!(await confirmDialog(`Switch off the link "${l.name}"? Anyone using it will no longer see your portfolio.`, "Switch off"))) return;
-    try { await state.store.revokePortfolioLink(l.id); l.revoked_at = new Date().toISOString(); drawLinks(el); toast("Link switched off"); }
+    try { await state.store.revokePortfolioLink(l.id); l.revoked_at = new Date().toISOString(); drawLinks(); toast("Link switched off"); }
     catch (err) { toast("Couldn't switch it off: " + err.message, "error"); }
   });
-
-  if (links === undefined) {
-    state.store.listPortfolioLinks().then((l) => { links = l; drawLinks(el); }, () => { links = []; drawLinks(el); });
-  }
 }
 
-function drawLinks(el) { const box = el.querySelector("#li-pf-list"); if (box) box.innerHTML = linksHtml(); }
+function drawLinks() { const box = document.getElementById("li-pf-list"); if (box) box.innerHTML = linksHtml(); }
 
 function linksHtml() {
   if (links === undefined) return `<p class="li-sub">Loading links…</p>`;
