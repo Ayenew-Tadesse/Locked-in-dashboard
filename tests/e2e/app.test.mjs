@@ -50,7 +50,11 @@ async function open(hash = "", viewport = { width: 1280, height: 900 }) {
 const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
 // A ☰ item: the ☰ is top left on phones and tablets, at the right of the tab row on laptops and desktops.
 async function menuItem(page, sel) {
-  await page.click((await page.locator("#li-menu-btn").isVisible()) ? "#li-menu-btn" : "#li-menu-btn-desk");
+  const btn = (await page.locator("#li-menu-btn").isVisible()) ? "#li-menu-btn" : (await page.locator("#li-menu-btn-desk").isVisible()) ? "#li-menu-btn-desk" : null;
+  if (btn) await page.click(btn);
+  // Computers: the sidebar has these links; the same menu still opens when asked.
+  else await page.evaluate(async () => (await import(new URL("app/ui/menu.js", location.href).href)).openMenu());
+  await page.waitForSelector("#li-menu:not([hidden])");
   return page.locator(`#li-menu ${sel}`);
 }
 // On weekdays the demo's two sample colleagues each have a task in progress today.
@@ -132,7 +136,7 @@ test("complete, reopen and change status; scores and the original checklist upda
 });
 
 test("a task with a past deadline becomes overdue automatically, and can be moved to today", async () => {
-  const page = await open("today");
+  const page = await open("today", { width: 820, height: 900 }); // the Tasks tab (computers reach Tasks from the Overview)
   await page.click(".li-view-head [data-new-task]");
   await page.locator("#li-modal [name=title]").fill("E2E: late thing");
   await page.locator("#li-modal [name=date]").fill(shift(today(), -3));
@@ -232,8 +236,8 @@ test("quarter view: switch quarters, add a goal with progress", async () => {
   await page.close();
 });
 
-test("Tasks: a tab on the main page; every task, no filters", async () => {
-  const page = await open("");
+test("Tasks: a tab on phones and tablets; every task, no filters", async () => {
+  const page = await open("", { width: 820, height: 900 });
   const tabs = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(tabs.slice(0, 4).map((t) => t.trim()), ["Overview", "Today", "Tasks", "Calendar"]);
   await page.click('#li-nav [data-view=tasks]');
@@ -325,7 +329,7 @@ test("assign one task to several people; the owner keeps, edits, extends, revoke
 });
 
 test("a dot on Tasks counts your unfinished tasks (red when some are overdue); the Team card shows each person's", async () => {
-  const page = await open("");
+  const page = await open("", { width: 820, height: 900 });
   const dot = page.locator("#li-nav [data-view=tasks] .li-nav-dot");
   const unfinished = Number(await dot.innerText());
   assert.ok(unfinished > 0 && await dot.isVisible());
@@ -343,27 +347,35 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   await page.close();
 });
 
-test("computers: a sidebar with More (menu from the right); tablets: the ☰ at the right of the tab row; phones: the ☰ on the left", async () => {
+test("computers: everything in the sidebar (no ☰); tablets: the ☰ at the right of the tab row; phones: the ☰ on the left", async () => {
   const page = await open("", { width: 1280, height: 800 });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "the top-left ☰ is hidden on a wide screen");
   const desk = page.locator("#li-menu-btn-desk");
-  // Computers: the tabs are a sidebar on the left; More (at its foot) opens the menu.
+  assert.ok(await desk.isHidden(), "no ☰ on a computer: its links are in the sidebar");
   const side = await page.locator("#li-nav").boundingBox();
   assert.ok(side.x < 40 && side.width < 300 && side.height > 600, "a sidebar on the left");
-  const more = await desk.boundingBox();
-  assert.ok(more.y > 450 && more.x < 280, "the ☰ is More, at the foot of the sidebar");
-  assert.equal(await desk.innerText(), "", "an icon with a More label (drawn by CSS)");
-  await desk.click();
-  assert.equal(await desk.getAttribute("aria-expanded"), "true");
-  assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
-  const panel = await page.locator("#li-menu .li-menu").boundingBox();
-  assert.ok(panel.x + panel.width >= 1279 && panel.x > 640, "slides in on the right");
-  await page.click('#li-menu a[href="#/settings"]');
+  assert.equal(await page.locator("#li-nav .li-side-logo").innerText(), "Locked In");
+  const vis = (sel) => page.locator(`#li-nav ${sel}`).evaluateAll((els) => els.filter((e) => e.offsetParent).map((e) => e.innerText.replace(/\s*\d+\+?$/, "").trim()));
+  assert.deepEqual(await vis(".li-nav-scroll .li-nav-link"), ["Overview", "Today", "Calendar", "Milestones", "Analytics", "Team"]);
+  assert.deepEqual(await vis("#li-side-projects .li-nav-link"), ["Projects", "Portfolio", "Case studies", "Resume", "View apps"]);
+  assert.deepEqual(await vis("#li-side-foot .li-nav-link"), ["Profile", "Daily report", "Settings", "Log out"]);
+  // Projects folds away (remembered); Case studies opens its list.
+  await page.click('[data-side-toggle="projects"]');
+  assert.ok(await page.locator("#li-side-projects-list").isHidden());
+  await page.click('[data-side-toggle="projects"]');
+  await page.click('[data-side-toggle="cases"]');
+  assert.ok(await page.locator("#li-side-cases .li-side-case--new").isVisible(), "+ New case study");
+  // A page from the sidebar keeps the sidebar, with that page highlighted.
+  await page.click('#li-side-foot a[href="#/settings"]');
   await page.waitForSelector(".li-formula");
-  assert.ok(await page.locator("#li-menu").isHidden(), "closes after choosing");
+  assert.ok(await page.locator("#li-nav").isVisible(), "the sidebar stays on Settings");
+  assert.equal(await page.locator('#li-side-foot [data-side="settings"]').getAttribute("aria-current"), "page");
+  await page.click('#li-side-projects a[href="#/portfolio"]');
+  await page.waitForSelector("#li-back");
+  assert.ok(await page.locator("#li-nav").isVisible(), "and on Portfolio");
   // Tablets (and phones in desktop view) too.
   await page.setViewportSize({ width: 820, height: 800 });
-  await page.click("#li-back");
+  await page.evaluate(() => { location.hash = "#/"; });
   await page.waitForSelector("#li-menu-btn-desk", { state: "visible" });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "no top-left ☰ on a tablet");
   const t = await page.locator("#li-nav .li-nav-scroll").boundingBox(), tb = await desk.boundingBox();
@@ -1312,8 +1324,8 @@ test("Overview layout: welcome card with the quote, sidebar tabs, Tasks card, Se
   await (await menuItem(page, 'a[href="#/settings"]')).click();
   await page.waitForSelector(".li-formula");
   assert.ok(await page.locator("#li-menu").isHidden(), "the menu closes after choosing");
-  // It opens as its own page: no greeting, quote or tabs; Back returns to the main page.
-  assert.ok(await page.locator("#daily-quote").isHidden() && await page.locator("#li-nav").isHidden(), "full-screen page");
+  // It opens as its own page: no greeting or quote (on computers the sidebar stays); Back returns to the main page.
+  assert.ok(await page.locator("#daily-quote").isHidden() && await page.locator("#li-nav").isVisible(), "its own page, with the sidebar");
   assert.equal(await page.textContent("#li-page-title"), "Settings");
   await page.click("#li-back");
   await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });

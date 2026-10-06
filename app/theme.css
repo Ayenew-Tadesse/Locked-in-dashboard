@@ -119,7 +119,7 @@ html.li-page .li-welcome{display:none;}
 }
 
 /* ---- Sidebar (computers) / tab row (phones) --------------------------------- */
-.li-side-logo, .li-side-foot{display:none;}
+.li-side-logo, .li-side-foot, .li-side-group{display:none;}
 .li-nav-link{display:inline-flex;align-items:center;gap:10px;border-radius:12px;}
 .li-nav-link svg{flex:none;}
 @media (max-width:1099px){
@@ -127,9 +127,12 @@ html.li-page .li-welcome{display:none;}
   html.app-mode:not(.app-booting) .li-nav:not(:empty){border-bottom:0;background:color-mix(in srgb, var(--bg) 92%, transparent);}
 }
 @media (min-width:1100px){
-  html.app-mode:not(.app-booting):not(.li-page) body{padding-left:280px;}
-  html.app-mode:not(.app-booting):not(.li-page) .wrap{max-width:1360px;}
-  html.app-mode:not(.app-booting):not(.li-page) .li-nav:not(:empty){
+  html.app-mode:not(.app-booting) body{padding-left:280px;}
+  html.app-mode:not(.app-booting) .wrap{max-width:1360px;}
+  /* The sidebar stays on every page, Profile, Portfolio and Resume included. */
+  html.app-mode.li-page:not(.app-booting) #li-nav:not(:empty){display:flex !important;}
+  html.app-mode:not(.app-booting) .li-nav:not(:empty){
+    overflow-y:auto;scrollbar-width:thin;
     position:fixed;left:20px;top:20px;bottom:20px;width:236px;margin:0;padding:26px 16px 18px;
     flex-direction:column;align-items:stretch;gap:0;z-index:40;
     background:var(--side);border:0;border-radius:24px;backdrop-filter:none;-webkit-backdrop-filter:none;
@@ -140,12 +143,24 @@ html.li-page .li-welcome{display:none;}
   .li-nav-scroll{flex-direction:column;gap:4px;overflow:visible;-webkit-mask-image:none !important;mask-image:none !important;flex:1;}
   .li-nav-link{width:100%;padding:11px 14px;font-size:14px;font-weight:500;}
   .li-nav-link .li-nav-dot{margin-left:auto;}
-  /* The ☰ becomes "More", above Settings and Log out. */
-  html.app-mode .li-nav-extra{display:block !important;margin:0;padding:12px 0 0;}
-  #li-menu-btn-desk{width:100%;height:auto;justify-content:flex-start;gap:10px;padding:11px 14px;border:0;border-radius:12px;background:none;color:var(--ink-2);font-size:14px;font-weight:500;}
-  #li-menu-btn-desk::after{content:"More";}
-  #li-menu-btn-desk:hover, #li-menu-btn-desk[aria-expanded="true"]{background:var(--surface-2);color:var(--ink);}
-  .li-side-foot{padding-top:0 !important;}
+  /* Everything from the ☰ is in the sidebar, so there's no ☰ here. */
+  html.app-mode .li-nav-extra{display:none !important;}
+  /* Tasks is reached from the Overview (Tasks card, Today's progress, Coming up). */
+  .li-nav-scroll [data-view="tasks"]{display:none;}
+  .li-nav-scroll{flex:none;}
+  .li-side-group{display:block;margin-top:4px;}
+  .li-side-group[hidden]{display:none;}
+  .li-side-head .li-caret, .li-side-link .li-caret{margin-left:auto;transition:transform .2s ease;}
+  .li-side-link[aria-expanded="false"] .li-caret{transform:rotate(-90deg);}
+  .li-side-head.has-active{color:var(--ink);}
+  .li-side-sub{display:flex;flex-direction:column;gap:2px;padding-left:14px;margin-top:2px;}
+  .li-side-sub[hidden]{display:none;}
+  .li-side-sub .li-nav-link{padding:9px 12px;font-size:13.5px;}
+  .li-side-cases{padding-left:28px;}
+  .li-side-case{background:none;border:0;padding:6px 10px;border-radius:10px;text-align:left;font:inherit;font-size:12.5px;color:var(--ink-3);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .li-side-case:hover, .li-side-case:focus-visible{background:var(--surface-2);color:var(--ink);outline:none;}
+  .li-side-case--new{color:var(--accent);}
+  .li-side-foot{margin-top:auto;padding-top:14px !important;border-top:1px solid var(--line);}
   .li-side-foot{display:flex;flex-direction:column;gap:4px;padding-top:12px;}
   .li-side-link{background:none;border:0;cursor:pointer;font:inherit;text-align:left;}
   .li-side-link[hidden]{display:none;}
