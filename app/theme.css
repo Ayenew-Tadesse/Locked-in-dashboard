@@ -101,7 +101,7 @@ html.li-page .li-top{display:none !important;} /* full-screen pages have their o
 .li-topbar{display:none !important;}
 
 /* ---- Welcome card (Overview only) --------------------------------------------- */
-.li-welcome{background:var(--surface);border-radius:var(--radius);padding:20px 24px;display:grid;grid-template-columns:1fr auto;gap:4px 24px;align-items:center;}
+.li-welcome{background:var(--surface);border-radius:var(--radius);padding:20px 24px;display:grid;grid-template-columns:1fr;gap:4px 24px;align-items:center;}
 html[data-theme="light"] .li-welcome{box-shadow:var(--shadow);}
 html.li-page .li-welcome{display:none;}
 /* On computers the welcome card is the Overview's (the sidebar never moves). On phones it stays on every tab, so the tab row doesn't jump when you switch. */
@@ -112,11 +112,8 @@ html.li-page .li-welcome{display:none;}
 .li-welcome .journey{grid-column:1;color:var(--ink-3);font-size:12px;}
 .li-welcome .journey b{color:var(--ink);}
 .li-welcome .greet-line{grid-column:1;margin:6px 0 0;font-size:13.5px;color:var(--ink-2);}
-.li-welcome .daily-quote{grid-column:2;grid-row:1 / span 4;max-width:340px;margin:0;padding:14px 16px;border:0;border-radius:14px;background:var(--surface-2);font-size:13px;}
-@media (max-width:760px){
-  .li-welcome{grid-template-columns:1fr;}
-  .li-welcome .daily-quote{grid-column:1;grid-row:auto;max-width:none;margin-top:10px;}
-}
+/* The quote sits at the bottom of the card, across its full width. */
+.li-welcome .daily-quote{grid-column:1;grid-row:auto;max-width:none;margin:12px 0 0;padding:14px 16px;border:0;border-radius:14px;background:var(--surface-2);font-size:13px;}
 
 /* ---- Sidebar (computers) / tab row (phones) --------------------------------- */
 .li-side-logo, .li-side-foot, .li-side-group{display:none;}
@@ -256,3 +253,23 @@ html[data-theme="light"] .li-ov-card{box-shadow:var(--shadow);}
   .li-tile-icon{top:12px;right:12px;}
   .li-tile-value{font-size:22px !important;margin-top:6px;}
 }
+
+/* ---- Spacing: one even gap between cards, room from the edges ---------------- */
+:root{--gap:16px;}
+@media (max-width:640px){ :root{--gap:12px;} }
+.li-warnings{gap:var(--gap);margin-top:var(--gap);}
+.li-overview{margin-top:var(--gap) !important;}
+.li-kpis, .li-ov-row{gap:var(--gap);}
+.li-ov-row, .li-overview > .li-ov-card{margin-top:var(--gap);}
+.dash-grid{margin-top:var(--gap) !important;}
+.dash-col-b{margin-top:var(--gap);}
+.dash-col > * + *:not(.li-tasks-card){margin-top:var(--gap) !important;}
+html.app-mode .li-tasks-card{margin-top:0 !important;}
+.li-project-grid{gap:var(--gap);}
+#li-projects > .li-project-grid:first-child{margin-top:0;}
+@media (min-width:1000px){ .dash-grid{gap:var(--gap) !important;} .dash-col-b{margin-top:0;} }
+@media (min-width:1100px){
+  /* 28px from the sidebar, 32px from the right edge, like a framed page. */
+  html.app-mode:not(.app-booting) body{padding:28px 32px 48px 284px;}
+}
+@media (max-width:640px){ .li-kpis{gap:var(--gap);} .li-kpis > *{flex-basis:calc(50% - var(--gap) / 2);} }
