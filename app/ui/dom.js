@@ -28,9 +28,17 @@ export function textBar(pct, width = 10) {
   const filled = Math.round(Math.max(0, Math.min(100, Number(pct) || 0)) / 100 * width);
   return "█".repeat(filled) + "░".repeat(width - filled);
 }
-export function tile(label, value, sub = "", tone = "", attrs = "") {
-  return `<div class="li-tile ${tone ? "tone-" + tone : ""}" ${attrs}><span class="li-tile-label">${esc(label)}</span>` +
+export function tile(label, value, sub = "", tone = "", attrs = "", icon = "") {
+  return `<div class="li-tile ${tone ? "tone-" + tone : ""}" ${attrs}><span class="li-tile-label">${esc(label)}</span>${icon ? `<span class="li-tile-icon">${icon}</span>` : ""}` +
     `<span class="li-tile-value">${value}</span>${sub ? `<span class="li-tile-sub">${sub}</span>` : ""}</div>`;
+}
+/** "↑ 12%" / "↓ 4%" against an earlier value (null when there's nothing to compare). */
+export function delta(now, before, label) {
+  if (now == null || before == null) return "";
+  if (!before) return now ? `<span class="li-delta up">↑ new</span> ${esc(label)}` : "";
+  const d = Math.round((now - before) / before * 100);
+  const cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
+  return `<span class="li-delta ${cls}">${d > 0 ? "↑" : d < 0 ? "↓" : "→"} ${Math.abs(d)}%</span> ${esc(label)}`;
 }
 export function scoreValue(v) { return v == null ? "—" : `${v}<small>/100</small>`; }
 export function pct(n, d) { return d ? Math.round(n / d * 100) : 0; }

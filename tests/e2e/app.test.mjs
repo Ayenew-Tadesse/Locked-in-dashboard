@@ -343,14 +343,16 @@ test("a dot on Tasks counts your unfinished tasks (red when some are overdue); t
   await page.close();
 });
 
-test("tablets and computers: the ☰ sits at the right of the tab row and opens from the right; phones keep the ☰ on the left", async () => {
+test("computers: a sidebar with More (menu from the right); tablets: the ☰ at the right of the tab row; phones: the ☰ on the left", async () => {
   const page = await open("", { width: 1280, height: 800 });
   assert.ok(await page.locator("#li-menu-btn").isHidden(), "the top-left ☰ is hidden on a wide screen");
   const desk = page.locator("#li-menu-btn-desk");
-  const tabs = await page.locator("#li-nav .li-nav-scroll").boundingBox(), b = await desk.boundingBox();
-  assert.ok(Math.abs((tabs.y + tabs.height / 2) - (b.y + b.height / 2)) < 12 && b.x >= tabs.x + tabs.width - 1, "same line, on the right");
-  assert.ok(b.x + b.width > 1280 - 80, "at the right edge");
-  assert.equal(await page.locator("#li-nav-extra .li-nav-link").count(), 0, "no inline menu links");
+  // Computers: the tabs are a sidebar on the left; More (at its foot) opens the menu.
+  const side = await page.locator("#li-nav").boundingBox();
+  assert.ok(side.x < 40 && side.width < 300 && side.height > 600, "a sidebar on the left");
+  const more = await desk.boundingBox();
+  assert.ok(more.y > 450 && more.x < 280, "the ☰ is More, at the foot of the sidebar");
+  assert.equal(await desk.innerText(), "", "an icon with a More label (drawn by CSS)");
   await desk.click();
   assert.equal(await desk.getAttribute("aria-expanded"), "true");
   assert.deepEqual(await page.locator("#li-menu .li-menu-link span").allInnerTexts(), ["Profile", "Daily report", "Projects", "Portfolio", "Case studies", "Resume", "Settings", "Light mode", "Log out"]);
@@ -1084,6 +1086,8 @@ test("tabs: switching keeps the tab row where it is (no jump); the browser tab s
       await page.waitForFunction((v) => document.querySelector(`#li-nav [data-view="${v}"]`).classList.contains("active"), v);
       assert.equal(await top(), start, `${v} at ${width}px: the tab row didn't move`);
     }
+    // Computers: the sidebar is fixed, so there's nothing to pin.
+    if (width >= 1100) { assert.deepEqual(page.errors, []); await page.close(); continue; }
     // Pinned to the top (scrolled down a long page): it stays pinned and the new page starts just under it.
     await tap("tasks");
     await page.evaluate(() => window.scrollTo(0, 2500));
@@ -1146,7 +1150,7 @@ test("responsive: every page fits phones, tablets, laptops and big monitors", as
       assert.ok(under(team, tasks), `Team under Tasks at ${width}px`);
       assert.ok(under(obj, team), `Objective under Team at ${width}px`);
     } else {
-      const order = ["#li-menu-btn", ".wrap > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#li-team-card", "#heat-card", "#li-projects", ".obj-section"];
+      const order = ["#li-menu-btn", ".li-welcome > h1", "#daily-quote", "#li-nav", "#li-overview .li-kpis", "#li-tasks-card", "#li-team-card", "#heat-card", "#li-projects", ".obj-section"];
       const tops = [];
       for (const sel of order) tops.push((await box(sel)).y);
       assert.deepEqual(tops, [...tops].sort((a, b) => a - b), `phone order at ${width}px: ${order.join(" > ")}`);
@@ -1241,7 +1245,7 @@ test("?demo=history previews the original dashboard's tracking history", async (
   await page.close();
 });
 
-test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings in the ☰ menu", async () => {
+test("Overview layout: welcome card with the quote, sidebar tabs, Tasks card, Settings in the ☰ menu", async () => {
   const requests = [];
   const page = await unlockedPage({ viewport: { width: 1280, height: 900 } });
   page.on("request", (r) => requests.push(r.url()));
@@ -1254,8 +1258,10 @@ test("Overview layout: quote above the tabs, trimmed tabs, Tasks card, Settings 
   assert.deepEqual(appFiles.filter((u) => !/\?v=[0-9a-f]{10}$/.test(u)), [], "all app files are version-stamped");
   const nav = (await page.locator("#li-nav .li-nav-scroll .li-nav-link").allInnerTexts()).map((t) => t.replace(/\s*\d+\+?$/, "").trim());
   assert.deepEqual(nav, ["Overview", "Today", "Tasks", "Calendar", "Milestones", "Analytics", "Team"], "the preview account owns a team");
-  const quoteBottom = (await page.locator("#daily-quote").boundingBox()).y + (await page.locator("#daily-quote").boundingBox()).height;
-  assert.ok(quoteBottom <= (await page.locator("#li-nav").boundingBox()).y, "quote sits above the tabs");
+  // The greeting and quote are one welcome card; the tabs are a sidebar to its left.
+  assert.ok(await page.locator(".li-welcome #daily-quote").isVisible(), "the quote is in the welcome card");
+  const side = await page.locator("#li-nav").boundingBox(), welcome = await page.locator(".li-welcome").boundingBox();
+  assert.ok(side.x + side.width <= welcome.x, "the sidebar sits to the left of the welcome card");
   assert.ok(!(await page.locator("#today-card").isVisible()), "Today's checklist is gone");
   assert.ok(!(await page.locator("#week-card").isVisible()), "the Your score (rings) card is gone");
   assert.equal(await page.locator("#li-overview .card-label", { hasText: "Deadlines" }).count(), 0, "the Deadlines card is gone");
@@ -1887,12 +1893,12 @@ test("signed in without a greeting: asked once, then greeted by title and name",
   const page = await dbPage({ signedIn: true });
   await page.waitForSelector("#li-modal", { state: "visible" });
   assert.match(await page.textContent("#li-modal-title"), /How should we greet you/);
-  assert.equal(await page.textContent(".wrap > h1"), "aye", "the heading shows their own name, not the original's");
+  assert.equal(await page.textContent(".li-welcome > h1"), "aye", "the heading shows their own name, not the original's");
   await page.fill('#li-modal input[name="name"]', "Ayenew Shiferaw");
   await page.selectOption('#li-modal select[name="greeting"]', "mr");
   await page.click('#li-modal button[type="submit"]');
   await page.waitForSelector("#li-modal", { state: "detached" });
-  assert.equal(await page.textContent(".wrap > h1"), "Mr. Ayenew Shiferaw");
+  assert.equal(await page.textContent(".li-welcome > h1"), "Mr. Ayenew Shiferaw");
   // The Team page lists them by name and title, not email.
   await page.evaluate(() => { location.hash = "#/team"; });
   await page.waitForSelector(".li-person");
@@ -1901,7 +1907,7 @@ test("signed in without a greeting: asked once, then greeted by title and name",
   await page.evaluate(() => { location.hash = "#/profile"; });
   await page.selectOption('#li-profile-form select[name="greeting"]', "none");
   await page.click('#li-profile-form button[type="submit"]');
-  await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
+  await page.waitForFunction(() => document.querySelector(".li-welcome > h1").textContent === "Ayenew Shiferaw");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -1909,7 +1915,7 @@ test("signed in without a greeting: asked once, then greeted by title and name",
 test("before the greeting migration is run, the site still loads (greetings just stay hidden)", async () => {
   const page = await dbPage({ signedIn: true, oldDb: true });
   await page.waitForSelector("#li-nav .li-nav-link");
-  assert.equal(await page.textContent(".wrap > h1"), "aye");
+  assert.equal(await page.textContent(".li-welcome > h1"), "aye");
   assert.equal(await page.locator("#li-modal").count(), 0, "no greeting prompt");
   await page.evaluate(() => { location.hash = "#/team"; });
   await page.waitForSelector(".li-person");
@@ -1919,7 +1925,7 @@ test("before the greeting migration is run, the site still loads (greetings just
   assert.equal(await page.locator('#li-profile-form select[name="greeting"]').count(), 0, "no greeting choice yet");
   await page.fill('#li-profile-form input[name="name"]', "Ayenew Shiferaw");
   await page.click('#li-profile-form button[type="submit"]');
-  await page.waitForFunction(() => document.querySelector(".wrap > h1").textContent === "Ayenew Shiferaw");
+  await page.waitForFunction(() => document.querySelector(".li-welcome > h1").textContent === "Ayenew Shiferaw");
   assert.deepEqual(page.errors, []);
   await page.close();
 });
@@ -2169,7 +2175,7 @@ test("☰ menu pages open full screen; Back returns to the same spot on the main
   const back = await page.locator("#li-back").boundingBox();
   assert.ok(back.x < 40 && back.y < 60, "Back sits at the top left");
   assert.equal(await page.evaluate(() => window.scrollY), 0, "the page starts at the top");
-  for (const sel of [".wrap > h1", "#daily-quote", "#li-nav", "#li-menu-btn", ".dash-grid"]) assert.ok(await page.locator(sel).first().isHidden(), `${sel} hidden`);
+  for (const sel of [".li-welcome > h1", "#daily-quote", "#li-nav", "#li-menu-btn", ".dash-grid"]) assert.ok(await page.locator(sel).first().isHidden(), `${sel} hidden`);
   assert.equal(await page.textContent("#li-page-title"), "Projects");
   await page.click("#li-back");
   await page.waitForSelector("#li-nav .li-nav-link", { state: "visible" });
@@ -2799,7 +2805,7 @@ test("import a project file: project, milestones, tasks and case study, never tw
   await page.close();
 });
 
-test("import the Awaa Braids project file: project, milestones and an in-progress case study with phone screens", async () => {
+test("import the Awaa Braids project file: project, milestones and a live case study with phone screens", async () => {
   const page = await open("projects", { width: 1280, height: 900 });
   await seedPortfolio(page);
   await page.evaluate(() => { location.hash = "#/projects"; });
@@ -2807,9 +2813,9 @@ test("import the Awaa Braids project file: project, milestones and an in-progres
   await page.setInputFiles("[data-pack-file]", new URL("../../docs/project-files/awaa-braids.json", import.meta.url).pathname);
   const preview = page.locator("[data-pack-preview]");
   await preview.getByText("This will add:").waitFor();
-  assert.match(await preview.innerText(), /Project Awaa Braids with 5 checklist items/);
-  assert.match(await preview.innerText(), /5 milestones with 27 tasks/);
-  assert.match(await preview.innerText(), /Case study Awaa Braids with 7 auto-updating pictures/);
+  assert.match(await preview.innerText(), /Project Awaa Braids with 7 checklist items/);
+  assert.match(await preview.innerText(), /7 milestones with 39 tasks/);
+  assert.match(await preview.innerText(), /Case study Awaa Braids with 14 auto-updating pictures/);
   await page.click('#li-modal button[type="submit"]');
   await page.waitForSelector("#li-modal", { state: "detached" });
   await page.locator("[data-project] .li-project-row-name", { hasText: "Awaa Braids" }).waitFor();
@@ -2819,15 +2825,16 @@ test("import the Awaa Braids project file: project, milestones and an in-progres
     const ms = state.milestones.filter((m) => m.title.startsWith("AWB "));
     return { status: x.status, device: x.device, project: x.project, button: x.style.button, flow: x.flow.steps.length, ms: ms.length, done: ms.filter((m) => m.status === "completed").length };
   });
-  assert.deepEqual(c, { status: "progress", device: "phone", project: "Awaa Braids", button: "#6d2e5b", flow: 4, ms: 5, done: 1 });
-  // On the portfolio: three phones with the app's screens, Try the app, and no status or case study button yet.
+  assert.deepEqual(c, { status: "live", device: "phone", project: "Awaa Braids", button: "#6d2e5b", flow: 7, ms: 7, done: 6 });
+  // On the portfolio: three phones with the app's screens, Try the app and the case study, and no status.
   await page.evaluate(() => { location.hash = "#/portfolio"; });
   const card = page.locator("#li-pf-preview .pf-rail__item:not([data-rail-copy]) .pf-card", { hasText: "Awaa Braids" });
   await card.waitFor();
-  assert.deepEqual(await card.locator(".pf-mini-phone img").evaluateAll((els) => els.map((e) => e.getAttribute("src").split("/").pop())), ["customer-home.jpg", "landing.jpg", "admin-today.jpg"]);
+  assert.deepEqual(await card.locator(".pf-mini-phone img").evaluateAll((els) => els.map((e) => e.getAttribute("src").split("/").pop())), ["customer-home.jpg", "book-3-time.jpg", "admin-today.jpg"]);
   assert.match(await card.innerText(), /Phone/);
   assert.match(await card.innerText(), /Try the app/);
-  assert.doesNotMatch(await card.innerText(), /In progress|View case study/);
+  assert.match(await card.innerText(), /View case study/);
+  assert.doesNotMatch(await card.innerText(), /In progress/);
   assert.deepEqual(page.errors, []);
   await page.close();
 });

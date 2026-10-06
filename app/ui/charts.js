@@ -54,12 +54,16 @@ export function lineChart(points, { max = 100, aria = "Line chart", height = 160
   const top = Math.max(max, ...points.map((p) => p.value || 0)) || 1;
   const x = (i) => (n <= 1 ? W / 2 : (i / (n - 1)) * (W - 16) + 8);
   const y = (v) => padT + (1 - v / top) * (H - padT - padB);
-  // Days without data are skipped; the line connects the days around them.
-  let d = "";
-  points.forEach((p, i) => {
-    if (p.value == null) return;
-    d += (d ? "L" : "M") + x(i).toFixed(1) + " " + y(p.value).toFixed(1);
-  });
+  // Days without data are skipped; the line connects the days around them,
+  // drawn as a smooth curve (Catmull-Rom through the points).
+  const pts = points.map((p, i) => (p.value == null ? null : [x(i), y(p.value)])).filter(Boolean);
+  let d = pts.length ? `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}` : "";
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
   const step = Math.max(1, Math.ceil(n / 6));
   // Axis labels are HTML so they don't stretch with the SVG.
   const labels = points.map((p, i) => i % step === 0 || i === n - 1
@@ -67,9 +71,36 @@ export function lineChart(points, { max = 100, aria = "Line chart", height = 160
   const tips = esc(JSON.stringify(points.map((p) => p.tip || `${p.label}: ${p.value == null ? "no data" : p.value + unit}`)));
   return `<div class="li-lc" data-tips="${tips}" data-w="${W}">` +
     `<svg viewBox="0 0 ${W} ${H - padB}" preserveAspectRatio="none" role="img" aria-label="${esc(aria)}" style="height:${H - padB}px">` +
+    `<defs><linearGradient id="li-lc-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>` +
     [0, 50, 100].map((g) => `<line class="li-lc-grid" x1="0" x2="${W}" y1="${y(g * top / 100)}" y2="${y(g * top / 100)}"/>`).join("") +
     `<path class="li-lc-line" d="${d}"/><line class="li-lc-cross" x1="0" x2="0" y1="${padT}" y2="${H - padB}" visibility="hidden"/></svg>` +
     `<div class="li-lc-axis" aria-hidden="true">${labels}</div></div>`;
+}
+
+/**
+ * Donut: parts [{ label, value, color }]. Empty (all zero) shows a plain track.
+ */
+export function donut(parts, { aria = "Donut chart", size = 118 } = {}) {
+  const total = parts.reduce((s, p) => s + (p.value || 0), 0);
+  const r = 42, C = 2 * Math.PI * r;
+  let at = 0;
+  const arcs = total ? parts.filter((p) => p.value).map((p) => {
+    const len = (p.value / total) * C;
+    const seg = `<circle cx="60" cy="60" r="${r}" stroke="${p.color}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`;
+    at += len;
+    return seg;
+  }).join("") : "";
+  return `<svg class="li-donut" viewBox="0 0 120 120" width="${size}" height="${size}" role="img" aria-label="${esc(aria)}" style="transform:rotate(-90deg)">` +
+    `<circle cx="60" cy="60" r="${r}" stroke="var(--surface-2)"/>${arcs}</svg>`;
+}
+
+/** A small progress ring with its percentage in the middle. */
+export function ring(value, { color = "var(--accent)", aria } = {}) {
+  const v = Math.max(0, Math.min(100, Math.round(value || 0)));
+  const r = 22, C = 2 * Math.PI * r;
+  return `<span class="li-ring" role="img" aria-label="${esc(aria || `${v}% complete`)}"><svg viewBox="0 0 52 52" aria-hidden="true">` +
+    `<circle cx="26" cy="26" r="${r}" stroke="var(--surface-2)"/>` +
+    `<circle cx="26" cy="26" r="${r}" stroke="${color}" stroke-linecap="round" stroke-dasharray="${(v / 100 * C).toFixed(2)} ${C.toFixed(2)}"/></svg><span>${v}%</span></span>`;
 }
 
 /** Horizontal progress rows: [{ label, value (0-100), detail }]. */
