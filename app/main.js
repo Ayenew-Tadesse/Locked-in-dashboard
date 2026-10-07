@@ -72,13 +72,9 @@ const NAV = ["overview", "today", "tasks", "calendar", "milestones", "analytics"
 const config = window.LOCKEDIN_CONFIG || {};
 // Preview modes come from the URL or, for a preview deployment, config.js.
 const demoMode = (() => {
-  // The public demo always shows the sample data, whatever the address says.
-  if (config.demo === "showcase") return "sample";
   const v = new URLSearchParams(location.search).get("demo") || config.demo;
   return v === "history" ? "history" : v === "1" || v === "sample" || v === true ? "sample" : null;
 })();
-// The public demo for hiring managers: sample data, a demo banner, computers only (index.html).
-const showcase = config.demo === "showcase";
 const demo = !!demoMode;
 let started = false;
 
@@ -610,10 +606,8 @@ async function start(store) {
   };
   placeObjective();
   phone.addEventListener("change", placeObjective);
-  if (showcase) showDemoBar();
   $("#footnote").textContent = store.mode === "demo"
-    ? (showcase ? "Demo: sample data held in memory only. Nothing you change here is saved."
-      : demoMode === "history"
+    ? (demoMode === "history"
       ? "Preview with your tracking history from the original dashboard. Changes you make here aren't saved."
       : "Demo mode: sample data held in memory only. Nothing you change here is saved.")
     : "Your tasks, scores and milestones are saved to your database and sync across devices.";
@@ -632,17 +626,6 @@ async function start(store) {
   syncPortfolioGithub().catch((e) => console.warn("portfolio GitHub:", e.message));
   // Reveal only now that the new design is drawn (no flash of the original page).
   document.documentElement.classList.remove("app-booting");
-}
-
-// The demo's banner: what this is, and a link to the portfolio when one is set.
-function showDemoBar() {
-  if (document.getElementById("li-demo-bar")) return;
-  const bar = document.createElement("div");
-  bar.id = "li-demo-bar";
-  bar.className = "li-demo-bar";
-  const url = /^https:\/\//.test(config.portfolioUrl || "") ? config.portfolioUrl : "";
-  bar.innerHTML = `<span class="li-demo-dot" aria-hidden="true"></span><span><b>Demo</b> · sample data · nothing is saved</span>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">See my portfolio &#8599;</a>` : ""}`;
-  document.querySelector(".wrap").prepend(bar);
 }
 
 async function boot() {

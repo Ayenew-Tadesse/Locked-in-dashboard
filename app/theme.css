@@ -304,21 +304,3 @@ a.li-app-phone:hover .pf-mini-phone, a.li-app-phone:focus-visible .pf-mini-phone
 .li-app-title{margin:0;font-size:15px;font-weight:600;color:var(--ink);}
 .li-app-desc{margin:4px 0 0;font-size:13px;line-height:1.45;color:var(--ink-3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 @media (max-width:640px){ .li-apps{grid-template-columns:repeat(2, minmax(0, 1fr));} .li-app-phone{height:280px;padding:16px 10px;} .li-app-try{right:8px;bottom:8px;font-size:11px;} }
-
-/* ---- The public demo (config.js { demo: "showcase" }) ------------------------- */
-.li-demo-bar{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:9px 14px;border-radius:12px;background:var(--accent-soft);color:var(--ink);font-size:13px;}
-.li-demo-bar b{font-weight:600;}
-.li-demo-bar a{margin-left:auto;color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap;}
-.li-demo-bar a:hover{text-decoration:underline;}
-.li-demo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);}
-/* Computers only: narrower windows get a note instead of the phone layout. */
-.li-desk-only{display:none;}
-@media (max-width:1099px){
-  html.li-showcase .li-desk-only{display:grid;place-items:center;position:fixed;inset:0;z-index:1000;padding:24px;background:var(--bg, #1E1E24);}
-  html.li-showcase body > :not(.li-desk-only):not(script){display:none !important;}
-}
-.li-desk-only-card{max-width:380px;text-align:center;color:var(--ink, #F4F4F7);font-family:Poppins, system-ui, sans-serif;}
-.li-desk-only-card h2{margin:16px 0 8px;font-size:20px;line-height:1.3;}
-.li-desk-only-card p{margin:0;font-size:14px;line-height:1.55;color:var(--ink-3, #A3A3B2);}
-.li-desk-only-mark{display:inline-block;width:56px;height:38px;border:3px solid var(--accent, #7B6CF6);border-radius:6px;position:relative;}
-.li-desk-only-mark::after{content:"";position:absolute;left:50%;bottom:-11px;width:30px;height:3px;border-radius:2px;background:var(--accent, #7B6CF6);transform:translateX(-50%);}

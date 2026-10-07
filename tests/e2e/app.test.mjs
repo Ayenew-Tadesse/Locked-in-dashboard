@@ -433,54 +433,6 @@ test("light / dark switch: easy to see in both themes", async () => {
   await page.close();
 });
 
-test("public demo (showcase): no password, sample data, a demo banner, computers only", async () => {
-  const showcase = async (viewport, path = "") => {
-    const page = await browser.newPage({ viewport });
-    page.errors = [];
-    page.on("pageerror", (e) => page.errors.push(e.message));
-    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    await page.route(/\/config\.js/, (r) => r.fulfill({ contentType: "text/javascript", body: 'window.LOCKEDIN_CONFIG = {"demo":"showcase","portfolioUrl":"https://example.com/portfolio"};' }));
-    await page.goto(BASE + path);
-    return page;
-  };
-  // A computer: straight in (no password screen), the sample dashboard, the banner.
-  const page = await showcase({ width: 1440, height: 900 });
-  await page.waitForSelector("#li-nav .li-nav-link");
-  assert.ok(await page.locator("#gate").isHidden(), "no password screen");
-  const bar = page.locator("#li-demo-bar");
-  assert.match(await bar.innerText(), /Demo · sample data · nothing is saved/);
-  assert.equal(await bar.locator("a").getAttribute("href"), "https://example.com/portfolio");
-  assert.ok(await page.locator(".li-tile").count() >= 4, "the sample dashboard");
-  assert.ok(await page.locator("#li-desk-only").isHidden());
-  assert.equal(await page.locator('#li-side-foot [data-side-logout]').count(), 0, "nothing to log out of");
-  // Narrower than a computer: a note instead of the phone layout.
-  await page.setViewportSize({ width: 900, height: 900 });
-  await page.waitForSelector("#li-desk-only", { state: "visible" });
-  assert.ok(await page.locator(".wrap").isHidden());
-  assert.match(await page.locator("#li-desk-only").innerText(), /Please open this demo on a computer/);
-  assert.deepEqual(page.errors, []);
-  await page.close();
-  // The address can't switch the demo to other data.
-  const hist = await showcase({ width: 1440, height: 900 }, "?demo=history");
-  await hist.waitForSelector("#li-demo-bar");
-  assert.match(await hist.locator("#footnote").innerText(), /Demo: sample data/);
-  await hist.close();
-  // A phone: only the note.
-  const phone = await showcase({ width: 390, height: 844 });
-  await phone.waitForSelector("#li-desk-only", { state: "visible" });
-  assert.ok(await phone.locator("#gate").isHidden() && await phone.locator(".wrap").isHidden());
-  await phone.close();
-});
-
-test("the real dashboard keeps its password screen (no showcase without the deployment's config)", async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto(BASE + "?demo=showcase");
-  await page.waitForTimeout(500);
-  assert.ok(await page.locator("#gate").isVisible(), "the password screen is still there");
-  assert.equal(await page.locator("#li-demo-bar").count(), 0);
-  await page.close();
-});
-
 test("work pages end with their own content: no Overview cards underneath (the Overview keeps them)", async () => {
   for (const width of [1280, 390]) {
     const page = await open("", { width, height: 800 });
