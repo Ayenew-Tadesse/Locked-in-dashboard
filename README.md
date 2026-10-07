@@ -72,6 +72,22 @@ the rings show the new scores, and ticking Today's checklist completes the real 
 A deployment without a database can open in a preview mode by default: build with
 `DEMO_MODE=history` (or `DEMO_MODE=sample`).
 
+### The public demo for hiring managers
+
+A separate Vercel project shows the dashboard with sample data: no password, no
+database, computers only (narrower windows get a "please open this on a computer"
+note), and a "Demo · sample data · nothing is saved" banner.
+
+1. In Vercel: **Add New… → Project**, import this repository again and name it
+   `locked-in-demo`.
+2. Under **Environment Variables** add `DEMO_MODE` = `showcase`. Optionally add
+   `PORTFOLIO_URL` = your portfolio's address (https://…) for the banner's
+   "See my portfolio" link. Add no Supabase settings: the demo build ignores them anyway.
+3. Deploy, then share `locked-in-demo.vercel.app`.
+
+Only the deployment's settings turn the demo on; adding `?demo=…` to your real
+dashboard's address never skips its password screen.
+
 **GitHub Pages** serves this repository as-is, using the root `config.js`. It is
 connected to the team's Supabase project, so the site opens on the sign-in screen
 and everything is saved in the database. Setting that file back to
