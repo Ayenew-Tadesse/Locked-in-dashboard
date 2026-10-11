@@ -404,6 +404,11 @@ test("View apps: each app on a phone with its name and description; Try the app 
   assert.match(await apps.nth(0).locator(".li-app-desc").innerText(), /Flight booking/);
   const box = await apps.nth(0).locator(".pf-mini-phone").boundingBox(), label = await apps.nth(0).locator(".li-app-label").boundingBox();
   assert.ok(label.y >= box.y + box.height, "the name and description are under the phone");
+  const tops = await apps.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  assert.equal(new Set(tops).size, 1, "all on one row");
+  const w = await apps.nth(0).evaluate((e) => e.getBoundingClientRect().width), list = await page.locator(".li-apps").evaluate((e) => e.getBoundingClientRect().width);
+  assert.ok(w < list / 4 + 1 && w > list / 4 - 20, "a quarter of the row each: four fit on one row");
+  assert.ok(box.height <= 240, "phones are small");
   assert.equal(await apps.nth(0).locator("a[data-try]").count(), 1, "a live app can be tried");
   assert.equal(await apps.nth(2).locator("a[data-try]").count(), 0, "no live link, nothing to try");
   await apps.nth(0).locator("a[data-try]").click();
